@@ -1,78 +1,440 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+'use client';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import AWSGraph, { NODES, CAT, AWSNode } from '@/components/aws-graph';
+import { CONCEPTS, ConceptKey } from '@/components/aws-concepts';
 
 export default function HomeScreen() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+  const selectedNode = useMemo(() => {
+    return NODES.find(n => n.id === selectedId);
+  }, [selectedId]);
+
+  const filteredNodes = useMemo(() => {
+    return NODES.filter(node => {
+      const matchesSearch = node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          node.desc.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !categoryFilter || node.cat === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, categoryFilter]);
+
+  const concept = selectedNode ? CONCEPTS[selectedNode.id as ConceptKey] : null;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+    <ThemedView style={styles.container}>
+      {/* Header */}
+      <ThemedView style={styles.header}>
+        <ThemedText type="title" style={styles.headerTitle}>
+          🎓 AWS SSA 시험 준비
+        </ThemedText>
+        <ThemedText style={styles.headerSubtitle}>
+          AWS 서비스 관계도를 클릭해서 상세 정보를 확인하세요
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        </Link>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
+
+      {/* Main Layout */}
+      <View style={styles.mainLayout}>
+        {/* Left: Graph Panel */}
+        <View style={styles.graphPanel}>
+          {/* Search & Filter Bar */}
+          <ThemedView style={styles.filterBar}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="서비스 검색..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </ThemedView>
+
+          {/* Category Filter */}
+          <ScrollView
+            horizontal
+            style={styles.categoryScroll}
+            showsHorizontalScrollIndicator={false}
+          >
+            <View style={styles.categoryFilterContainer}>
+              <CategoryButton
+                label="전체"
+                active={categoryFilter === null}
+                onPress={() => setCategoryFilter(null)}
+              />
+              {Object.entries(CAT).map(([key, value]) => (
+                <CategoryButton
+                  key={key}
+                  label={value.label}
+                  color={value.color}
+                  active={categoryFilter === key}
+                  onPress={() => setCategoryFilter(categoryFilter === key ? null : key)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Graph */}
+          <View style={styles.graphContainer}>
+            <AWSGraph
+              selectedId={selectedId}
+              onSelectNode={(node) => setSelectedId(node?.id || null)}
+            />
+          </View>
+
+          {/* Node List */}
+          <ScrollView style={styles.nodeList}>
+            <View style={styles.nodeListContent}>
+              {filteredNodes.map(node => (
+                <NodeListItem
+                  key={node.id}
+                  node={node}
+                  isSelected={node.id === selectedId}
+                  onPress={() => setSelectedId(node.id)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Right: Detail Panel */}
+        <View style={styles.detailPanel}>
+          {selectedNode && concept ? (
+            <ScrollView style={styles.detailContent}>
+              <ThemedView style={styles.detailHeader}>
+                <ThemedText style={styles.detailEmoji}>{selectedNode.emoji}</ThemedText>
+                <ThemedText type="title" style={styles.detailTitle}>
+                  {concept.title}
+                </ThemedText>
+                <ThemedText style={styles.detailSubtitle}>
+                  {concept.subtitle}
+                </ThemedText>
+              </ThemedView>
+
+              {/* Easy Explanation */}
+              <ThemedView style={styles.section}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  💡 쉽게 이해하기
+                </ThemedText>
+                <ThemedText style={styles.easyText}>
+                  {concept.easy}
+                </ThemedText>
+              </ThemedView>
+
+              {/* Key Points */}
+              <ThemedView style={styles.section}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  🎯 핵심 포인트
+                </ThemedText>
+                {concept.points.map((point, idx) => (
+                  <ThemedView key={idx} style={styles.pointContainer}>
+                    <ThemedText type="defaultSemiBold" style={styles.pointLabel}>
+                      {point.label}
+                    </ThemedText>
+                    <ThemedText style={styles.pointText}>
+                      {point.text}
+                    </ThemedText>
+                    <ThemedText style={styles.pointEasy}>
+                      {point.easy}
+                    </ThemedText>
+                  </ThemedView>
+                ))}
+              </ThemedView>
+
+              {/* Related Services */}
+              <ThemedView style={styles.section}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  🔗 연관 서비스
+                </ThemedText>
+                <View style={styles.relatedServices}>
+                  {/* 여기에 연관 서비스 렌더링 */}
+                </View>
+              </ThemedView>
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyState}>
+              <ThemedText style={styles.emptyStateText}>
+                서비스를 선택하면{'\n'}상세 정보가 표시됩니다
+              </ThemedText>
+            </View>
+          )}
+        </View>
+      </View>
+    </ThemedView>
+  );
+}
+
+// Category Filter Button Component
+function CategoryButton({
+  label,
+  color,
+  active,
+  onPress,
+}: {
+  label: string;
+  color?: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <View
+      style={[
+        styles.categoryButton,
+        active && { backgroundColor: color || '#2196F3' },
+      ]}
+      onTouchEnd={onPress}
+    >
+      <ThemedText
+        style={[
+          styles.categoryButtonText,
+          active && { color: 'white' },
+        ]}
+      >
+        {label}
+      </ThemedText>
+    </View>
+  );
+}
+
+// Node List Item Component
+function NodeListItem({
+  node,
+  isSelected,
+  onPress,
+}: {
+  node: AWSNode;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  const catColor = CAT[node.cat].color;
+
+  return (
+    <View
+      style={[
+        styles.nodeListItem,
+        isSelected && { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+      ]}
+      onTouchEnd={onPress}
+    >
+      <View style={[styles.nodeListItemColorBar, { backgroundColor: catColor }]} />
+      <View style={styles.nodeListItemContent}>
+        <ThemedText type="defaultSemiBold" style={styles.nodeListItemName}>
+          {node.emoji} {node.name}
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        <ThemedText style={styles.nodeListItemDesc}>
+          {node.desc}
         </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#1a1a1a',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  mainLayout: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 15,
+    padding: 15,
+  },
+  graphPanel: {
+    flex: 2,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  filterBar: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  searchInput: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    backgroundColor: '#f9f9f9',
+    color: '#333',
+  },
+  categoryScroll: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  categoryFilterContainer: {
+    flexDirection: 'row',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  categoryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    whiteSpace: 'nowrap' as any,
+  },
+  categoryButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#666',
+  },
+  graphContainer: {
+    flex: 1,
+    minHeight: 300,
+    backgroundColor: '#060e18',
+    borderRadius: 6,
+    margin: 10,
+    overflow: 'hidden',
+  },
+  nodeList: {
+    maxHeight: 200,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  nodeListContent: {
+    padding: 8,
+  },
+  nodeListItem: {
+    flexDirection: 'row',
     marginBottom: 8,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: '#fafafa',
+    borderWidth: 1,
+    borderColor: '#eee',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  nodeListItemColorBar: {
+    width: 4,
+  },
+  nodeListItemContent: {
+    flex: 1,
+    padding: 10,
+  },
+  nodeListItemName: {
+    fontSize: 14,
+    marginBottom: 3,
+    color: '#333',
+  },
+  nodeListItemDesc: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+  },
+  detailPanel: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  detailContent: {
+    flex: 1,
+    padding: 20,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  detailHeader: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  detailEmoji: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  detailTitle: {
+    fontSize: 24,
+    marginBottom: 5,
+    textAlign: 'center',
+    color: '#333',
+  },
+  detailSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: '#333',
+  },
+  easyText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#555',
+    fontStyle: 'italic',
+  },
+  pointContainer: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  pointLabel: {
+    fontSize: 13,
+    marginBottom: 5,
+    color: '#2196F3',
+  },
+  pointText: {
+    fontSize: 13,
+    color: '#333',
+    marginBottom: 5,
+    lineHeight: 18,
+  },
+  pointEasy: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  relatedServices: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
 });

@@ -8,6 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:prod": "vite build && vite preview",
+    "dev": "vite",
+    "build": "vite build",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -40,10 +43,13 @@
   },
   "devDependencies": {
     "@types/react": "~19.0.10",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
     "babel-plugin-react-compiler": "19.1.0-rc.3",
     "eslint": "^9.28.0",
     "eslint-config-expo": "~9.2.0",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "vite": "^5.0.0"
   },
   "private": true
 }

@@ -1,50 +1,62 @@
-# Welcome to your Expo app 👋
+# 🎓 AWS SSA 시험 준비 - 서비스 관계도 웹 애플리케이션
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+AWS Solutions Architect Associate (SAA-C03) 시험을 준비하기 위한 인터랙티브 서비스 관계도 시각화 도구입니다.
 
-## Get started
+## 🚀 기능
 
-1. Install dependencies
+- **31개 AWS 서비스** - Compute, Storage, Database, Network, Security, Messaging, Monitor 카테고리별 정리
+- **인터랙티브 그래프** - 서비스 간의 관계를 시각화
+- **상세 학습 자료** - 각 서비스마다:
+  - 💡 쉬운 설명 (초급자 수준)
+  - 🎯 핵심 포인트
+  - 🔗 연관 서비스
+- **검색 & 필터** - 서비스 이름, 설명으로 검색 및 카테고리별 필터링
+- **반응형 디자인** - 데스크톱과 태블릿 최적화
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 📦 설치
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🏃 빠른 시작
 
-## Learn more
+### 웹 버전 (Vite)
+```bash
+npm run dev
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Expo로 실행 (모바일 호환)
+```bash
+npm start
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 프로덕션 빌드
+```bash
+npm run build
+npm run web:prod
+```
 
-## Join the community
+## 📚 AWS 서비스 카테고리
 
-Join our community of developers creating universal apps.
+- **🖥️ Compute** (5개): EC2, Lambda, ECS/EKS, Auto Scaling, Beanstalk
+- **💾 Storage** (4개): S3, EBS, EFS, S3 Glacier
+- **🗄️ Database** (5개): RDS, Aurora, DynamoDB, ElastiCache, Redshift
+- **🌐 Network** (6개): VPC, ELB, CloudFront, Route 53, API Gateway, Direct Connect
+- **🔐 Security** (5개): IAM, KMS, WAF & Shield, Cognito, Secrets Manager
+- **📬 Messaging** (4개): SQS, SNS, EventBridge, Kinesis
+- **👁️ Monitor** (2개): CloudWatch, CloudTrail
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🎯 사용 방법
+
+1. 그래프에서 서비스 선택
+2. 오른쪽 패널에서 상세 정보 확인
+3. "연관 서비스"로 관계 탐색
+4. 카테고리 필터나 검색으로 원하는 서비스 찾기
+
+## 🛠️ 기술 스택
+
+- React 19 + TypeScript
+- Vite (웹 번들러)
+- SVG (그래프 시각화)
+- CSS3 (반응형 디자인)

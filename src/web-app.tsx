@@ -590,13 +590,15 @@ function App() {
                 </button>
               </>
             ) : (
-              <button onClick={() => setShowLoginModal(true)} style={{
-                fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
-                border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
-                whiteSpace: "nowrap"
-              }}>
-                {t("btnLogin")}
-              </button>
+              (tab === "concept" || tab === "status") && (
+                <button onClick={() => setShowLoginModal(true)} style={{
+                  fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
+                  border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                  whiteSpace: "nowrap"
+                }}>
+                  {t("btnLogin")}
+                </button>
+              )
             )}
           </div>
 
@@ -816,10 +818,7 @@ function App() {
                         }}
                         disabled={loginLoading}
                         style={{
-                          width: "100%", padding: "12px", background: "#fff", color: "#000",
-                          border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
-                          fontSize: "14px", fontWeight: "bold", marginBottom: "16px", display: "flex",
-                          alignItems: "center", justifyContent: "center", gap: "8px", opacity: loginLoading ? 0.6 : 1
+                          display: "none"
                         }}
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24">
@@ -832,7 +831,7 @@ function App() {
                       </button>
 
                       {/* 또는 구분선 */}
-                      <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: "12px" }}>
+                      <div style={{ display: "none" }}>
                         <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
                         <span style={{ color: "#94a3b8", fontSize: "12px" }}>또는</span>
                         <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>

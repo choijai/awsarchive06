@@ -590,7 +590,7 @@ function App() {
                 </button>
               </>
             ) : (
-              (tab === "concept" || tab === "status") && (
+              (tab === "concept" || tab === "status") ? (
                 <button onClick={() => setShowLoginModal(true)} style={{
                   fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
                   border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
@@ -598,7 +598,7 @@ function App() {
                 }}>
                   {t("btnLogin")}
                 </button>
-              )
+              ) : null
             )}
           </div>
 

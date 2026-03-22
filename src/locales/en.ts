@@ -122,7 +122,6 @@ export const en: Strings = {
   weakServicesDesc: "(Most incorrect)",
   timesAnswered: "times",
   setExamDate: "Edit Exam Date",
-  examDateLabel: "Exam Date",
   examDatePlaceholder: "YYYY-MM-DD",
   loginPrompt: "Sign in to save your learning progress",
   loginButton: "Get Started with Google",

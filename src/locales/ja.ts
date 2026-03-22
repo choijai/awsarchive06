@@ -122,7 +122,6 @@ export const ja: Strings = {
   weakServicesDesc: "(不正解が多い順)",
   timesAnswered: "回",
   setExamDate: "試験日を編集",
-  examDateLabel: "試験日",
   examDatePlaceholder: "YYYY-MM-DD",
   loginPrompt: "ログインして学習記録を保存しましょう",
   loginButton: "Googleで始める",

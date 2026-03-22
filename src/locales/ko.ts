@@ -120,7 +120,6 @@ export const ko = {
   weakServicesDesc: "(오답 많은 순)",
   timesAnswered: "회",
   setExamDate: "시험일 수정",
-  examDateLabel: "시험일",
   examDatePlaceholder: "YYYY-MM-DD",
   loginPrompt: "로그인하면 학습 기록이 저장됩니다",
   loginButton: "Google로 시작하기",

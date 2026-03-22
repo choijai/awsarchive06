@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
-import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth } from "./analytics";
+import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors } from "./analytics";
 import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, ADMIN_UID } from "./firebase";
 import "./styles.css";
 
@@ -330,14 +330,10 @@ function App() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly" | "month">("daily");
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
   const [graphZoom, setGraphZoom] = useState(1);
   const [graphScroll, setGraphScroll] = useState(0);
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return now.getMonth();
-  });
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
 
@@ -435,13 +431,10 @@ function App() {
     } else if (graphPeriod === "monthly") {
       const data = getMonthlyVisitors();
       setGraphData(data.map(d => ({ label: d.month, count: d.count })));
-    } else if (graphPeriod === "month") {
-      const data = getDailyVisitorsForMonth(selectedMonth);
-      setGraphData(data.map(d => ({ label: d.date, count: d.count })));
     }
     setGraphZoom(1);
     setGraphScroll(0);
-  }, [graphPeriod, selectedMonth]);
+  }, [graphPeriod]);
 
   const onNodeClick = (id: string | null) => {
     if (!id) return;
@@ -1472,15 +1465,14 @@ function App() {
                 {/* Period Switching Buttons */}
                 <div style={{
                   display: "flex",
-                  gap: "8px",
-                  flexWrap: "wrap"
+                  gap: "8px"
                 }}>
-                  {["daily", "weekly", "monthly", "month"].map((period) => (
+                  {["daily", "weekly", "monthly"].map((period) => (
                     <button
                       key={period}
-                      onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly" | "month")}
+                      onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly")}
                       style={{
-                        flex: period === "month" ? "1 0 100%" : 1,
+                        flex: 1,
                         padding: "8px 12px",
                         fontSize: "11px",
                         background: graphPeriod === period ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)",
@@ -1495,35 +1487,9 @@ function App() {
                       {period === "daily" && (locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별")}
                       {period === "weekly" && (locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별")}
                       {period === "monthly" && (locale === "en" ? "Monthly" : locale === "ja" ? "月別" : "월별")}
-                      {period === "month" && (locale === "en" ? "Select Month" : locale === "ja" ? "月選択" : "월 선택")}
                     </button>
                   ))}
                 </div>
-
-                {/* Month Selector */}
-                {graphPeriod === "month" && (
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      fontSize: "12px",
-                      background: "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(255,255,255,0.2)",
-                      borderRadius: "6px",
-                      color: "#94a3b8",
-                      cursor: "pointer",
-                      fontWeight: 500
-                    }}
-                  >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i} value={i} style={{ background: "#0f172a", color: "#e2e8f0" }}>
-                        {i + 1}월
-                      </option>
-                    ))}
-                  </select>
-                )}
 
                 {/* Bar Graph */}
                 <div style={{

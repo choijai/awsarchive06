@@ -165,8 +165,7 @@ export function getDailyVisitors() {
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split("T")[0];
     const count = allData[dateStr]?.count || 0;
-    const day = new Date(dateStr).getDate();
-    result.push({ date: day.toString(), count });
+    result.push({ date: (30 - i).toString(), count });
   }
 
   return result;

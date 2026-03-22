@@ -334,7 +334,10 @@ function App() {
   const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
   const [graphZoom, setGraphZoom] = useState(1);
   const [graphScroll, setGraphScroll] = useState(0);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return now.getMonth();
+  });
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
 
@@ -1499,31 +1502,27 @@ function App() {
 
                 {/* Month Selector */}
                 {graphPeriod === "month" && (
-                  <div style={{
-                    display: "flex",
-                    gap: "8px",
-                    flexWrap: "wrap"
-                  }}>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      fontSize: "12px",
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "6px",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      fontWeight: 500
+                    }}
+                  >
                     {Array.from({ length: 12 }, (_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedMonth(i)}
-                        style={{
-                          flex: "1 0 calc(25% - 6px)",
-                          padding: "6px",
-                          fontSize: "10px",
-                          background: selectedMonth === i ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)",
-                          border: `1px solid ${selectedMonth === i ? "rgba(34,197,94,0.6)" : "rgba(255,255,255,0.2)"}`,
-                          borderRadius: "4px",
-                          color: selectedMonth === i ? "#4ade80" : "#94a3b8",
-                          cursor: "pointer",
-                          fontWeight: selectedMonth === i ? 600 : 500
-                        }}
-                      >
+                      <option key={i} value={i} style={{ background: "#0f172a", color: "#e2e8f0" }}>
                         {i + 1}월
-                      </button>
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 )}
 
                 {/* Bar Graph */}

@@ -590,15 +590,13 @@ function App() {
                 </button>
               </>
             ) : (
-              (tab === "concept" || tab === "status") ? (
-                <button onClick={() => setShowLoginModal(true)} style={{
-                  fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
-                  border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
-                  whiteSpace: "nowrap"
-                }}>
-                  {t("btnLogin")}
-                </button>
-              ) : null
+              <button onClick={() => setShowLoginModal(true)} style={{
+                fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
+                border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                whiteSpace: "nowrap"
+              }}>
+                {t("btnLogin")}
+              </button>
             )}
           </div>
 

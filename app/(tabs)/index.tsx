@@ -1,16 +1,20 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import AWSGraph, { NODES, CAT, AWSNode } from '@/components/aws-graph';
 import { CONCEPTS, ConceptKey } from '@/components/aws-concepts';
+import { generateSAAProblem, Problem } from '@/components/api';
 
 export default function HomeScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const selectedNode = useMemo(() => {
     return NODES.find(n => n.id === selectedId);
@@ -26,6 +30,26 @@ export default function HomeScreen() {
   }, [searchQuery, categoryFilter]);
 
   const concept = selectedNode ? CONCEPTS[selectedNode.id as ConceptKey] : null;
+
+  const handleGenerateProblem = async () => {
+    if (!selectedNode) {
+      Alert.alert('알림', '서비스를 선택한 후 문제를 생성하세요');
+      return;
+    }
+
+    setLoading(true);
+    setSelectedAnswer(null);
+
+    try {
+      const problem = await generateSAAProblem([selectedNode.name], '보통');
+      setProblem(problem);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '문제 생성 실패';
+      Alert.alert('오류', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -103,7 +127,116 @@ export default function HomeScreen() {
 
         {/* Right: Detail Panel */}
         <View style={styles.detailPanel}>
-          {selectedNode && concept ? (
+          {problem ? (
+            // Problem View
+            <ScrollView style={styles.detailContent}>
+              <ThemedView style={styles.problemSection}>
+                <ThemedText type="title" style={styles.problemTitle}>
+                  📝 생성된 문제
+                </ThemedText>
+
+                {/* Question */}
+                <ThemedView style={styles.questionContainer}>
+                  <ThemedText type="subtitle" style={styles.sectionTitle}>
+                    문제
+                  </ThemedText>
+                  <ThemedText style={styles.questionText}>
+                    {problem.question}
+                  </ThemedText>
+                  <ThemedText style={styles.constraintText}>
+                    제약: {problem.constraint.join(' + ')}
+                  </ThemedText>
+                </ThemedView>
+
+                {/* Options */}
+                <ThemedView style={styles.optionsContainer}>
+                  {(['A', 'B', 'C', 'D'] as const).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.optionButton,
+                        selectedAnswer === opt && {
+                          backgroundColor:
+                            opt === problem.answer ? '#4CAF50' : '#F44336',
+                        },
+                      ]}
+                      onPress={() => setSelectedAnswer(opt)}
+                      disabled={!!selectedAnswer}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.optionText,
+                          selectedAnswer === opt && { color: '#fff' },
+                        ]}
+                      >
+                        {opt}. {problem.options[opt]}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ThemedView>
+
+                {/* Explanation */}
+                {selectedAnswer && (
+                  <ThemedView
+                    style={[
+                      styles.explanationContainer,
+                      {
+                        backgroundColor:
+                          selectedAnswer === problem.answer
+                            ? 'rgba(76, 175, 80, 0.1)'
+                            : 'rgba(244, 67, 54, 0.1)',
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.explanationTitle,
+                        {
+                          color:
+                            selectedAnswer === problem.answer ? '#4CAF50' : '#F44336',
+                        },
+                      ]}
+                    >
+                      {selectedAnswer === problem.answer ? '✅ 정답!' : '❌ 오답'}
+                    </ThemedText>
+                    <ThemedText style={styles.explanationText}>
+                      정답: {problem.answer}
+                    </ThemedText>
+                    <ThemedText style={styles.explanationText}>
+                      {problem.explanation.correct}
+                    </ThemedText>
+                    {selectedAnswer !== problem.answer && (
+                      <ThemedText
+                        style={[
+                          styles.explanationText,
+                          { color: '#F44336', marginTop: 10 },
+                        ]}
+                      >
+                        {
+                          problem.explanation[
+                            `trap_${selectedAnswer}` as keyof typeof problem.explanation
+                          ]
+                        }
+                      </ThemedText>
+                    )}
+                  </ThemedView>
+                )}
+
+                {/* Generate New Problem */}
+                <TouchableOpacity
+                  style={styles.newProblemButton}
+                  onPress={() => {
+                    setProblem(null);
+                    setSelectedAnswer(null);
+                  }}
+                >
+                  <ThemedText style={styles.newProblemButtonText}>
+                    다른 문제 생성
+                  </ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
+            </ScrollView>
+          ) : selectedNode && concept ? (
             <ScrollView style={styles.detailContent}>
               <ThemedView style={styles.detailHeader}>
                 <ThemedText style={styles.detailEmoji}>{selectedNode.emoji}</ThemedText>
@@ -154,6 +287,21 @@ export default function HomeScreen() {
                   {/* 여기에 연관 서비스 렌더링 */}
                 </View>
               </ThemedView>
+
+              {/* Generate Problem Button */}
+              <TouchableOpacity
+                style={[styles.generateProblemButton, loading && { opacity: 0.6 }]}
+                onPress={handleGenerateProblem}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <ThemedText style={styles.generateProblemButtonText}>
+                    🚀 이 서비스로 문제 생성
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
             </ScrollView>
           ) : (
             <View style={styles.emptyState}>
@@ -436,5 +584,90 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  problemSection: {
+    padding: 20,
+  },
+  problemTitle: {
+    fontSize: 20,
+    marginBottom: 20,
+    color: '#333',
+  },
+  questionContainer: {
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  questionText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#555',
+    marginBottom: 10,
+  },
+  constraintText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  optionsContainer: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  optionButton: {
+    padding: 12,
+    borderRadius: 6,
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  optionText: {
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 18,
+  },
+  explanationContainer: {
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  explanationTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  explanationText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  newProblemButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  newProblemButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  generateProblemButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#2196F3',
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  generateProblemButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

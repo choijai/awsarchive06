@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
-import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors } from "./analytics";
+import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
 import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, ADMIN_UID } from "./firebase";
 import "./styles.css";
 
@@ -330,7 +330,9 @@ function App() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const [graphMonthOffset, setGraphMonthOffset] = useState(0);
+  const [graphWeekIndex, setGraphWeekIndex] = useState(0);
   const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
   const [graphZoom, setGraphZoom] = useState(1);
   const [graphScroll, setGraphScroll] = useState(0);
@@ -423,10 +425,10 @@ function App() {
   // 그래프 데이터 업데이트
   useEffect(() => {
     if (graphPeriod === "daily") {
-      const data = getDailyVisitors();
+      const data = getDailyVisitorsForMonth(graphMonthOffset);
       setGraphData(data.map(d => ({ label: d.date, count: d.count })));
     } else if (graphPeriod === "weekly") {
-      const data = getWeeklyVisitors();
+      const data = getWeeklyVisitorsForMonth(graphMonthOffset);
       setGraphData(data.map(d => ({ label: d.week, count: d.count })));
     } else if (graphPeriod === "monthly") {
       const data = getMonthlyVisitors();
@@ -434,7 +436,7 @@ function App() {
     }
     setGraphZoom(1);
     setGraphScroll(0);
-  }, [graphPeriod]);
+  }, [graphPeriod, graphMonthOffset, graphWeekIndex]);
 
   const onNodeClick = (id: string | null) => {
     if (!id) return;
@@ -1502,6 +1504,51 @@ function App() {
                   flexDirection: "column",
                   overflow: "hidden"
                 }}>
+                  {/* Graph Header with Navigation */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "12px",
+                    fontSize: "12px",
+                    color: "rgba(255,255,255,0.6)"
+                  }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      {graphPeriod !== "monthly" && (
+                        <button
+                          onClick={() => {
+                            if (graphPeriod === "daily") {
+                              setGraphPeriod("weekly");
+                            } else if (graphPeriod === "weekly") {
+                              setGraphPeriod("monthly");
+                            }
+                          }}
+                          style={{
+                            padding: "4px 8px",
+                            background: "rgba(59,130,246,0.2)",
+                            border: "1px solid rgba(59,130,246,0.3)",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            cursor: "pointer",
+                            fontSize: "11px"
+                          }}>
+                          ← {locale === "en" ? "Back" : locale === "ja" ? "戻る" : "뒤로"}
+                        </button>
+                      )}
+                      <span style={{ fontWeight: "500" }}>
+                        {graphPeriod === "monthly"
+                          ? locale === "en" ? "Monthly Overview" : locale === "ja" ? "月別概要" : "월별 현황"
+                          : graphPeriod === "weekly"
+                          ? locale === "en" ? `Weekly - ${new Date(new Date().getFullYear(), new Date().getMonth() - graphMonthOffset, 1).toLocaleDateString(locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR", { month: "long", year: "numeric" })}` : "주별 현황"
+                          : locale === "en" ? `Daily - ${new Date(new Date().getFullYear(), new Date().getMonth() - graphMonthOffset, 1).toLocaleDateString(locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR", { month: "long", year: "numeric" })}` : "일별 현황"}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>
+                      {graphPeriod === "monthly"
+                        ? locale === "en" ? "Click to zoom in" : locale === "ja" ? "クリックでズーム" : "클릭으로 확대"
+                        : locale === "en" ? "Scroll to zoom, click bar" : locale === "ja" ? "スクロールでズーム" : "스크롤로 줌"}
+                    </span>
+                  </div>
                   {graphData && graphData.length > 0 ? (
                     <div style={{
                       flex: 1,
@@ -1510,8 +1557,22 @@ function App() {
                     }}
                       onWheel={(e) => {
                         e.preventDefault();
-                        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                        setGraphZoom(Math.max(1, Math.min(3, graphZoom * delta)));
+                        // 줌아웃 (아래 스크롤): 더 넓은 범위 보기
+                        if (e.deltaY > 0) {
+                          if (graphPeriod === "daily") {
+                            setGraphPeriod("weekly");
+                          } else if (graphPeriod === "weekly") {
+                            setGraphPeriod("monthly");
+                          }
+                        }
+                        // 줌인 (위로 스크롤): 더 상세하게 보기
+                        else {
+                          if (graphPeriod === "monthly") {
+                            setGraphPeriod("weekly");
+                          } else if (graphPeriod === "weekly") {
+                            setGraphPeriod("daily");
+                          }
+                        }
                       }}
                       onMouseDown={(e) => {
                         const startX = e.clientX;
@@ -1552,11 +1613,32 @@ function App() {
                           const y = 200 - barHeight;
 
                           return (
-                            <g key={`bar-${idx}`}>
+                            <g key={`bar-${idx}`} style={{ cursor: graphPeriod !== "daily" ? "pointer" : "default" }}>
                               <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
-                                fill="rgba(59,130,246,0.6)" rx="3" />
+                                fill="rgba(59,130,246,0.6)" rx="3"
+                                onClick={() => {
+                                  if (graphPeriod === "monthly") {
+                                    // 월 클릭 → Weekly로 변경
+                                    setGraphMonthOffset(idx);
+                                    setGraphPeriod("weekly");
+                                  } else if (graphPeriod === "weekly") {
+                                    // 주 클릭 → Daily로 변경
+                                    setGraphWeekIndex(idx);
+                                    setGraphPeriod("daily");
+                                  }
+                                }} />
                               <text x={x + barWidth * 0.4} y="215" fontSize="9" fill="rgba(255,255,255,0.5)"
-                                textAnchor="middle">
+                                textAnchor="middle"
+                                onClick={() => {
+                                  if (graphPeriod === "monthly") {
+                                    setGraphMonthOffset(idx);
+                                    setGraphPeriod("weekly");
+                                  } else if (graphPeriod === "weekly") {
+                                    setGraphWeekIndex(idx);
+                                    setGraphPeriod("daily");
+                                  }
+                                }}
+                                style={{ cursor: graphPeriod !== "daily" ? "pointer" : "default" }}>
                                 {item.label}
                               </text>
                             </g>

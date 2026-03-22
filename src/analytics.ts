@@ -200,17 +200,15 @@ export function getWeeklyVisitors() {
 }
 
 /**
- * 월별 방문자 데이터 (최근 12개월)
+ * 월별 방문자 데이터 (올해 1월 ~ 12월)
  */
 export function getMonthlyVisitors() {
   const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
   const result: Array<{ month: string; count: number }> = [];
+  const currentYear = new Date().getFullYear();
 
-  for (let i = 0; i < 12; i++) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - (11 - i));
-    const monthStr = date.toISOString().slice(0, 7);
-    const monthNum = new Date(monthStr + "-01").getMonth() + 1;
+  for (let month = 0; month < 12; month++) {
+    const monthStr = `${currentYear}-${String(month + 1).padStart(2, "0")}`;
 
     let monthCount = 0;
     Object.keys(allData).forEach((key) => {
@@ -219,7 +217,7 @@ export function getMonthlyVisitors() {
       }
     });
 
-    result.push({ month: `${monthNum}월`, count: monthCount });
+    result.push({ month: `${month + 1}월`, count: monthCount });
   }
 
   return result;
@@ -244,6 +242,87 @@ export function getDailyVisitorsForMonth(monthOffset: number) {
     const dateStr = date.toISOString().split("T")[0];
     const count = allData[dateStr]?.count || 0;
     result.push({ date: day.toString(), count });
+  }
+
+  return result;
+}
+
+/**
+ * 특정 월의 주별 방문자 데이터
+ */
+export function getWeeklyVisitorsForMonth(monthOffset: number) {
+  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
+  const result: Array<{ week: string; count: number }> = [];
+
+  const targetDate = new Date();
+  targetDate.setMonth(targetDate.getMonth() - monthOffset);
+  const year = targetDate.getFullYear();
+  const month = targetDate.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  let weekCount = 1;
+  let currentDate = new Date(firstDay);
+
+  // 첫 주의 시작일 (월요일부터)
+  const firstDayOfWeek = firstDay.getDay();
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDayOfWeek);
+
+  currentDate = new Date(startDate);
+
+  while (currentDate <= lastDay) {
+    let count = 0;
+
+    // 7일간 데이터 합산
+    for (let i = 0; i < 7; i++) {
+      const dateStr = currentDate.toISOString().split("T")[0];
+      count += allData[dateStr]?.count || 0;
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // 현재 월에 속하는 주만 표시
+    if (weekCount <= 6) {
+      result.push({ week: `W${weekCount}`, count });
+      weekCount++;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 특정 월의 특정 주의 일별 방문자 데이터 (weekIndex: 0~5)
+ */
+export function getDailyVisitorsForWeek(monthOffset: number, weekIndex: number) {
+  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
+  const result: Array<{ date: string; count: number }> = [];
+
+  const targetDate = new Date();
+  targetDate.setMonth(targetDate.getMonth() - monthOffset);
+  const year = targetDate.getFullYear();
+  const month = targetDate.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const firstDayOfWeek = firstDay.getDay();
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDayOfWeek);
+
+  // 요청된 주의 시작일
+  const weekStartDate = new Date(startDate);
+  weekStartDate.setDate(weekStartDate.getDate() + weekIndex * 7);
+
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(weekStartDate);
+    currentDate.setDate(currentDate.getDate() + i);
+    const dateStr = currentDate.toISOString().split("T")[0];
+    const count = allData[dateStr]?.count || 0;
+    const dayName = dayNames[currentDate.getDay()];
+
+    result.push({ date: dayName, count });
   }
 
   return result;

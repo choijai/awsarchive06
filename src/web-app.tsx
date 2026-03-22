@@ -1557,22 +1557,8 @@ function App() {
                     }}
                       onWheel={(e) => {
                         e.preventDefault();
-                        // 줌아웃 (아래 스크롤): 더 넓은 범위 보기
-                        if (e.deltaY > 0) {
-                          if (graphPeriod === "daily") {
-                            setGraphPeriod("weekly");
-                          } else if (graphPeriod === "weekly") {
-                            setGraphPeriod("monthly");
-                          }
-                        }
-                        // 줌인 (위로 스크롤): 더 상세하게 보기
-                        else {
-                          if (graphPeriod === "monthly") {
-                            setGraphPeriod("weekly");
-                          } else if (graphPeriod === "weekly") {
-                            setGraphPeriod("daily");
-                          }
-                        }
+                        const delta = e.deltaY > 0 ? 1.2 : 0.9;
+                        setGraphZoom(Math.max(0.5, Math.min(5, graphZoom * delta)));
                       }}
                       onMouseDown={(e) => {
                         const startX = e.clientX;
@@ -1589,25 +1575,34 @@ function App() {
                         document.addEventListener("mouseup", handleMouseUp);
                       }}
                     >
-                      <svg viewBox={`${graphScroll} 0 500 250`} style={{ width: `${graphZoom * 100}%`, height: "100%", minWidth: "100%" }}>
-                        {/* X-axis */}
-                        <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                        {/* Y-axis */}
-                        <line x1="40" y1="20" x2="40" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                      {(() => {
+                        const maxScale = 100 / graphZoom;
+                        const gridStep = Math.ceil(maxScale / 5 / 10) * 10; // Round to nearest 10
+                        const gridValues = [];
+                        for (let i = 0; i <= maxScale; i += gridStep) {
+                          gridValues.push(i);
+                        }
 
-                        {/* Grid lines and labels (0-100 range) */}
-                        {[0, 20, 40, 60, 80, 100].map((value) => (
-                          <g key={`grid-${value}`}>
-                            <line x1="35" y1={200 - (value / 100) * 180} x2="480" y2={200 - (value / 100) * 180} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                            <text x="25" y={205 - (value / 100) * 180} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
-                              {value}
-                            </text>
-                          </g>
-                        ))}
+                        return (
+                          <svg viewBox={`${graphScroll} 0 500 250`} style={{ width: `${graphZoom * 100}%`, height: "100%", minWidth: "100%" }}>
+                            {/* X-axis */}
+                            <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                            {/* Y-axis */}
+                            <line x1="40" y1="20" x2="40" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
 
-                        {/* Bars */}
-                        {graphData.map((item, idx) => {
-                          const barHeight = Math.min(item.count, 100) * 1.8; // Scale to 0-100 range
+                            {/* Grid lines and labels (dynamic range) */}
+                            {gridValues.map((value) => (
+                              <g key={`grid-${value}`}>
+                                <line x1="35" y1={200 - (value / maxScale) * 180} x2="480" y2={200 - (value / maxScale) * 180} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                                <text x="25" y={205 - (value / maxScale) * 180} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
+                                  {value}
+                                </text>
+                              </g>
+                            ))}
+
+                            {/* Bars */}
+                            {graphData.map((item, idx) => {
+                              const barHeight = (item.count / maxScale) * 180;
                           const barWidth = 430 / graphData.length;
                           const x = 45 + idx * barWidth + barWidth * 0.1;
                           const y = 200 - barHeight;
@@ -1645,6 +1640,8 @@ function App() {
                           );
                         })}
                       </svg>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div style={{

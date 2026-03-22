@@ -165,7 +165,8 @@ export function getDailyVisitors() {
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split("T")[0];
     const count = allData[dateStr]?.count || 0;
-    result.push({ date: dateStr.slice(5), count });
+    const day = new Date(dateStr).getDate();
+    result.push({ date: day.toString(), count });
   }
 
   return result;
@@ -210,6 +211,7 @@ export function getMonthlyVisitors() {
     const date = new Date();
     date.setMonth(date.getMonth() - (11 - i));
     const monthStr = date.toISOString().slice(0, 7);
+    const monthNum = new Date(monthStr + "-01").getMonth() + 1;
 
     let monthCount = 0;
     Object.keys(allData).forEach((key) => {
@@ -218,7 +220,31 @@ export function getMonthlyVisitors() {
       }
     });
 
-    result.push({ month: monthStr.slice(5), count: monthCount });
+    result.push({ month: `${monthNum}월`, count: monthCount });
+  }
+
+  return result;
+}
+
+/**
+ * 특정 월의 일별 방문자 데이터
+ */
+export function getDailyVisitorsForMonth(monthOffset: number) {
+  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
+  const result: Array<{ date: string; count: number }> = [];
+
+  const targetDate = new Date();
+  targetDate.setMonth(targetDate.getMonth() - monthOffset);
+  const year = targetDate.getFullYear();
+  const month = targetDate.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const dateStr = date.toISOString().split("T")[0];
+    const count = allData[dateStr]?.count || 0;
+    result.push({ date: day.toString(), count });
   }
 
   return result;

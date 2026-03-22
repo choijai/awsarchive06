@@ -83,7 +83,7 @@ export const CAT: Record<string, {color: string; glow: string; label: string}> =
   monitor:  {color:"#7f8c8d",glow:"#bdc3c7",label:"Monitor"},
 };
 
-export const CONCEPTS: Record<string, Concept> = {
+export const CONCEPTS_KO: Record<string, Concept> = {
   ec2: {
     title:"Amazon EC2", subtitle:"Elastic Compute Cloud",
     easy:"EC2는 인터넷에 있는 내 컴퓨터야! 필요할 때만 빌려 쓰고 돈을 내는 구조야. 항상 쓸 거면 미리 예약하면 최대 72% 싸게 쓸 수 있어.",
@@ -426,3 +426,19 @@ export const CONCEPTS: Record<string, Concept> = {
     ]
   },
 };
+
+export const CONCEPTS_JA: Record<string, Concept> = {
+  ec2: {
+    title:"Amazon EC2", subtitle:"Elastic Compute Cloud",
+    easy:"EC2はインターネット上の自分のコンピューター! 必要な時だけ借りて料金を払う仕組み。常に使うなら事前に予約すると最大72%安く使える。",
+    points:[
+      {label:"インスタンス購入オプション", text:"On-Demand(柔軟), Reserved(1~3年契約 最大72%割引), Spot(最大90%割引、いつでも終了可能), Dedicated Host(物理サーバー専用)", easy:"On-Demandは当日レンタル(高い), Reservedは1年長期契約(安い), Spotは空き車の超特価でいつでも返却可能。"},
+      {label:"AMI", text:"Amazon Machine Image. インスタンスのOS・ソフトウェアテンプレート。カスタムAMIで高速デプロイ可能。リージョン間でコピー可能", easy:"クッキー型のようなもの! 1つの型(AMI)を作ったら、同じ形のクッキー(サーバー)をいくつでも素早く量産できる。"},
+      {label:"Placement Group", text:"Cluster(同じAZ、低レイテンシ), Spread(異なるハードウェア、障害の分離), Partition(大規模分散システム)", easy:"教室の座席配置のようなもの! Clusterはチームメンバー固まって座る(素早い通信), Spreadはわざと離れて座る(一人が欠席しても他のチーム影響なし)。"},
+      {label:"ストレージ", text:"EBS(永続ブロック), Instance Store(一時的・高速), EFS(共有ファイルシステム)", easy:"EBSは個人ロッカー(オフでも保持), Instance Storeは机の上のメモ(オフで消える), EFSは共用キャビネット(みんなで使える)。"},
+      {label:"試験ポイント", text:"Spot Instance中断時に2分警告。Reservedはスコープを選択可(AZまたはリージョン)。HibernateでRAM保持状態で停止可能", easy:"Spotはカラオケの空き部屋 — 他の客が予約したら2分以内に出ないといけない! HibernateはノートPC省電力モード — オフにして再度オンにしても作業が同じままだ。"},
+    ]
+  },
+};
+
+export const CONCEPTS = CONCEPTS_KO;

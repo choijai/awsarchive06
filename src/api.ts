@@ -23,7 +23,9 @@ export interface Problem {
   };
   answer: string;
   explanation: {
-    correct: string;
+    architecture?: string;  // 전체 아키텍처 흐름 설명
+    correct: string;        // 정답인 이유
+    service_features?: string;  // AWS 서비스 특징
     trap_A: string;
     trap_B?: string;
     trap_C: string;
@@ -50,16 +52,15 @@ export async function generateSAAProblem(
   const prompt = generatePrompt(serviceNames, difficulty, locale);
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // 백엔드 프록시 서버로 요청 (CORS 우회)
+    const response = await fetch("http://localhost:5000/api/claude", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-3-5-haiku-20241022",
-        max_tokens: 2000,
+        max_tokens: 3000,  // 상세한 설명을 위해 2000에서 3000으로 증가
         messages: [
           {
             role: "user",
@@ -115,12 +116,11 @@ ${JSON.stringify(concept)}
 Output (JSON only):`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // 백엔드 프록시 서버로 요청 (CORS 우회)
+    const response = await fetch("http://localhost:5000/api/claude", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-3-5-haiku-20241022",

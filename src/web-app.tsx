@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
-import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors } from "./analytics";
+import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth } from "./analytics";
 import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, ADMIN_UID } from "./firebase";
 import "./styles.css";
 
@@ -330,8 +330,11 @@ function App() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly" | "month">("daily");
   const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
+  const [graphZoom, setGraphZoom] = useState(1);
+  const [graphScroll, setGraphScroll] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
 
@@ -429,8 +432,13 @@ function App() {
     } else if (graphPeriod === "monthly") {
       const data = getMonthlyVisitors();
       setGraphData(data.map(d => ({ label: d.month, count: d.count })));
+    } else if (graphPeriod === "month") {
+      const data = getDailyVisitorsForMonth(selectedMonth);
+      setGraphData(data.map(d => ({ label: d.date, count: d.count })));
     }
-  }, [graphPeriod]);
+    setGraphZoom(1);
+    setGraphScroll(0);
+  }, [graphPeriod, selectedMonth]);
 
   const onNodeClick = (id: string | null) => {
     if (!id) return;
@@ -1461,14 +1469,15 @@ function App() {
                 {/* Period Switching Buttons */}
                 <div style={{
                   display: "flex",
-                  gap: "8px"
+                  gap: "8px",
+                  flexWrap: "wrap"
                 }}>
-                  {["daily", "weekly", "monthly"].map((period) => (
+                  {["daily", "weekly", "monthly", "month"].map((period) => (
                     <button
                       key={period}
-                      onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly")}
+                      onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly" | "month")}
                       style={{
-                        flex: 1,
+                        flex: period === "month" ? "1 0 100%" : 1,
                         padding: "8px 12px",
                         fontSize: "11px",
                         background: graphPeriod === period ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)",
@@ -1483,9 +1492,39 @@ function App() {
                       {period === "daily" && (locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별")}
                       {period === "weekly" && (locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별")}
                       {period === "monthly" && (locale === "en" ? "Monthly" : locale === "ja" ? "月別" : "월별")}
+                      {period === "month" && (locale === "en" ? "Select Month" : locale === "ja" ? "月選択" : "월 선택")}
                     </button>
                   ))}
                 </div>
+
+                {/* Month Selector */}
+                {graphPeriod === "month" && (
+                  <div style={{
+                    display: "flex",
+                    gap: "8px",
+                    flexWrap: "wrap"
+                  }}>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedMonth(i)}
+                        style={{
+                          flex: "1 0 calc(25% - 6px)",
+                          padding: "6px",
+                          fontSize: "10px",
+                          background: selectedMonth === i ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)",
+                          border: `1px solid ${selectedMonth === i ? "rgba(34,197,94,0.6)" : "rgba(255,255,255,0.2)"}`,
+                          borderRadius: "4px",
+                          color: selectedMonth === i ? "#4ade80" : "#94a3b8",
+                          cursor: "pointer",
+                          fontWeight: selectedMonth === i ? 600 : 500
+                        }}
+                      >
+                        {i + 1}월
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Bar Graph */}
                 <div style={{
@@ -1495,47 +1534,71 @@ function App() {
                   padding: "16px",
                   border: "1px solid rgba(255,255,255,0.08)",
                   display: "flex",
-                  flexDirection: "column"
+                  flexDirection: "column",
+                  overflow: "hidden"
                 }}>
                   {graphData && graphData.length > 0 ? (
-                    <svg viewBox="0 0 500 250" style={{ width: "100%", height: "100%" }}>
-                      {/* X-axis */}
-                      <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                      {/* Y-axis */}
-                      <line x1="40" y1="20" x2="40" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                    <div style={{
+                      flex: 1,
+                      overflow: "auto",
+                      cursor: "grab"
+                    }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                        setGraphZoom(Math.max(1, Math.min(3, graphZoom * delta)));
+                      }}
+                      onMouseDown={(e) => {
+                        const startX = e.clientX;
+                        const startScroll = graphScroll;
+                        const handleMouseMove = (moveEvent: MouseEvent) => {
+                          const delta = moveEvent.clientX - startX;
+                          setGraphScroll(Math.max(0, startScroll - delta * 2));
+                        };
+                        const handleMouseUp = () => {
+                          document.removeEventListener("mousemove", handleMouseMove);
+                          document.removeEventListener("mouseup", handleMouseUp);
+                        };
+                        document.addEventListener("mousemove", handleMouseMove);
+                        document.addEventListener("mouseup", handleMouseUp);
+                      }}
+                    >
+                      <svg viewBox={`${graphScroll} 0 500 250`} style={{ width: `${graphZoom * 100}%`, height: "100%", minWidth: "100%" }}>
+                        {/* X-axis */}
+                        <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                        {/* Y-axis */}
+                        <line x1="40" y1="20" x2="40" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
 
-                      {/* Grid lines and labels */}
-                      {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <g key={`grid-${i}`}>
-                          <line x1="35" y1={200 - i * 36} x2="480" y2={200 - i * 36} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                          <text x="25" y={205 - i * 36} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
-                            {Math.max(...graphData.map(d => d.count), 0) > 0
-                              ? Math.round((i / 5) * Math.max(...graphData.map(d => d.count)))
-                              : 0}
-                          </text>
-                        </g>
-                      ))}
-
-                      {/* Bars */}
-                      {graphData.map((item, idx) => {
-                        const maxCount = Math.max(...graphData.map(d => d.count), 1);
-                        const barHeight = (item.count / maxCount) * 180;
-                        const barWidth = 430 / graphData.length;
-                        const x = 45 + idx * barWidth + barWidth * 0.1;
-                        const y = 200 - barHeight;
-
-                        return (
-                          <g key={`bar-${idx}`}>
-                            <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
-                              fill="rgba(59,130,246,0.6)" rx="3" />
-                            <text x={x + barWidth * 0.4} y="215" fontSize="9" fill="rgba(255,255,255,0.5)"
-                              textAnchor="middle">
-                              {item.label}
+                        {/* Grid lines and labels (0-100 range) */}
+                        {[0, 20, 40, 60, 80, 100].map((value) => (
+                          <g key={`grid-${value}`}>
+                            <line x1="35" y1={200 - (value / 100) * 180} x2="480" y2={200 - (value / 100) * 180} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                            <text x="25" y={205 - (value / 100) * 180} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
+                              {value}
                             </text>
                           </g>
-                        );
-                      })}
-                    </svg>
+                        ))}
+
+                        {/* Bars */}
+                        {graphData.map((item, idx) => {
+                          const barHeight = Math.min(item.count, 100) * 1.8; // Scale to 0-100 range
+                          const barWidth = 430 / graphData.length;
+                          const x = 45 + idx * barWidth + barWidth * 0.1;
+                          const y = 200 - barHeight;
+
+                          return (
+                            <g key={`bar-${idx}`}>
+                              <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
+                                fill="rgba(59,130,246,0.6)" rx="3" />
+                              <text x={x + barWidth * 0.4} y="215" fontSize="9" fill="rgba(255,255,255,0.5)"
+                                textAnchor="middle">
+                                {item.label}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
                   ) : (
                     <div style={{
                       flex: 1,
@@ -1549,6 +1612,18 @@ function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Zoom Info */}
+                {graphData && graphData.length > 0 && (
+                  <div style={{
+                    fontSize: "10px",
+                    color: "#64748b",
+                    marginTop: "8px",
+                    textAlign: "center"
+                  }}>
+                    {locale === "en" ? "Scroll to zoom, drag to pan" : locale === "ja" ? "スクロールでズーム、ドラッグで移動" : "스크롤로 줌, 드래그로 이동"}
+                  </div>
+                )}
               </div>
             </>
           ) : (

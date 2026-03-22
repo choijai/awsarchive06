@@ -1150,6 +1150,32 @@ function App() {
 
           {tab === "concept" && (
             <div className="concept-panel">
+              {!userEmail && (
+                <div style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  textAlign: "center",
+                  marginBottom: "16px"
+                }}>
+                  <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "12px" }}>
+                    {t("loginPrompt")}
+                  </p>
+                  <button onClick={() => setShowLoginModal(true)} style={{
+                    padding: "8px 16px",
+                    background: "rgba(59, 130, 246, 0.2)",
+                    border: "1px solid rgba(59, 130, 246, 0.5)",
+                    borderRadius: "6px",
+                    color: "#60a5fa",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 600
+                  }}>
+                    {t("loginButton")}
+                  </button>
+                </div>
+              )}
               {concept && selectedNode ? (
                 <>
                   <div className="concept-header">
@@ -1201,29 +1227,31 @@ function App() {
                 </h2>
 
                 {/* Login prompt if not logged in */}
-                <div style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  textAlign: "center"
-                }}>
-                  <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "12px" }}>
-                    {t("loginPrompt")}
-                  </p>
-                  <button style={{
-                    padding: "8px 16px",
-                    background: "rgba(59, 130, 246, 0.2)",
-                    border: "1px solid rgba(59, 130, 246, 0.5)",
-                    borderRadius: "6px",
-                    color: "#60a5fa",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: 600
+                {!userEmail && (
+                  <div style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    textAlign: "center"
                   }}>
-                    {t("loginButton")}
-                  </button>
-                </div>
+                    <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "12px" }}>
+                      {t("loginPrompt")}
+                    </p>
+                    <button onClick={() => setShowLoginModal(true)} style={{
+                      padding: "8px 16px",
+                      background: "rgba(59, 130, 246, 0.2)",
+                      border: "1px solid rgba(59, 130, 246, 0.5)",
+                      borderRadius: "6px",
+                      color: "#60a5fa",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontWeight: 600
+                    }}>
+                      {t("loginButton")}
+                    </button>
+                  </div>
+                )}
 
                 {/* Stats cards */}
                 <div style={{

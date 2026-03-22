@@ -1393,100 +1393,6 @@ function App() {
                 </div>
               </div>
 
-              {/* Period Switching Buttons */}
-              <div style={{
-                display: "flex",
-                gap: "8px",
-                paddingTop: "12px",
-                borderTop: "1px solid rgba(255,255,255,0.1)"
-              }}>
-                {["daily", "weekly", "monthly"].map((period) => (
-                  <button
-                    key={period}
-                    onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly")}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      fontSize: "11px",
-                      background: graphPeriod === period ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)",
-                      border: `1px solid ${graphPeriod === period ? "rgba(59,130,246,0.6)" : "rgba(255,255,255,0.2)"}`,
-                      borderRadius: "6px",
-                      color: graphPeriod === period ? "#60a5fa" : "#94a3b8",
-                      cursor: "pointer",
-                      fontWeight: graphPeriod === period ? 600 : 500,
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    {period === "daily" && (locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별")}
-                    {period === "weekly" && (locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별")}
-                    {period === "monthly" && (locale === "en" ? "Monthly" : locale === "ja" ? "月別" : "월별")}
-                  </button>
-                ))}
-              </div>
-
-              {/* Bar Graph Visualization */}
-              <div style={{
-                background: "rgba(255,255,255,0.04)",
-                borderRadius: "8px",
-                padding: "16px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                minHeight: "200px",
-                display: "flex",
-                flexDirection: "column"
-              }}>
-                {graphData && graphData.length > 0 ? (
-                  <svg viewBox="0 0 500 200" style={{ width: "100%", height: "200px" }}>
-                    {/* X-axis */}
-                    <line x1="40" y1="180" x2="480" y2="180" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                    {/* Y-axis */}
-                    <line x1="40" y1="20" x2="40" y2="180" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-
-                    {/* Grid lines and labels */}
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <g key={`grid-${i}`}>
-                        <line x1="35" y1={180 - i * 32} x2="480" y2={180 - i * 32} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                        <text x="25" y={185 - i * 32} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
-                          {Math.max(...graphData.map(d => d.count), 0) > 0
-                            ? Math.round((i / 5) * Math.max(...graphData.map(d => d.count)))
-                            : 0}
-                        </text>
-                      </g>
-                    ))}
-
-                    {/* Bars */}
-                    {graphData.map((item, idx) => {
-                      const maxCount = Math.max(...graphData.map(d => d.count), 1);
-                      const barHeight = (item.count / maxCount) * 160;
-                      const barWidth = 430 / graphData.length;
-                      const x = 45 + idx * barWidth + barWidth * 0.1;
-                      const y = 180 - barHeight;
-
-                      return (
-                        <g key={`bar-${idx}`}>
-                          <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
-                            fill="rgba(59,130,246,0.6)" rx="3" />
-                          <text x={x + barWidth * 0.4} y="195" fontSize="9" fill="rgba(255,255,255,0.5)"
-                            textAnchor="middle">
-                            {item.label}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                ) : (
-                  <div style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#64748b",
-                    fontSize: "12px"
-                  }}>
-                    {locale === "en" ? "No data available" : locale === "ja" ? "データがありません" : "데이터 없음"}
-                  </div>
-                )}
-              </div>
-
               {/* Test Purchase Button */}
               <div style={{
                 paddingTop: "12px"
@@ -1539,16 +1445,122 @@ function App() {
           )}
         </div>
 
-        {/* Right: Graph */}
-        {tab !== "admin" ? (
-          <div className="graph-panel">
-            <div className="graph-label">{t("graphLabel")}</div>
-            <div className="graph-box">
-              <GraphSVG pos={pos} setPos={setPos} posRef={posRef} dragRef={dragRef}
-                selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} />
-            </div>
-          </div>
-        ) : null}
+        {/* Right: Graph or Admin Chart */}
+        <div className="graph-panel">
+          {tab === "admin" ? (
+            <>
+              {/* Admin Bar Graph */}
+              <div className="graph-label">📊 Visitor Analytics</div>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+                gap: "12px",
+                padding: "16px"
+              }}>
+                {/* Period Switching Buttons */}
+                <div style={{
+                  display: "flex",
+                  gap: "8px"
+                }}>
+                  {["daily", "weekly", "monthly"].map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly")}
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        fontSize: "11px",
+                        background: graphPeriod === period ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)",
+                        border: `1px solid ${graphPeriod === period ? "rgba(59,130,246,0.6)" : "rgba(255,255,255,0.2)"}`,
+                        borderRadius: "6px",
+                        color: graphPeriod === period ? "#60a5fa" : "#94a3b8",
+                        cursor: "pointer",
+                        fontWeight: graphPeriod === period ? 600 : 500,
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {period === "daily" && (locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별")}
+                      {period === "weekly" && (locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별")}
+                      {period === "monthly" && (locale === "en" ? "Monthly" : locale === "ja" ? "月別" : "월별")}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Bar Graph */}
+                <div style={{
+                  flex: 1,
+                  background: "rgba(255,255,255,0.04)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex",
+                  flexDirection: "column"
+                }}>
+                  {graphData && graphData.length > 0 ? (
+                    <svg viewBox="0 0 500 250" style={{ width: "100%", height: "100%" }}>
+                      {/* X-axis */}
+                      <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                      {/* Y-axis */}
+                      <line x1="40" y1="20" x2="40" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+
+                      {/* Grid lines and labels */}
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <g key={`grid-${i}`}>
+                          <line x1="35" y1={200 - i * 36} x2="480" y2={200 - i * 36} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <text x="25" y={205 - i * 36} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
+                            {Math.max(...graphData.map(d => d.count), 0) > 0
+                              ? Math.round((i / 5) * Math.max(...graphData.map(d => d.count)))
+                              : 0}
+                          </text>
+                        </g>
+                      ))}
+
+                      {/* Bars */}
+                      {graphData.map((item, idx) => {
+                        const maxCount = Math.max(...graphData.map(d => d.count), 1);
+                        const barHeight = (item.count / maxCount) * 180;
+                        const barWidth = 430 / graphData.length;
+                        const x = 45 + idx * barWidth + barWidth * 0.1;
+                        const y = 200 - barHeight;
+
+                        return (
+                          <g key={`bar-${idx}`}>
+                            <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
+                              fill="rgba(59,130,246,0.6)" rx="3" />
+                            <text x={x + barWidth * 0.4} y="215" fontSize="9" fill="rgba(255,255,255,0.5)"
+                              textAnchor="middle">
+                              {item.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  ) : (
+                    <div style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#64748b",
+                      fontSize: "12px"
+                    }}>
+                      {locale === "en" ? "No data available" : locale === "ja" ? "データがありません" : "데이터 없음"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="graph-label">{t("graphLabel")}</div>
+              <div className="graph-box">
+                <GraphSVG pos={pos} setPos={setPos} posRef={posRef} dragRef={dragRef}
+                  selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

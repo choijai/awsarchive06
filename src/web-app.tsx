@@ -1,9 +1,107 @@
 import { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { NODES, LINKS, CAT, CONCEPTS } from "./data";
+import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
+import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors } from "./analytics";
+import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, ADMIN_UID } from "./firebase";
 import "./styles.css";
+
+// ===== 사용자 인증 및 일일 제한 관리 =====
+type UserStatus = "guest" | "loggedIn" | "paid";
+
+function getUserStatus(): UserStatus {
+  if (typeof window === "undefined") return "guest";
+  const status = localStorage.getItem("userStatus");
+  return (status as UserStatus) || "guest";
+}
+
+function setUserStatus(status: UserStatus) {
+  localStorage.setItem("userStatus", status);
+}
+
+function getTodayProblemCount(): number {
+  if (typeof window === "undefined") return 0;
+  const today = new Date().toISOString().split("T")[0];
+  const stored = localStorage.getItem("problemCountDate");
+  if (stored !== today) {
+    localStorage.setItem("problemCountDate", today);
+    localStorage.setItem("problemCount", "0");
+    return 0;
+  }
+  return parseInt(localStorage.getItem("problemCount") || "0", 10);
+}
+
+function incrementProblemCount() {
+  const count = getTodayProblemCount() + 1;
+  localStorage.setItem("problemCount", count.toString());
+}
+
+function getDailyLimit(): number {
+  const status = getUserStatus();
+  if (status === "paid") return 20;
+  if (status === "loggedIn") return 2;
+  return 2; // 비로그인은 2회
+}
+
+/**
+ * 연속 방문 일수 계산 및 업데이트
+ */
+function updateStreak(): number {
+  if (typeof window === "undefined") return 0;
+  const today = new Date().toISOString().split("T")[0];
+  const lastVisitDate = localStorage.getItem("lastVisitDate");
+  let streak = parseInt(localStorage.getItem("streak") || "0");
+
+  if (lastVisitDate === today) {
+    // 오늘 이미 방문함 - streak 유지
+    return streak;
+  }
+
+  if (lastVisitDate) {
+    const lastDate = new Date(lastVisitDate);
+    const todayDate = new Date(today);
+    const diffTime = todayDate.getTime() - lastDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      // 어제 방문했으므로 카운트 증가
+      streak += 1;
+    } else if (diffDays > 1) {
+      // 2일 이상 지났으므로 리셋
+      streak = 1;
+    }
+  } else {
+    // 첫 방문
+    streak = 1;
+  }
+
+  localStorage.setItem("lastVisitDate", today);
+  localStorage.setItem("streak", streak.toString());
+  return streak;
+}
+
+function getExamDday(): string {
+  if (typeof window === "undefined") return "-";
+  const startDate = localStorage.getItem("examStartDate");
+  if (!startDate) return "-";
+
+  const start = new Date(startDate);
+  const now = new Date();
+  const examDate = new Date(start);
+  examDate.setDate(examDate.getDate() + 84); // 12주 = 84일
+
+  const diff = examDate.getTime() - now.getTime();
+  const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (daysLeft <= 0) return "D-Day";
+  return `D-${daysLeft}`;
+}
+
+function setExamStartDate() {
+  const today = new Date().toISOString().split("T")[0];
+  localStorage.setItem("examStartDate", today);
+}
 
 const W = 900, H = 520;
 
@@ -218,7 +316,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 function App() {
   const { locale, setLocale, t } = useLocale();
   const { pos, setPos, posRef, dragRef } = useForce();
-  const [tab, setTab] = useState<"quiz" | "concept" | "status">("quiz");
+  const [tab, setTab] = useState<"quiz" | "concept" | "status" | "admin">("quiz");
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string | null>(null);
@@ -227,8 +325,112 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [visitorCount, setVisitorCount] = useState(0);
+  const [totalVisitorCount, setTotalVisitorCount] = useState(0);
+  const [purchaseCount, setPurchaseCount] = useState(0);
+  const [paidUsers, setPaidUsers] = useState(0);
+  const [freeUsers, setFreeUsers] = useState(0);
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
+
+  // 사용자 상태 및 일일 제한
+  const [userStatus, setUserStatusLocal] = useState<UserStatus>("guest");
+  const [dailyCount, setDailyCount] = useState(0);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [dday, setDday] = useState("-");
+  const [showExamDateModal, setShowExamDateModal] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
+
+  // Track visitors and load purchase count on mount
+  useEffect(() => {
+    const count = trackVisitor();
+    setVisitorCount(count);
+    setTotalVisitorCount(getTotalVisitorCount());
+    setPurchaseCount(getTodayPurchaseCount());
+
+    // 사용자 상태 초기화
+    setUserStatusLocal(getUserStatus());
+    setDailyCount(getTodayProblemCount());
+
+    // 저장된 이메일 불러오기
+    const savedEmail = localStorage.getItem("userEmail");
+    if (savedEmail) {
+      setUserEmail(savedEmail);
+    }
+
+    // D-day 초기화
+    setDday(getExamDday());
+
+    // 1초마다 D-day 업데이트
+    const interval = setInterval(() => {
+      setDday(getExamDday());
+    }, 1000);
+
+    // 화면 업데이트 강제 (날짜 변경 감지)
+    const dateCheckInterval = setInterval(() => {
+      const newDday = getExamDday();
+      if (newDday !== dday) {
+        setDday(newDday);
+      }
+    }, 60000); // 1분마다 확인
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 로그인 후 streak 업데이트 (Firebase)
+  useEffect(() => {
+    if (userEmail) {
+      (async () => {
+        try {
+          // Firebase Auth의 실제 uid를 사용하여 업데이트
+          const firebaseStreak = await updateStreakInFirebase(userStatus);
+          setStreak(firebaseStreak);
+          // 로컬 저장소에도 백업
+          localStorage.setItem("streak", firebaseStreak.toString());
+        } catch (error) {
+          console.error("Firebase streak 업데이트 실패, 로컬로 폴백:", error);
+          // Firebase 실패 시 로컬 함수 사용
+          setStreak(updateStreak());
+        }
+      })();
+    }
+  }, [userEmail]);
+
+  // Admin 탭 통계 로드
+  useEffect(() => {
+    if (tab === "admin" && ADMIN_UID && userEmail) {
+      (async () => {
+        try {
+          const stats = await getAdminStats();
+          setPaidUsers(stats.paidUsers);
+          setFreeUsers(stats.freeUsers);
+        } catch (error) {
+          console.error("관리자 통계 로드 실패:", error);
+        }
+      })();
+    }
+  }, [tab]);
+
+  // 그래프 데이터 업데이트
+  useEffect(() => {
+    if (graphPeriod === "daily") {
+      const data = getDailyVisitors();
+      setGraphData(data.map(d => ({ label: d.date, count: d.count })));
+    } else if (graphPeriod === "weekly") {
+      const data = getWeeklyVisitors();
+      setGraphData(data.map(d => ({ label: d.week, count: d.count })));
+    } else if (graphPeriod === "monthly") {
+      const data = getMonthlyVisitors();
+      setGraphData(data.map(d => ({ label: d.month, count: d.count })));
+    }
+  }, [graphPeriod]);
 
   const onNodeClick = (id: string | null) => {
     if (!id) return;
@@ -256,6 +458,14 @@ function App() {
   const handleGenerateProblem = async () => {
     if (slots.length === 0) return;
 
+    // 일일 제한 확인
+    const limit = getDailyLimit();
+    if (dailyCount >= limit) {
+      setError(getQuotaMessage(userStatus, limit, dailyCount));
+      setShowAuthModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
@@ -269,6 +479,10 @@ function App() {
       const diff = (difficulty || "medium") as "easy" | "medium" | "hard";
       const generatedProblem = await generateSAAProblem(serviceNames, diff, locale);
       setProblem(generatedProblem);
+
+      // 카운트 증가
+      incrementProblemCount();
+      setDailyCount(getTodayProblemCount());
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGenerate"));
       console.error(err);
@@ -277,37 +491,29 @@ function App() {
     }
   };
 
-  // Concept translation logic
+  // 할당량 메시지 생성
+  function getQuotaMessage(status: UserStatus, limit: number, current: number): string {
+    const remaining = Math.max(0, limit - current);
+    if (status === "guest") {
+      return `🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade to unlimited.`;
+    }
+    if (status === "loggedIn") {
+      return `✨ Your free 2 attempts are used. Please upgrade to generate unlimited problems today!`;
+    }
+    return `Limit reached (${current}/${limit}).`;
+  }
+
+  // Get concept for current locale
   const getConceptForLocale = async () => {
     if (!selected) return null;
 
-    if (locale === "ko") {
-      return CONCEPTS[selected] || null;
-    }
+    const conceptsByLocale = {
+      ko: CONCEPTS_KO,
+      en: CONCEPTS_KO, // Fallback to Korean (English version not available yet)
+      ja: CONCEPTS_KO, // Fallback to Korean (Japanese version coming soon)
+    };
 
-    const cacheKey = `${locale}:${selected}`;
-    if (conceptCache.has(cacheKey)) {
-      return conceptCache.get(cacheKey)!;
-    }
-
-    // Fetch and translate
-    const koConcept = CONCEPTS[selected];
-    if (!koConcept) return null;
-
-    setConceptTranslating(true);
-    try {
-      const translated = await translateConcept(koConcept, locale as "ja" | "en");
-      const newCache = new Map(conceptCache);
-      newCache.set(cacheKey, translated);
-      setConceptCache(newCache);
-      return translated;
-    } catch (err) {
-      console.error("Concept translation failed:", err);
-      // Fallback to Korean
-      return koConcept;
-    } finally {
-      setConceptTranslating(false);
-    }
+    return conceptsByLocale[locale][selected] || null;
   };
 
   const [concept, setConcept] = useState<Concept | null>(null);
@@ -330,18 +536,71 @@ function App() {
         </div>
         <div className="header-right">
           <div className="lang-selector">
-            {(["ko", "ja", "en"] as const).map(l => (
-              <button
-                key={l}
-                className={`lang-btn ${locale === l ? "active" : ""}`}
-                onClick={() => setLocale(l)}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as "ko" | "ja" | "en")}
+              style={{
+                padding: "6px 10px",
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: "6px",
+                color: "#cbd5e1",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: "bold"
+              }}
+            >
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+              <option value="ja">日本語</option>
+            </select>
           </div>
-          <span className="badge">D-14</span>
-          <span className="streak">&#128293; 1{t("streakSuffix")}</span>
+          <div className="visitor-count">
+            <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "2px" }}>{t("currentVisitors")}</div>
+            <div style={{ fontSize: "14px", fontWeight: 700 }}>👥 {visitorCount}</div>
+          </div>
+
+          {/* 사용자 상태 및 일일 카운트 / 로그인 */}
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+            fontSize: "10px", color: "#94a3b8", marginLeft: "16px", padding: "0 12px",
+            borderLeft: "1px solid rgba(255,255,255,0.1)"
+          }}>
+            {userEmail ? (
+              <>
+                <div style={{ fontSize: "12px", color: "#cbd5e1", textAlign: "center", fontWeight: "bold" }}>
+                  👤 {userEmail.split("@")[0]}
+                </div>
+                <button onClick={() => {
+                  setUserEmail(null);
+                  setUserStatusLocal("guest");
+                  localStorage.removeItem("userEmail");
+                }} style={{
+                  fontSize: "10px", padding: "4px 8px", background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8",
+                  borderRadius: "4px", cursor: "pointer", marginTop: "4px"
+                }}>
+                  {t("logoutBtn")}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowLoginModal(true)} style={{
+                fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
+                border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                whiteSpace: "nowrap"
+              }}>
+                {t("btnLogin")}
+              </button>
+            )}
+          </div>
+
+          {/* D-day 배지 + 날짜 아이콘 통합 */}
+          <span className="badge" style={{ cursor: userEmail ? "pointer" : "default" }}
+            onClick={() => userEmail && setShowExamDateModal(true)}
+            title={userEmail ? "시작일 변경" : "로그인 후 설정 가능"}>
+            📅 {dday === "-" ? "-" : dday}
+          </span>
+          {userEmail && <span className="streak">🔥 {streak}{t("streakSuffix")}</span>}
         </div>
       </div>
 
@@ -350,6 +609,10 @@ function App() {
         <button className={`tab ${tab === "quiz" ? "active" : ""}`} onClick={() => setTab("quiz")}>&#127919; {t("tabQuiz")}</button>
         <button className={`tab ${tab === "concept" ? "active" : ""}`} onClick={() => setTab("concept")}>&#128218; {t("tabConcept")}</button>
         <button className={`tab ${tab === "status" ? "active" : ""}`} onClick={() => setTab("status")}>&#128202; {t("tabStatus")}</button>
+        {/* 관리자에게만 Admin 탭 표시 */}
+        {ADMIN_UID && userEmail && (
+          <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
+        )}
       </div>
 
       <div className="main-area">
@@ -406,14 +669,385 @@ function App() {
                   })}
                 </div>
 
-                <button className="generate-btn" disabled={slots.length === 0 || loading}
-                  onClick={handleGenerateProblem}>
+                <button className="generate-btn"
+                  disabled={slots.length === 0 || loading || dailyCount >= getDailyLimit()}
+                  onClick={handleGenerateProblem}
+                  title={dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
                   {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
+                  <br />
+                  <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
+                    {dailyCount}/{getDailyLimit()}
+                  </span>
                 </button>
+
+                {/* 프리미엄 배너 (로그인하지 않았거나 일반 사용자일 때) */}
+                {userStatus !== "paid" && !error && (
+                  <div style={{
+                    marginTop: "16px", padding: "14px", background: "linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(59,130,246,0.2) 100%)",
+                    border: "1px solid rgba(139,92,246,0.3)", borderRadius: "8px", textAlign: "center"
+                  }}>
+                    <div style={{ color: "#e0e7ff", fontSize: "12px", marginBottom: "8px" }}>
+                      <strong>{t("premiumTitle")}</strong>
+                    </div>
+                    <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "10px" }}>
+                      {t("premiumFeature1")} - <span style={{ color: "#8b5cf6" }}>{t("premiumPrice")}</span>
+                    </div>
+                    <button onClick={() => setShowAuthModal(true)} style={{
+                      width: "100%", padding: "10px", background: "#8b5cf6", color: "#fff",
+                      border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold"
+                    }}>
+                      {t("premiumUpgradeBtn")}
+                    </button>
+                  </div>
+                )}
 
                 {error && (
                   <div className="error-message" style={{ color: "#ff6b6b", marginTop: "12px", padding: "10px", background: "rgba(255,107,107,0.1)", borderRadius: "6px" }}>
                     ⚠️ {error}
+                  </div>
+                )}
+
+                {/* 시험 시작일 설정 모달 */}
+                {showExamDateModal && (
+                  <div style={{
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1001
+                  }} onClick={() => setShowExamDateModal(false)}>
+                    <div style={{
+                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
+                      padding: "32px", maxWidth: "450px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+                    }} onClick={e => e.stopPropagation()}>
+                      <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>📅 시험 시작일 설정</h2>
+
+                      <div style={{ marginBottom: "24px" }}>
+                        <label style={{ display: "block", color: "#cbd5e1", fontSize: "12px", marginBottom: "8px", fontWeight: "bold" }}>
+                          SAA-C03 시험 날짜 (84일 후가 시험일입니다)
+                        </label>
+                        <input type="date"
+                          defaultValue={new Date().toISOString().split("T")[0]}
+                          id="examDateInput"
+                          style={{
+                            width: "100%", padding: "10px", background: "rgba(255,255,255,0.1)",
+                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px",
+                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box"
+                          }} />
+
+                        <div style={{
+                          marginTop: "16px", padding: "12px", background: "rgba(59,130,246,0.1)",
+                          border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "12px", color: "#cbd5e1"
+                        }}>
+                          ✨ <strong>팁:</strong> 시작일부터 84일 후가 시험 예정일입니다.
+                          <br />📍 우측 상단에서 D-day를 확인할 수 있습니다!
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "12px" }}>
+                        <button onClick={() => {
+                          setExamStartDate();
+                          setDday(getExamDday());
+                          setShowExamDateModal(false);
+                        }} style={{
+                          flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
+                          border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                        }}>
+                          ✅ 설정 완료
+                        </button>
+                        <button onClick={() => setShowExamDateModal(false)} style={{
+                          flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
+                          border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
+                        }}>
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Firebase 로그인/회원가입 모달 */}
+                {showLoginModal && (
+                  <div style={{
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1001
+                  }}>
+                    <div style={{
+                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px",
+                      padding: "48px 40px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+                    }} onClick={e => e.stopPropagation()}>
+                      <h2 style={{ color: "#fff", marginBottom: "12px", fontSize: "24px", fontWeight: "bold", textAlign: "center" }}>
+                        {isSignUp ? "📝 " + t("btnSignUp") : "🔐 " + t("btnLogIn")}
+                      </h2>
+                      <p style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", marginBottom: "24px" }}>
+                        {t("verifyEmailDesc")}
+                      </p>
+
+                      {/* Google 로그인 버튼 */}
+                      <button
+                        onClick={async () => {
+                          setLoginError(null);
+                          setLoginLoading(true);
+                          try {
+                            const user = await signInWithGoogle();
+                            setUserEmail(user.email);
+                            setUserStatusLocal("loggedIn");
+                            localStorage.setItem("userEmail", user.email || "");
+                            localStorage.setItem("userStatus", "loggedIn");
+                            setDailyCount(0);
+                            localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                            localStorage.setItem("problemCount", "0");
+                            setShowLoginModal(false);
+                            // 시험일정이 설정되지 않았을 때만 팝업 띄우기
+                            const examDate = localStorage.getItem("examStartDate");
+                            if (!examDate) {
+                              setTimeout(() => setShowExamDateModal(true), 300);
+                            }
+                          } catch (err: any) {
+                            setLoginError(err.message);
+                          } finally {
+                            setLoginLoading(false);
+                          }
+                        }}
+                        disabled={loginLoading}
+                        style={{
+                          width: "100%", padding: "12px", background: "#fff", color: "#000",
+                          border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
+                          fontSize: "14px", fontWeight: "bold", marginBottom: "16px", display: "flex",
+                          alignItems: "center", justifyContent: "center", gap: "8px", opacity: loginLoading ? 0.6 : 1
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC04"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        {t("continueWithGoogle")}
+                      </button>
+
+                      {/* 또는 구분선 */}
+                      <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: "12px" }}>
+                        <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
+                        <span style={{ color: "#94a3b8", fontSize: "12px" }}>또는</span>
+                        <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
+                      </div>
+
+                      {/* 에러 메시지 */}
+                      {loginError && (
+                        <div style={{
+                          marginBottom: "16px", padding: "12px", background: "rgba(239,68,68,0.1)",
+                          border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", color: "#fca5a5",
+                          fontSize: "12px", textAlign: "center"
+                        }}>
+                          ⚠️ {loginError}
+                        </div>
+                      )}
+
+                      {/* 이메일/비밀번호 입력 */}
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        setLoginError(null);
+                        setLoginLoading(true);
+
+                        const email = (document.getElementById("loginEmail") as HTMLInputElement).value;
+                        const password = (document.getElementById("loginPassword") as HTMLInputElement).value;
+
+                        try {
+                          if (isSignUp) {
+                            await signUp(email, password);
+                          } else {
+                            await signIn(email, password);
+                          }
+
+                          // 성공 시 상태 업데이트
+                          setUserEmail(email);
+                          setUserStatusLocal("loggedIn");
+                          localStorage.setItem("userEmail", email);
+                          localStorage.setItem("userStatus", "loggedIn");
+                          setDailyCount(0);
+                          localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                          localStorage.setItem("problemCount", "0");
+                          setShowLoginModal(false);
+
+                          // 시험일정이 설정되지 않았을 때만 팝업 띄우기
+                          const examDate = localStorage.getItem("examStartDate");
+                          if (!examDate) {
+                            setTimeout(() => setShowExamDateModal(true), 300);
+                          }
+                        } catch (err: any) {
+                          setLoginError(err.message);
+                        } finally {
+                          setLoginLoading(false);
+                        }
+                      }} style={{ marginBottom: "24px" }}>
+                        <input type="email"
+                          id="loginEmail"
+                          placeholder={t("verifyEmailPlaceholder")}
+                          required
+                          style={{
+                            width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
+                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
+                            marginBottom: "12px"
+                          }} />
+
+                        <input type="password"
+                          id="loginPassword"
+                          placeholder={t("passwordPlaceholder")}
+                          required
+                          minLength={6}
+                          style={{
+                            width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
+                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
+                            marginBottom: "12px"
+                          }} />
+
+                        <button type="submit"
+                          disabled={loginLoading}
+                          style={{
+                            width: "100%", padding: "12px", background: "#3b82f6", color: "#fff",
+                            border: "none", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
+                            fontSize: "14px", fontWeight: "bold", opacity: loginLoading ? 0.6 : 1
+                          }}>
+                          {loginLoading ? t("btnGenerating") : (isSignUp ? t("btnSignUp") : t("btnLogIn"))}
+                        </button>
+                      </form>
+
+                      {/* 로그인/회원가입 토글 */}
+                      <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>
+                          {isSignUp ? t("alreadyHaveAccount") + " " : t("dontHaveAccount") + " "}
+                          <button onClick={() => { setIsSignUp(!isSignUp); setLoginError(null); }}
+                            style={{
+                              background: "none", border: "none", color: "#3b82f6",
+                              cursor: "pointer", textDecoration: "underline", fontSize: "13px"
+                            }}>
+                            {isSignUp ? t("btnLogIn") : t("btnSignUp")}
+                          </button>
+                        </span>
+                      </div>
+
+                      {/* 정보 박스 */}
+                      <div style={{
+                        textAlign: "center", color: "#cbd5e1", fontSize: "12px",
+                        padding: "16px", background: "rgba(139,92,246,0.1)", borderRadius: "8px",
+                        border: "1px solid rgba(139,92,246,0.3)", lineHeight: "1.6"
+                      }}>
+                        <p style={{ marginBottom: "8px" }}><strong>{t("loginGetTitle")}</strong></p>
+                        <p style={{ marginBottom: "12px", color: "#a8d5ff", fontWeight: 500 }}>{t("aiFeature")}</p>
+                        <p>{t("loginFreeAttempts")}</p>
+                        <p style={{ marginTop: "12px", color: "#8b5cf6", fontWeight: "bold" }}>{t("loginUpgradeOffer")}</p>
+                      </div>
+
+                      <button onClick={() => { setShowLoginModal(false); setLoginError(null); }} style={{
+                        width: "100%", padding: "12px", background: "transparent", color: "#94a3b8",
+                        border: "none", cursor: "pointer", fontSize: "14px", marginTop: "20px"
+                      }}>
+                        {t("cancelBtn")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 인증 모달 */}
+                {showAuthModal && (
+                  <div style={{
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1000
+                  }} onClick={() => setShowAuthModal(false)}>
+                    <div style={{
+                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
+                      padding: "32px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+                    }} onClick={e => e.stopPropagation()}>
+                      <h2 style={{ color: "#fff", marginBottom: "16px", fontSize: "20px" }}>🚀 {t("labelQuotaFull") || "Quota Limited"}</h2>
+
+                      <div style={{ marginBottom: "24px", color: "#cbd5e1", lineHeight: "1.6", fontSize: "14px" }}>
+                        {userStatus === "guest" && (
+                          <>
+                            <p>📌 <strong>Guest (비로그인):</strong> 하루 2회 무료</p>
+                            <p style={{ marginTop: "12px" }}>로그인하면 하루 <strong>2회 무료</strong>를 이용할 수 있으며, 결제 후에는 <strong>하루 20개 문제</strong>를 생성할 수 있습니다.</p>
+                            <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
+                              <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
+                              <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
+                              <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                            </div>
+                          </>
+                        )}
+                        {userStatus === "loggedIn" && (
+                          <>
+                            <p>✨ <strong>Logged In (로그인):</strong> 2회 무료 이용 완료</p>
+                            <p style={{ marginTop: "12px" }}>결제하시면 <strong>하루 20개 문제</strong>를 무제한으로 생성하실 수 있습니다!</p>
+                            <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
+                              <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
+                              <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
+                              <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                            </div>
+                          </>
+                        )}
+                        {userStatus === "paid" && (
+                          <>
+                            <p>💎 <strong>Premium (결제):</strong> 하루 20개 문제 이용 중</p>
+                            <p style={{ marginTop: "12px" }}>내일 자정에 카운트가 초기화됩니다.</p>
+                          </>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                        {userStatus === "guest" && (
+                          <>
+                            <button onClick={() => {
+                              setUserStatus("loggedIn");
+                              setUserStatusLocal("loggedIn");
+                              setDailyCount(0);
+                              localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                              localStorage.setItem("problemCount", "0");
+                              setShowAuthModal(false);
+                            }} style={{
+                              flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
+                              border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                            }}>
+                              📝 로그인
+                            </button>
+                            <button onClick={() => {
+                              setUserStatus("paid");
+                              setUserStatusLocal("paid");
+                              setDailyCount(0);
+                              localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                              localStorage.setItem("problemCount", "0");
+                              setShowAuthModal(false);
+                            }} style={{
+                              flex: 1, padding: "12px", background: "#8b5cf6", color: "#fff",
+                              border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                            }}>
+                              💳 프리미엄 업그레이드
+                            </button>
+                          </>
+                        )}
+                        {userStatus === "loggedIn" && (
+                          <button onClick={() => {
+                            setUserStatus("paid");
+                            setUserStatusLocal("paid");
+                            setDailyCount(0);
+                            localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                            localStorage.setItem("problemCount", "0");
+                            setShowAuthModal(false);
+                          }} style={{
+                            width: "100%", padding: "12px", background: "#8b5cf6", color: "#fff",
+                            border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                          }}>
+                            💳 프리미엄 업그레이드
+                          </button>
+                        )}
+                        <button onClick={() => setShowAuthModal(false)} style={{
+                          flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
+                          border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
+                        }}>
+                          닫기
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -674,16 +1308,247 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* Admin Panel - 관리자만 접근 가능 */}
+          {tab === "admin" && ADMIN_UID && userEmail && (
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              height: "100%",
+              color: "#e2e8f0"
+            }}>
+              <div style={{ fontSize: "14px", color: "#94a3b8" }}>
+                ⚙️ Admin Dashboard
+              </div>
+
+              {/* Admin Stats */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px"
+              }}>
+                {/* 오늘 방문자 */}
+                <div style={{
+                  background: "rgba(59,130,246,0.1)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  textAlign: "center",
+                  border: "1px solid rgba(59,130,246,0.3)"
+                }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 600 }}>
+                    오늘 방문자
+                  </div>
+                  <div style={{ fontSize: "32px", fontWeight: 700, color: "#60a5fa" }}>
+                    {visitorCount}
+                  </div>
+                </div>
+
+                {/* 전체 방문자 */}
+                <div style={{
+                  background: "rgba(168,85,247,0.1)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  textAlign: "center",
+                  border: "1px solid rgba(168,85,247,0.3)"
+                }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 600 }}>
+                    전체 방문자
+                  </div>
+                  <div style={{ fontSize: "32px", fontWeight: 700, color: "#c4b5fd" }}>
+                    {totalVisitorCount}
+                  </div>
+                </div>
+
+                {/* 유료 사용자 */}
+                <div style={{
+                  background: "rgba(34,197,94,0.1)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  textAlign: "center",
+                  border: "1px solid rgba(34,197,94,0.3)"
+                }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 600 }}>
+                    💎 유료 사용자
+                  </div>
+                  <div style={{ fontSize: "32px", fontWeight: 700, color: "#4ade80" }}>
+                    {paidUsers}
+                  </div>
+                </div>
+
+                {/* 2회 무료 사용자 */}
+                <div style={{
+                  background: "rgba(249,115,22,0.1)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  textAlign: "center",
+                  border: "1px solid rgba(249,115,22,0.3)"
+                }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 600 }}>
+                    ✨ 2회 무료 사용자
+                  </div>
+                  <div style={{ fontSize: "32px", fontWeight: 700, color: "#fb923c" }}>
+                    {freeUsers}
+                  </div>
+                </div>
+              </div>
+
+              {/* Period Switching Buttons */}
+              <div style={{
+                display: "flex",
+                gap: "8px",
+                paddingTop: "12px",
+                borderTop: "1px solid rgba(255,255,255,0.1)"
+              }}>
+                {["daily", "weekly", "monthly"].map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setGraphPeriod(period as "daily" | "weekly" | "monthly")}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      fontSize: "11px",
+                      background: graphPeriod === period ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)",
+                      border: `1px solid ${graphPeriod === period ? "rgba(59,130,246,0.6)" : "rgba(255,255,255,0.2)"}`,
+                      borderRadius: "6px",
+                      color: graphPeriod === period ? "#60a5fa" : "#94a3b8",
+                      cursor: "pointer",
+                      fontWeight: graphPeriod === period ? 600 : 500,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {period === "daily" && (locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별")}
+                    {period === "weekly" && (locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별")}
+                    {period === "monthly" && (locale === "en" ? "Monthly" : locale === "ja" ? "月別" : "월별")}
+                  </button>
+                ))}
+              </div>
+
+              {/* Bar Graph Visualization */}
+              <div style={{
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: "8px",
+                padding: "16px",
+                border: "1px solid rgba(255,255,255,0.08)",
+                minHeight: "200px",
+                display: "flex",
+                flexDirection: "column"
+              }}>
+                {graphData && graphData.length > 0 ? (
+                  <svg viewBox="0 0 500 200" style={{ width: "100%", height: "200px" }}>
+                    {/* X-axis */}
+                    <line x1="40" y1="180" x2="480" y2="180" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                    {/* Y-axis */}
+                    <line x1="40" y1="20" x2="40" y2="180" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+
+                    {/* Grid lines and labels */}
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <g key={`grid-${i}`}>
+                        <line x1="35" y1={180 - i * 32} x2="480" y2={180 - i * 32} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                        <text x="25" y={185 - i * 32} fontSize="10" fill="rgba(255,255,255,0.4)" textAnchor="end">
+                          {Math.max(...graphData.map(d => d.count), 0) > 0
+                            ? Math.round((i / 5) * Math.max(...graphData.map(d => d.count)))
+                            : 0}
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* Bars */}
+                    {graphData.map((item, idx) => {
+                      const maxCount = Math.max(...graphData.map(d => d.count), 1);
+                      const barHeight = (item.count / maxCount) * 160;
+                      const barWidth = 430 / graphData.length;
+                      const x = 45 + idx * barWidth + barWidth * 0.1;
+                      const y = 180 - barHeight;
+
+                      return (
+                        <g key={`bar-${idx}`}>
+                          <rect x={x} y={y} width={barWidth * 0.8} height={barHeight}
+                            fill="rgba(59,130,246,0.6)" rx="3" />
+                          <text x={x + barWidth * 0.4} y="195" fontSize="9" fill="rgba(255,255,255,0.5)"
+                            textAnchor="middle">
+                            {item.label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                ) : (
+                  <div style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#64748b",
+                    fontSize: "12px"
+                  }}>
+                    {locale === "en" ? "No data available" : locale === "ja" ? "データがありません" : "데이터 없음"}
+                  </div>
+                )}
+              </div>
+
+              {/* Test Purchase Button */}
+              <div style={{
+                paddingTop: "12px"
+              }}>
+                <button
+                  onClick={() => {
+                    recordPaidPurchase();
+                    setPurchaseCount(getTodayPurchaseCount());
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    fontSize: "12px",
+                    background: "rgba(34,197,94,0.2)",
+                    border: "1px solid rgba(34,197,94,0.4)",
+                    borderRadius: "6px",
+                    color: "#4ade80",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(34,197,94,0.3)";
+                    e.currentTarget.style.borderColor = "rgba(34,197,94,0.6)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(34,197,94,0.2)";
+                    e.currentTarget.style.borderColor = "rgba(34,197,94,0.4)";
+                  }}
+                >
+                  + Record Purchase (Dev)
+                </button>
+              </div>
+
+              {/* Admin Info */}
+              <div style={{
+                marginTop: "auto",
+                padding: "12px",
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: "6px",
+                fontSize: "11px",
+                color: "#64748b",
+                lineHeight: "1.6"
+              }}>
+                <strong>Development Mode</strong><br/>
+                Visitor and purchase tracking active.<br/>
+                Production will require authentication.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Graph */}
-        <div className="graph-panel">
-          <div className="graph-label">{t("graphLabel")}</div>
-          <div className="graph-box">
-            <GraphSVG pos={pos} setPos={setPos} posRef={posRef} dragRef={dragRef}
-              selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} />
+        {tab !== "admin" ? (
+          <div className="graph-panel">
+            <div className="graph-label">{t("graphLabel")}</div>
+            <div className="graph-box">
+              <GraphSVG pos={pos} setPos={setPos} posRef={posRef} dragRef={dragRef}
+                selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} />
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

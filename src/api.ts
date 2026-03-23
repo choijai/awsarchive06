@@ -21,6 +21,15 @@ export interface Problem {
     D: string;
   };
   answer: string;
+  keywords: string[];  // 핵심 키워드 (bold 처리용)
+  goal: string;        // 핵심 목표
+  easyMode: {          // 초등학교 5학년 수준 설명
+    explanation: string;
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
   explanation: {
     architecture?: string;  // 전체 아키텍처 흐름 설명
     correct: string;        // 정답인 이유

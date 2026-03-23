@@ -325,6 +325,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showEasyMode, setShowEasyMode] = useState(false);
   const [visitorCount, setVisitorCount] = useState(0);
   const [totalVisitorCount, setTotalVisitorCount] = useState(0);
   const [graphPanelWidth, setGraphPanelWidth] = useState(50); // 비율 (%)
@@ -529,6 +531,8 @@ function App() {
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
+    setIsSubmitted(false);
+    setShowEasyMode(false);
 
     try {
       const serviceNames = slots.map(id => {
@@ -782,21 +786,27 @@ function App() {
                           <button
                             key={opt}
                             onClick={() => setSelectedAnswer(opt)}
+                            disabled={isSubmitted}
                             style={{
                               display: "block",
                               width: "100%",
                               padding: "12px",
                               marginBottom: "8px",
                               background: selectedAnswer === opt
-                                ? (opt === problem.answer ? "#10b981" : "#ef4444")
+                                ? (isSubmitted && opt === problem.answer ? "#10b981" : isSubmitted && opt !== problem.answer ? "#ef4444" : "rgba(59,130,246,0.3)")
+                                : isSubmitted && opt === problem.answer ? "rgba(16,185,129,0.15)"
                                 : "rgba(255,255,255,0.05)",
-                              border: `1px solid ${selectedAnswer === opt ? (opt === problem.answer ? "#10b981" : "#ef4444") : "rgba(255,255,255,0.1)"}`,
+                              border: `1px solid ${selectedAnswer === opt
+                                ? (isSubmitted && opt === problem.answer ? "#10b981" : isSubmitted && opt !== problem.answer ? "#ef4444" : "rgba(59,130,246,0.6)")
+                                : isSubmitted && opt === problem.answer ? "rgba(16,185,129,0.4)"
+                                : "rgba(255,255,255,0.1)"}`,
                               borderRadius: "6px",
                               color: "#cbd5e1",
                               textAlign: "left",
-                              cursor: "pointer",
+                              cursor: isSubmitted ? "default" : "pointer",
                               fontSize: "13px",
                               transition: "all 0.2s",
+                              opacity: isSubmitted && opt !== problem.answer && selectedAnswer !== opt ? 0.5 : 1,
                             }}
                           >
                             <strong>{opt}.</strong> {problem.options[opt]}
@@ -804,26 +814,125 @@ function App() {
                         ))}
                       </div>
 
-                      {selectedAnswer && (
+                      {!isSubmitted && selectedAnswer && (
+                        <button
+                          onClick={() => setIsSubmitted(true)}
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            marginBottom: "16px",
+                            background: "linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(139,92,246,0.3) 100%)",
+                            border: "1px solid rgba(59,130,246,0.5)",
+                            borderRadius: "6px",
+                            color: "#60a5fa",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(59,130,246,0.4) 0%, rgba(139,92,246,0.4) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(59,130,246,0.7)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(139,92,246,0.3) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(59,130,246,0.5)";
+                          }}
+                        >
+                          ✓ 제출
+                        </button>
+                      )}
+
+                      {isSubmitted && (
                         <div className="explanation" style={{ background: "rgba(255,255,255,0.05)", padding: "12px", borderRadius: "6px", marginTop: "12px" }}>
+                          {/* 정답 표시 */}
                           <div style={{ fontSize: "12px", color: selectedAnswer === problem.answer ? "#10b981" : "#ef4444", marginBottom: "8px", fontWeight: "bold" }}>
-                            {selectedAnswer === problem.answer ? t("labelCorrect") : t("labelWrong")}
+                            {selectedAnswer === problem.answer ? "✅ 정답입니다!" : "❌ 틀렸습니다."}
+                          </div>
+
+                          {/* 핵심 목표 */}
+                          {(problem as any).goal && (
+                            <div style={{ fontSize: "12px", color: "#a78bfa", marginBottom: "8px", padding: "8px", background: "rgba(167,139,250,0.1)", borderRadius: "4px" }}>
+                              <strong>🎯 핵심 목표:</strong> {(problem as any).goal}
+                            </div>
+                          )}
+
+                          {/* 정답과 설명 */}
+                          <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "8px" }}>
+                            <strong>정답: {problem.answer}</strong>
                           </div>
                           <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "8px" }}>
-                            <strong>{t("labelAnswer")}</strong> {problem.answer}
-                          </div>
-                          <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6" }}>
-                            <strong>{t("labelExplanation")}</strong>
+                            <strong>설명</strong>
                             <p style={{ marginTop: "6px" }}>{problem.explanation.correct}</p>
                             {selectedAnswer !== problem.answer && problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation] && (
                               <p style={{ marginTop: "6px", color: "#ef4444" }}>
-                                <strong>{t("labelTrapOption")}</strong> {problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation]}
+                                <strong>⚠️ 함정:</strong> {problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation]}
                               </p>
                             )}
                           </div>
+
+                          {/* 핵심 키워드 */}
+                          {(problem as any).keywords && (problem as any).keywords.length > 0 && (
+                            <div style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "8px", padding: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px" }}>
+                              <strong>📌 핵심 키워드:</strong>
+                              <div style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                                {(problem as any).keywords.map((kw: string, i: number) => (
+                                  <span key={i} style={{ background: "rgba(59,130,246,0.3)", padding: "2px 8px", borderRadius: "12px", color: "#60a5fa" }}>
+                                    <strong>{kw}</strong>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* easyMode 버튼 */}
+                          {(problem as any).easyMode && (
+                            <button
+                              onClick={() => setShowEasyMode(!showEasyMode)}
+                              style={{
+                                width: "100%",
+                                padding: "10px",
+                                marginBottom: "12px",
+                                marginTop: "8px",
+                                background: showEasyMode ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)",
+                                border: `1px solid ${showEasyMode ? "rgba(34,197,94,0.4)" : "rgba(245,158,11,0.4)"}`,
+                                borderRadius: "6px",
+                                color: showEasyMode ? "#4ade80" : "#fbbf24",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                                transition: "all 0.2s",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = showEasyMode ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = showEasyMode ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)";
+                              }}
+                            >
+                              {showEasyMode ? "🧠 쉬운 설명 닫기" : "👶 초등학교 5학년 수준으로 설명"}
+                            </button>
+                          )}
+
+                          {/* easyMode 설명 */}
+                          {showEasyMode && (problem as any).easyMode && (
+                            <div style={{ fontSize: "12px", color: "#cbd5e1", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "6px", marginBottom: "12px" }}>
+                              <strong style={{ color: "#fbbf24" }}>🎈 쉬운 설명:</strong>
+                              <p style={{ marginTop: "6px", lineHeight: "1.6" }}>{(problem as any).easyMode.explanation}</p>
+                              <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(245,158,11,0.2)" }}>
+                                <strong style={{ color: "#fbbf24" }}>각 보기 설명:</strong>
+                                {(["A", "B", "C", "D"] as const).map(opt => (
+                                  <div key={opt} style={{ marginTop: "6px", color: opt === problem.answer ? "#4ade80" : "#cbd5e1" }}>
+                                    <strong>{opt}.</strong> {(problem as any).easyMode[opt]}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {problem.patterns && (
                             <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                              <strong style={{ fontSize: "12px" }}>{t("labelPatterns")}</strong>
+                              <strong style={{ fontSize: "12px" }}>📚 핵심 패턴</strong>
                               <ul style={{ fontSize: "12px", marginTop: "4px", paddingLeft: "16px" }}>
                                 {problem.patterns.map((p, i) => (
                                   <li key={i} style={{ color: "#94a3b8", marginTop: "4px" }}>{p}</li>

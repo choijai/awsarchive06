@@ -46,6 +46,13 @@ function getDailyLimit(): number {
 }
 
 /**
+ * 운영자 계정 확인 (imjaichoipro@gmail.com)
+ */
+function isAdminUser(email: string | null): boolean {
+  return email === "imjaichoipro@gmail.com";
+}
+
+/**
  * 연속 방문 일수 계산 및 업데이트
  */
 function updateStreak(): number {
@@ -549,12 +556,14 @@ function App() {
 
     if (slots.length === 0) return;
 
-    // 일일 제한 확인
-    const limit = getDailyLimit();
-    if (dailyCount >= limit) {
-      setError(getQuotaMessage(userStatus, limit, dailyCount));
-      setShowAuthModal(true);
-      return;
+    // 일일 제한 확인 (운영자는 제한 없음)
+    if (!isAdminUser(userEmail)) {
+      const limit = getDailyLimit();
+      if (dailyCount >= limit) {
+        setError(getQuotaMessage(userStatus, limit, dailyCount));
+        setShowAuthModal(true);
+        return;
+      }
     }
 
     setLoading(true);
@@ -859,14 +868,14 @@ function App() {
                 </div>
 
                 <button className="generate-btn"
-                  disabled={slots.length === 0 || loading || dailyCount >= getDailyLimit()}
+                  disabled={slots.length === 0 || loading || (!isAdminUser(userEmail) && dailyCount >= getDailyLimit())}
                   onClick={handleGenerateProblem}
-                  title={dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
+                  title={!isAdminUser(userEmail) && dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
                   {loading && <span className="loading-icon">●●●</span>}
                   {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
-                    {dailyCount}/{getDailyLimit()}
+                    {isAdminUser(userEmail) ? "무제한" : `${dailyCount}/${getDailyLimit()}`}
                   </span>
                 </button>
 

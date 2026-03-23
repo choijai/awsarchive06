@@ -15,9 +15,9 @@ export const SAA_PROBLEM_PROMPT_MEDIUM = `⚠️ **CRITICAL: 응답은 정확히
 새로운 문제를 **동일한 수준**으로 만들어주세요.
 
 ## 📋 생성 시 필수 규칙:
-1. **options (선택지)**: 매우 중요! 각 선택지는 **3-5줄의 구체적인 서술형**으로 작성
-   - 단순하지 말고, 실제 아키텍처처럼 구체적으로 설명
-   - 예: "Amazon EC2를 배포하여 Amazon Kinesis 데이터 스트림으로 데이터를 전송하는 API를 호스팅합니다. Kinesis 데이터 스트림을 Firehose의 데이터 원본으로 사용합니다. Lambda로 변환하고 Firehose를 통해 S3로 전달합니다."
+1. **options (선택지)**: 매우 중요! 각 선택지는 **3-4줄의 구체적인 서술형**으로 작성
+   - 실제 아키텍처처럼 구체적으로 서비스 흐름을 설명
+   - 예: "Application Load Balancer로 트래픽을 분산하여 다중 AZ의 Auto Scaling EC2 인스턴스로 라우팅합니다. 데이터는 다중 AZ Amazon RDS 인스턴스에 저장되고, CloudWatch로 실시간 모니터링하며 성능 메트릭을 분석합니다."
 2. **goal (핵심 목표)**: 이 문제가 테스트하는 핵심 목표를 한 문장으로 명확히
 3. **keywords (핵심 키워드)**: 문제에서 가장 중요한 AWS 개념 3~4개
 4. **easyMode 설명**: 초등학교 5학년도 이해하는 비유법 사용
@@ -197,8 +197,9 @@ D. 프로비저닝된 용량 모드에서 테이블을 생성하고 Global Table
 - 비즈니스 제약: 비용 최적화, 운영 오버헤드 최소화, 규제 준수 등
 - 각 제약을 **명시적으로 마크하기** (정답과 함정답 구분에 중요)
 
-### 3. 선택지 A~D (각 1~2줄만 - 간결함)
-- 각 선택지는 AWS 서비스 이름 + 핵심 구성만 포함
+### 3. 선택지 A~D (각 3~4줄 - 전문적 서술형)
+- 각 선택지는 구체적인 AWS 서비스 구성과 아키텍처 흐름을 상세히 설명
+- 각 선택지마다 어떤 서비스들이 어떻게 연결되는지 명확히 서술
 - 1개 정답: 모든 제약조건 완벽 충족
 - 3개 함정답:
   * 1개: 거의 맞지만 1가지 제약만 미충족 (가장 실수하기 쉬운 오답)
@@ -227,10 +228,10 @@ JSON 형식으로 응답해주세요 (마크다운 없이 순수 JSON만, 모든
   "question": "구체적 시나리오와 제약조건을 포함한 2-4문장 질문",
   "constraint": ["제약1", "제약2", "제약3"],
   "options": {
-    "A": "EC2 + Auto Scaling + RDS 다중 AZ 구성으로 고가용성 확보",
-    "B": "Lambda + DynamoDB + CloudFront로 서버리스 아키텍처 구성",
-    "C": "온프레미스 데이터베이스 유지 + VPN 연결 방식",
-    "D": "S3 + Glacier로 데이터 아카이빙 구성"
+    "A": "Application Load Balancer로 사용자 트래픽을 분산하여 다중 AZ의 Auto Scaling EC2 인스턴스로 라우팅합니다. 데이터는 다중 AZ Amazon RDS MySQL 인스턴스에 저장되고, CloudWatch로 모니터링합니다. 하지만 읽기 성능 최적화는 제공하지 않습니다.",
+    "B": "Amazon CloudFront 엣지 로케이션에서 정적 콘텐츠를 캐싱하고, API Gateway를 통해 Lambda 함수로 동적 요청을 처리합니다. DynamoDB는 자동 스케일링으로 성능을 확보하며, DynamoDB 글로벌 테이블로 다중 리전 읽기 복제본을 구성합니다.",
+    "C": "온프레미스 데이터베이스를 Amazon VPN으로 AWS VPC와 연결하여 현재 시스템을 유지합니다. AWS Site-to-Site VPN을 통해 안전하게 통신하지만, 클라우드 네이티브 확장성과 AWS 관리형 서비스의 이점을 활용하지 못합니다.",
+    "D": "Amazon S3에 데이터를 업로드하고, 스토리지 라이프사이클 정책으로 90일 후 Glacier로 자동 이동시킵니다. 비용은 최소화되지만, 빈번한 액세스 요구사항을 충족하지 못합니다."
   },
   "answer": "B",
   "keywords": ["핵심 개념1", "핵심 개념2", "핵심 개념3"],
@@ -243,14 +244,14 @@ JSON 형식으로 응답해주세요 (마크다운 없이 순수 JSON만, 모든
     "D": "선택지 D가 어떤 기능인지 어린이 수준으로 설명. 다른 용도라면 언급"
   },
   "explanation": {
-    "architecture": "전체 아키텍처 흐름 (1-2줄)",
-    "correct": "정답이 모든 제약을 만족하는 이유 (1-2줄)",
-    "service_features": "핵심 AWS 서비스의 특징 (1줄)",
-    "trap_A": "선택지 A의 미충족 제약 (1줄)",
-    "trap_B": "선택지 B의 미충족 제약 (1줄)",
-    "trap_C": "선택지 C의 미충족 제약 (1줄)"
+    "architecture": "사용자 요청은 CloudFront 엣지 로케이션에서 캐싱되어 첫 바이트까지의 지연이 최소화됩니다. 동적 요청은 API Gateway를 통해 Lambda로 라우팅되고, DynamoDB에서 데이터를 조회합니다. DynamoDB 글로벌 테이블은 자동으로 다중 리전에 복제되어 읽기 가용성을 보장합니다.",
+    "correct": "정답은 다중 리전 읽기 복제(DynamoDB 글로벌 테이블)로 읽기 지연을 최소화하고, CloudFront 캐싱으로 콘텐츠 전달을 가속화합니다. Lambda + DynamoDB 조합은 관리형 서비스로 운영 오버헤드를 제거하고, 자동 스케일링으로 비용 효율성을 실현합니다.",
+    "service_features": "CloudFront는 엣지 캐싱으로 컨텐츠 전달을 가속화합니다. DynamoDB 글로벌 테이블은 완전 관리형 다중 리전 복제를 제공하고, Lambda는 서버리스 컴퓨팅으로 관리 복잡도를 줄입니다.",
+    "trap_A": "선택지 A는 RDS 읽기 복제본이 단일 리전 내에만 제한되어 글로벌 읽기 성능 요구사항을 충족하지 못합니다.",
+    "trap_B": "선택지 B는 온프레미스 시스템을 유지하기 위해 VPN 오버헤드로 인한 지연이 발생하며, 클라우드 인프라의 확장성 이점을 활용하지 못합니다.",
+    "trap_C": "선택지 C는 S3 + Glacier 구성이 빈번한 데이터 액세스 시 Glacier 검색 비용이 높아져 비용 최적화 요구사항을 충족하지 못합니다."
   },
-  "patterns": ["패턴1: 시험에 자주 출제되는 개념", "패턴2: 유사 서비스와의 차이점", "패턴3: SAA 시험 팁"]
+  "patterns": ["패턴1: 다중 리전 아키텍처에서 글로벌 테이블의 중요성", "패턴2: CloudFront와 관리형 DB의 조합으로 성능 최적화", "패턴3: 온프레미스 vs 클라우드 네이티브 아키텍처 선택 기준"]
 }
 
 ⚠️ 필수사항:
@@ -971,10 +972,10 @@ export function generatePrompt(
   const diffLabel = DIFFICULTY_LABELS[locale][difficulty as "medium" | "hard" | "challenge"] || difficulty;
 
   const tokenConstraint = locale === "ko"
-    ? `\n\n⚠️ **필수 제약사항 (반드시 지켜야 함)**:\n- 응답은 정확히 2000 토큰 이내로 제한됩니다.\n- JSON 외에 다른 설명이나 마크다운은 절대 금지입니다.\n- 각 필드는 가능한 한 짧고 간결하게 (1-2줄 이내).\n- 선택지(options)와 explanation은 핵심만 포함하세요.\n- JSON 구조는 빠짐없이 완전해야 합니다.\n- "이것은 예시입니다" 같은 전치사는 쓰지 마세요.`
+    ? `\n\n⚠️ **필수 제약사항 (반드시 지켜야 함)**:\n- 응답은 정확히 3000 토큰 이내로 제한됩니다.\n- JSON 외에 다른 설명이나 마크다운은 절대 금지입니다.\n- 선택지(options): 각 선택지는 3-4줄의 구체적인 아키텍처 설명.\n- 정답 설명(explanation): 각 필드는 전문적이고 상세하게 (2-4줄).\n- architecture: 전체 아키텍처 흐름을 명확히 (2-3줄).\n- correct: 정답이 모든 제약을 만족하는 이유를 기술적으로 상세히 (2-3줄).\n- service_features: 핵심 AWS 서비스의 특징과 한계 (2줄).\n- trap_A, B, C: 각각 미충족 제약과 기술적 근거 (2줄).\n- JSON 구조는 빠짐없이 완전해야 합니다.`
     : locale === "ja"
-    ? `\n\n⚠️ **必須の制約（必ず守る必要があります）**:\n- レスポンスは正確に2000トークン以内に制限されています。\n- JSON以外の説明やマークダウンは絶対に禁止です。\n- 各フィールドはできるだけ短く簡潔に（1-2行以内）。\n- オプション(options)と説明(explanation)はコアのみ。\n- JSON構造は完全である必要があります。\n- 「これは例です」のような前置詞は使用しないでください。`
-    : `\n\n⚠️ **Mandatory Constraint (Must Follow)**:\n- Response MUST be within exactly 2000 tokens.\n- NO explanations or markdown outside JSON.\n- Each field must be concise (max 1-2 lines).\n- options and explanation: ONLY core content.\n- JSON structure MUST be complete.\n- Do NOT include phrases like "For example" or "This is an example".`;
+    ? `\n\n⚠️ **必須の制約（必ず守る必要があります）**:\n- レスポンスは正確に3000トークン以内に制限されています。\n- JSON以外の説明やマークダウンは絶対に禁止です。\n- オプション(options): 各選択肢は3-4行の具体的なアーキテクチャ説明。\n- 正答説明(explanation): 各フィールドは専門的で詳細に（2-4行）。\n- architecture: 全体的なアーキテクチャフローを明確に（2-3行）。\n- correct: 正答がすべての制約を満たす理由を技術的に詳細に（2-3行）。\n- service_features: コアAWSサービスの特徴と制限（2行）。\n- trap_A, B, C: 各々の未充足制約と技術的根拠（2行）。\n- JSON構造は完全である必要があります。`
+    : `\n\n⚠️ **Mandatory Constraint (Must Follow)**:\n- Response MUST be within exactly 3000 tokens.\n- NO explanations or markdown outside JSON.\n- options: Each option must be 3-4 lines of detailed architecture description.\n- explanation: Each field must be professional and detailed (2-4 lines).\n- architecture: Describe complete architecture flow clearly (2-3 lines).\n- correct: Explain why answer satisfies all constraints technically (2-3 lines).\n- service_features: Core AWS service features and limitations (2 lines).\n- trap_A, B, C: Each unsatisfied constraint and technical reasoning (2 lines).\n- JSON structure MUST be complete.`;
 
   return (prompt
     .replace("${SERVICE_NAMES}", serviceNames.join(", "))

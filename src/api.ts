@@ -105,6 +105,8 @@ export async function generateSAAProblem(
     }
 
     console.log("Extracted JSON length:", jsonStr.length);
+    console.log("JSON starts with:", jsonStr.substring(0, 100));
+    console.log("JSON ends with:", jsonStr.substring(Math.max(0, jsonStr.length - 100)));
 
     // JSON 내 문자열 값의 줄바꿈을 공백으로 치환
     // 더 강력한 정규화 로직

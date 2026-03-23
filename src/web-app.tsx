@@ -375,6 +375,7 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
+  const [sessionId, setSessionId] = useState<string>(`${Date.now()}`); // 현재 세션 ID
 
   // 문제 세션 (PDF 다운로드용)
   const [problemSessions, setProblemSessions] = useState<Array<{
@@ -963,7 +964,8 @@ function App() {
                                 user.uid,
                                 problem,
                                 selectedAnswer,
-                                difficulty as "medium" | "hard" | "challenge"
+                                difficulty as "medium" | "hard" | "challenge",
+                                sessionId
                               );
                             }
                           }}

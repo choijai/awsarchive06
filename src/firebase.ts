@@ -269,15 +269,15 @@ export async function recordQuizResult(
   userId: string,
   problem: any,
   selectedAnswer: string,
-  difficulty: "medium" | "hard" | "challenge"
-): Promise<string> {
+  difficulty: "medium" | "hard" | "challenge",
+  sessionId: string // 세션 ID를 외부에서 받음
+): Promise<void> {
   try {
     const isCorrect = selectedAnswer === problem.answer;
     const resultsRef = collection(db, "users", userId, "quizResults");
-    const sessionId = `${Date.now()}`; // 생성 세션 ID
 
-    const docRef = await addDoc(resultsRef, {
-      sessionId, // 같은 시간대 생성 문제들 그룹화
+    await addDoc(resultsRef, {
+      sessionId, // 같은 세션의 문제들을 그룹화
       fullProblem: problem, // 전체 문제 객체 저장
       question: problem.question,
       correctAnswer: problem.answer,
@@ -287,8 +287,6 @@ export async function recordQuizResult(
       createdAt: new Date().toISOString(),
       timestamp: new Date().getTime()
     });
-
-    return sessionId;
   } catch (error) {
     console.error("퀴즈 결과 저장 실패:", error);
     throw error;

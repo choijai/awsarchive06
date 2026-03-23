@@ -329,6 +329,7 @@ function App() {
   const [totalVisitorCount, setTotalVisitorCount] = useState(0);
   const [graphPanelWidth, setGraphPanelWidth] = useState(50); // 비율 (%)
   const [isResizing, setIsResizing] = useState(false);
+  const resizeStartPosRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
@@ -478,14 +479,15 @@ function App() {
   // 그래프 패널 리사이징
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
+      if (!isResizing || !resizeStartPosRef.current) return;
 
       const mainArea = document.querySelector('.main-area') as HTMLElement;
       if (!mainArea) return;
 
       const rect = mainArea.getBoundingClientRect();
-      const newX = e.clientX - rect.left;
-      const newWidth = (newX / rect.width) * 100;
+      const deltaX = e.clientX - resizeStartPosRef.current.startX;
+      const deltaPercent = (deltaX / rect.width) * 100;
+      const newWidth = resizeStartPosRef.current.startWidth + deltaPercent;
 
       // 최소 25%, 최대 75% 제약
       if (newWidth >= 25 && newWidth <= 75) {
@@ -495,6 +497,7 @@ function App() {
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      resizeStartPosRef.current = null;
     };
 
     if (isResizing) {
@@ -1188,7 +1191,10 @@ function App() {
 
         {/* Resizer Handle */}
         <div
-          onMouseDown={() => setIsResizing(true)}
+          onMouseDown={(e) => {
+            resizeStartPosRef.current = { startX: e.clientX, startWidth: graphPanelWidth };
+            setIsResizing(true);
+          }}
           style={{
             width: '6px',
             background: isResizing ? '#3b82f6' : 'rgba(255,255,255,0.15)',

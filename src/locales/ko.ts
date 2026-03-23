@@ -12,9 +12,9 @@ export const ko = {
   filterAll: "전체",
 
   // Difficulty
-  diffEasy: "쉬움",
   diffMedium: "보통",
   diffHard: "어려움",
+  diffChallenge: "챌린지",
 
   // Slots
   slotsTitle: "서비스 슬롯",

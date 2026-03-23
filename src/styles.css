@@ -124,8 +124,6 @@ body {
 
 /* ── Controls panel (left) ── */
 .controls-panel {
-  width: 420px;
-  min-width: 360px;
   overflow-y: auto;
   padding: 20px;
   border-right: 1px solid rgba(255,255,255,0.08);
@@ -391,6 +389,19 @@ body {
   background: #060e18;
 }
 
+/* ── Select and Option ── */
+select {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+select option {
+  background: #0b0f1e;
+  color: #cbd5e1;
+}
+select option:checked {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -400,7 +411,7 @@ body {
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .main-area { flex-direction: column; }
-  .controls-panel { width: 100%; min-width: 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); max-height: 50vh; }
+  .controls-panel { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); max-height: 50vh; }
   .graph-panel { min-height: 300px; }
   .slots-grid { grid-template-columns: repeat(2, 1fr); }
 }

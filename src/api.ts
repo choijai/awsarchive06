@@ -1,5 +1,4 @@
 import { generatePrompt } from "./prompts";
-import { CONCEPTS } from "./data";
 
 export interface Concept {
   title: string;
@@ -39,7 +38,6 @@ export async function generateSAAProblem(
   difficulty: string,
   locale: "ko" | "ja" | "en" = "ko"
 ): Promise<Problem> {
-  // Vite 환경변수 접근 (빌드 타임에 결정됨)
   const apiKey = (globalThis as any).__VITE_API_KEY__ || import.meta.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -52,15 +50,16 @@ export async function generateSAAProblem(
   const prompt = generatePrompt(serviceNames, difficulty, locale);
 
   try {
-    // 백엔드 프록시 서버로 요청 (CORS 우회)
-    const response = await fetch("http://localhost:5000/api/claude", {
+    // Firebase Cloud Functions 프록시로 요청
+    const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL || "http://localhost:5000";
+    const response = await fetch(`${backendUrl}/api/claudeProxy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
-        max_tokens: 3000,  // 상세한 설명을 위해 2000에서 3000으로 증가
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 3000,
         messages: [
           {
             role: "user",
@@ -116,15 +115,16 @@ ${JSON.stringify(concept)}
 Output (JSON only):`;
 
   try {
-    // 백엔드 프록시 서버로 요청 (CORS 우회)
-    const response = await fetch("http://localhost:5000/api/claude", {
+    // Firebase Cloud Functions 프록시로 요청
+    const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL || "http://localhost:5000";
+    const response = await fetch(`${backendUrl}/api/claudeProxy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
-        max_tokens: 1500,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
         messages: [
           {
             role: "user",

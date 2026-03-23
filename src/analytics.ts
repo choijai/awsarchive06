@@ -1,7 +1,9 @@
 // Analytics and tracking utilities for visitor count and paid purchases
+import { db } from "./firebase";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 
-const VISITOR_STORAGE_KEY = "aws-quiz-visitors";
-const PURCHASE_STORAGE_KEY = "aws-quiz-purchases";
+const VISITOR_COLLECTION = "analytics/visitors/daily";
+const PURCHASE_COLLECTION = "analytics/purchases/daily";
 
 interface VisitorData {
   date: string; // YYYY-MM-DD
@@ -37,293 +39,373 @@ function generateVisitorId(): string {
 /**
  * Track today's visitor - returns today's visitor count
  */
-export function trackVisitor(): number {
-  const today = getTodayDate();
-  const visitorId = generateVisitorId();
+export async function trackVisitor(): Promise<number> {
+  try {
+    const today = getTodayDate();
+    const visitorId = generateVisitorId();
 
-  // Check if this is a new session (visitor hasn't been tracked yet)
-  const sessionKey = `aws-quiz-session-${today}`;
-  if (!sessionStorage.getItem(sessionKey)) {
-    sessionStorage.setItem(sessionKey, visitorId);
+    // Check if this is a new session (visitor hasn't been tracked yet)
+    const sessionKey = `aws-quiz-session-${today}`;
+    if (!sessionStorage.getItem(sessionKey)) {
+      sessionStorage.setItem(sessionKey, visitorId);
 
-    // Retrieve all visitor data
-    const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
+      const docRef = doc(db, VISITOR_COLLECTION, today);
+      const docSnap = await getDoc(docRef);
 
-    // Get or create today's visitor data
-    let todayData: VisitorData = allData[today] || {
-      date: today,
-      count: 0,
-      visitors: [],
-    };
+      let todayData: VisitorData;
+      if (docSnap.exists()) {
+        todayData = docSnap.data() as VisitorData;
+        if (!todayData.visitors.includes(visitorId)) {
+          todayData.visitors.push(visitorId);
+          todayData.count = todayData.visitors.length;
+        }
+      } else {
+        todayData = {
+          date: today,
+          count: 1,
+          visitors: [visitorId],
+        };
+      }
 
-    // Add new visitor
-    todayData.visitors = todayData.visitors || [];
-    if (!todayData.visitors.includes(visitorId)) {
-      todayData.visitors.push(visitorId);
-      todayData.count = todayData.visitors.length;
+      await setDoc(docRef, todayData);
     }
 
-    allData[today] = todayData;
-    localStorage.setItem(VISITOR_STORAGE_KEY, JSON.stringify(allData));
+    // Return today's count
+    const docRef = doc(db, VISITOR_COLLECTION, today);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? (docSnap.data() as VisitorData).count : 0;
+  } catch (error) {
+    console.error("Failed to track visitor:", error);
+    return 0;
   }
-
-  // Return today's count
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const todayData = allData[today];
-  return todayData ? todayData.count : 0;
 }
 
 /**
  * Get today's visitor count
  */
-export function getTodayVisitorCount(): number {
-  const today = getTodayDate();
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const todayData = allData[today];
-  return todayData ? todayData.count : 0;
+export async function getTodayVisitorCount(): Promise<number> {
+  try {
+    const today = getTodayDate();
+    const docRef = doc(db, VISITOR_COLLECTION, today);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? (docSnap.data() as VisitorData).count : 0;
+  } catch (error) {
+    console.error("Failed to get today's visitor count:", error);
+    return 0;
+  }
 }
 
 /**
  * Get total visitor count across all days
  */
-export function getTotalVisitorCount(): number {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  return Object.values(allData).reduce((sum: number, day: any) => sum + (day.count || 0), 0);
+export async function getTotalVisitorCount(): Promise<number> {
+  try {
+    const collectionRef = collection(db, VISITOR_COLLECTION);
+    const snapshot = await getDocs(collectionRef);
+    return snapshot.docs.reduce((sum, doc) => sum + ((doc.data() as VisitorData).count || 0), 0);
+  } catch (error) {
+    console.error("Failed to get total visitor count:", error);
+    return 0;
+  }
 }
 
 /**
  * Record a paid purchase for today
  */
-export function recordPaidPurchase(amount?: number): number {
-  const today = getTodayDate();
-  const purchaseId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export async function recordPaidPurchase(amount?: number): Promise<number> {
+  try {
+    const today = getTodayDate();
+    const purchaseId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  const allData = JSON.parse(localStorage.getItem(PURCHASE_STORAGE_KEY) || "{}");
+    const docRef = doc(db, PURCHASE_COLLECTION, today);
+    const docSnap = await getDoc(docRef);
 
-  let todayData: PurchaseData = allData[today] || {
-    date: today,
-    count: 0,
-    purchases: [],
-  };
+    let todayData: PurchaseData;
+    if (docSnap.exists()) {
+      todayData = docSnap.data() as PurchaseData;
+    } else {
+      todayData = {
+        date: today,
+        count: 0,
+        purchases: [],
+      };
+    }
 
-  todayData.purchases.push({
-    id: purchaseId,
-    timestamp: Date.now(),
-    amount,
-  });
+    todayData.purchases.push({
+      id: purchaseId,
+      timestamp: Date.now(),
+      amount,
+    });
 
-  todayData.count = todayData.purchases.length;
-  allData[today] = todayData;
-  localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify(allData));
+    todayData.count = todayData.purchases.length;
+    await setDoc(docRef, todayData);
 
-  return todayData.count;
+    return todayData.count;
+  } catch (error) {
+    console.error("Failed to record purchase:", error);
+    return 0;
+  }
 }
 
 /**
  * Get today's paid purchase count
  */
-export function getTodayPurchaseCount(): number {
-  const today = getTodayDate();
-  const allData = JSON.parse(localStorage.getItem(PURCHASE_STORAGE_KEY) || "{}");
-  const todayData = allData[today];
-  return todayData ? todayData.count : 0;
+export async function getTodayPurchaseCount(): Promise<number> {
+  try {
+    const today = getTodayDate();
+    const docRef = doc(db, PURCHASE_COLLECTION, today);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? (docSnap.data() as PurchaseData).count : 0;
+  } catch (error) {
+    console.error("Failed to get today's purchase count:", error);
+    return 0;
+  }
 }
 
 /**
  * Get all visitor history (for analytics)
  */
-export function getVisitorHistory() {
-  return JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
+export async function getVisitorHistory() {
+  try {
+    const collectionRef = collection(db, VISITOR_COLLECTION);
+    const snapshot = await getDocs(collectionRef);
+    const data: Record<string, VisitorData> = {};
+    snapshot.docs.forEach((doc) => {
+      data[doc.id] = doc.data() as VisitorData;
+    });
+    return data;
+  } catch (error) {
+    console.error("Failed to get visitor history:", error);
+    return {};
+  }
 }
 
 /**
  * Get all purchase history (for analytics)
  */
-export function getPurchaseHistory() {
-  return JSON.parse(localStorage.getItem(PURCHASE_STORAGE_KEY) || "{}");
+export async function getPurchaseHistory() {
+  try {
+    const collectionRef = collection(db, PURCHASE_COLLECTION);
+    const snapshot = await getDocs(collectionRef);
+    const data: Record<string, PurchaseData> = {};
+    snapshot.docs.forEach((doc) => {
+      data[doc.id] = doc.data() as PurchaseData;
+    });
+    return data;
+  } catch (error) {
+    console.error("Failed to get purchase history:", error);
+    return {};
+  }
 }
 
 /**
  * Clear all analytics data (for testing/reset)
  */
 export function clearAnalyticsData() {
-  localStorage.removeItem(VISITOR_STORAGE_KEY);
-  localStorage.removeItem(PURCHASE_STORAGE_KEY);
   sessionStorage.removeItem(`aws-quiz-session-${getTodayDate()}`);
 }
 
 /**
  * 일별 방문자 데이터 (최근 30일)
  */
-export function getDailyVisitors() {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ date: string; count: number }> = [];
+export async function getDailyVisitors() {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ date: string; count: number }> = [];
 
-  // 최근 30일의 데이터
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split("T")[0];
-    const count = allData[dateStr]?.count || 0;
-    result.push({ date: (30 - i).toString(), count });
+    // 최근 30일의 데이터
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      const count = allData[dateStr]?.count || 0;
+      result.push({ date: (30 - i).toString(), count });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to get daily visitors:", error);
+    return [];
   }
-
-  return result;
 }
 
 /**
  * 주별 방문자 데이터 (최근 12주)
  */
-export function getWeeklyVisitors() {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ week: string; count: number }> = [];
+export async function getWeeklyVisitors() {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ week: string; count: number }> = [];
 
-  for (let i = 0; i < 12; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (11 - i) * 7);
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay());
-    const weekStr = weekStart.toISOString().split("T")[0];
+    for (let i = 0; i < 12; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (11 - i) * 7);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
 
-    let weekCount = 0;
-    for (let j = 0; j < 7; j++) {
-      const dayDate = new Date(weekStart);
-      dayDate.setDate(weekStart.getDate() + j);
-      const dayStr = dayDate.toISOString().split("T")[0];
-      weekCount += allData[dayStr]?.count || 0;
+      let weekCount = 0;
+      for (let j = 0; j < 7; j++) {
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + j);
+        const dayStr = dayDate.toISOString().split("T")[0];
+        weekCount += allData[dayStr]?.count || 0;
+      }
+
+      result.push({ week: `W${i + 1}`, count: weekCount });
     }
 
-    result.push({ week: `W${i + 1}`, count: weekCount });
+    return result;
+  } catch (error) {
+    console.error("Failed to get weekly visitors:", error);
+    return [];
   }
-
-  return result;
 }
 
 /**
  * 월별 방문자 데이터 (올해 1월 ~ 12월)
  */
-export function getMonthlyVisitors() {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ month: string; count: number }> = [];
-  const currentYear = new Date().getFullYear();
+export async function getMonthlyVisitors() {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ month: string; count: number }> = [];
+    const currentYear = new Date().getFullYear();
 
-  for (let month = 0; month < 12; month++) {
-    const monthStr = `${currentYear}-${String(month + 1).padStart(2, "0")}`;
+    for (let month = 0; month < 12; month++) {
+      const monthStr = `${currentYear}-${String(month + 1).padStart(2, "0")}`;
 
-    let monthCount = 0;
-    Object.keys(allData).forEach((key) => {
-      if (key.startsWith(monthStr)) {
-        monthCount += allData[key]?.count || 0;
-      }
-    });
+      let monthCount = 0;
+      Object.keys(allData).forEach((key) => {
+        if (key.startsWith(monthStr)) {
+          monthCount += allData[key]?.count || 0;
+        }
+      });
 
-    result.push({ month: `${month + 1}월`, count: monthCount });
+      result.push({ month: `${month + 1}월`, count: monthCount });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to get monthly visitors:", error);
+    return [];
   }
-
-  return result;
 }
 
 /**
  * 특정 월의 일별 방문자 데이터
  */
-export function getDailyVisitorsForMonth(monthOffset: number) {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ date: string; count: number }> = [];
+export async function getDailyVisitorsForMonth(monthOffset: number) {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ date: string; count: number }> = [];
 
-  const targetDate = new Date();
-  targetDate.setMonth(targetDate.getMonth() - monthOffset);
-  const year = targetDate.getFullYear();
-  const month = targetDate.getMonth();
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - monthOffset);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split("T")[0];
-    const count = allData[dateStr]?.count || 0;
-    result.push({ date: day.toString(), count });
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateStr = date.toISOString().split("T")[0];
+      const count = allData[dateStr]?.count || 0;
+      result.push({ date: day.toString(), count });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to get daily visitors for month:", error);
+    return [];
   }
-
-  return result;
 }
 
 /**
  * 특정 월의 주별 방문자 데이터
  */
-export function getWeeklyVisitorsForMonth(monthOffset: number) {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ week: string; count: number }> = [];
+export async function getWeeklyVisitorsForMonth(monthOffset: number) {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ week: string; count: number }> = [];
 
-  const targetDate = new Date();
-  targetDate.setMonth(targetDate.getMonth() - monthOffset);
-  const year = targetDate.getFullYear();
-  const month = targetDate.getMonth();
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - monthOffset);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
 
-  let weekCount = 1;
-  let currentDate = new Date(firstDay);
+    let weekCount = 1;
+    let currentDate = new Date(firstDay);
 
-  // 첫 주의 시작일 (월요일부터)
-  const firstDayOfWeek = firstDay.getDay();
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - firstDayOfWeek);
+    // 첫 주의 시작일 (월요일부터)
+    const firstDayOfWeek = firstDay.getDay();
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDayOfWeek);
 
-  currentDate = new Date(startDate);
+    currentDate = new Date(startDate);
 
-  while (currentDate <= lastDay) {
-    let count = 0;
+    while (currentDate <= lastDay) {
+      let count = 0;
 
-    // 7일간 데이터 합산
-    for (let i = 0; i < 7; i++) {
-      const dateStr = currentDate.toISOString().split("T")[0];
-      count += allData[dateStr]?.count || 0;
-      currentDate.setDate(currentDate.getDate() + 1);
+      // 7일간 데이터 합산
+      for (let i = 0; i < 7; i++) {
+        const dateStr = currentDate.toISOString().split("T")[0];
+        count += allData[dateStr]?.count || 0;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // 현재 월에 속하는 주만 표시
+      if (weekCount <= 6) {
+        result.push({ week: `W${weekCount}`, count });
+        weekCount++;
+      }
     }
 
-    // 현재 월에 속하는 주만 표시
-    if (weekCount <= 6) {
-      result.push({ week: `W${weekCount}`, count });
-      weekCount++;
-    }
+    return result;
+  } catch (error) {
+    console.error("Failed to get weekly visitors for month:", error);
+    return [];
   }
-
-  return result;
 }
 
 /**
  * 특정 월의 특정 주의 일별 방문자 데이터 (weekIndex: 0~5)
  */
-export function getDailyVisitorsForWeek(monthOffset: number, weekIndex: number) {
-  const allData = JSON.parse(localStorage.getItem(VISITOR_STORAGE_KEY) || "{}");
-  const result: Array<{ date: string; count: number }> = [];
+export async function getDailyVisitorsForWeek(monthOffset: number, weekIndex: number) {
+  try {
+    const allData = await getVisitorHistory();
+    const result: Array<{ date: string; count: number }> = [];
 
-  const targetDate = new Date();
-  targetDate.setMonth(targetDate.getMonth() - monthOffset);
-  const year = targetDate.getFullYear();
-  const month = targetDate.getMonth();
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - monthOffset);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
 
-  const firstDay = new Date(year, month, 1);
-  const firstDayOfWeek = firstDay.getDay();
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - firstDayOfWeek);
+    const firstDay = new Date(year, month, 1);
+    const firstDayOfWeek = firstDay.getDay();
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDayOfWeek);
 
-  // 요청된 주의 시작일
-  const weekStartDate = new Date(startDate);
-  weekStartDate.setDate(weekStartDate.getDate() + weekIndex * 7);
+    // 요청된 주의 시작일
+    const weekStartDate = new Date(startDate);
+    weekStartDate.setDate(weekStartDate.getDate() + weekIndex * 7);
 
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  for (let i = 0; i < 7; i++) {
-    const currentDate = new Date(weekStartDate);
-    currentDate.setDate(currentDate.getDate() + i);
-    const dateStr = currentDate.toISOString().split("T")[0];
-    const count = allData[dateStr]?.count || 0;
-    const dayName = dayNames[currentDate.getDay()];
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(weekStartDate);
+      currentDate.setDate(currentDate.getDate() + i);
+      const dateStr = currentDate.toISOString().split("T")[0];
+      const count = allData[dateStr]?.count || 0;
+      const dayName = dayNames[currentDate.getDay()];
 
-    result.push({ date: dayName, count });
+      result.push({ date: dayName, count });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to get daily visitors for week:", error);
+    return [];
   }
-
-  return result;
 }

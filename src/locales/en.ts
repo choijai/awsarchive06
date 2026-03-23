@@ -14,9 +14,9 @@ export const en: Strings = {
   filterAll: "All",
 
   // Difficulty
-  diffEasy: "Easy",
   diffMedium: "Medium",
   diffHard: "Hard",
+  diffChallenge: "Challenge",
 
   // Slots
   slotsTitle: "Service Slots",

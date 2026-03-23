@@ -14,9 +14,9 @@ export const ja: Strings = {
   filterAll: "すべて",
 
   // Difficulty
-  diffEasy: "簡単",
   diffMedium: "普通",
   diffHard: "難しい",
+  diffChallenge: "チャレンジ",
 
   // Slots
   slotsTitle: "サービススロット",

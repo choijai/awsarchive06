@@ -320,13 +320,15 @@ function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string | null>(null);
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | null>(null);
+  const [difficulty, setDifficulty] = useState<"medium" | "hard" | "challenge" | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [visitorCount, setVisitorCount] = useState(0);
   const [totalVisitorCount, setTotalVisitorCount] = useState(0);
+  const [graphPanelWidth, setGraphPanelWidth] = useState(50); // 비율 (%)
+  const [isResizing, setIsResizing] = useState(false);
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
@@ -335,7 +337,6 @@ function App() {
   const [graphWeekIndex, setGraphWeekIndex] = useState(0);
   const [graphData, setGraphData] = useState<Array<{ label: string; count: number }>>([]);
   const [graphZoom, setGraphZoom] = useState(1);
-  const [graphScroll, setGraphScroll] = useState(0);
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
 
@@ -354,10 +355,18 @@ function App() {
 
   // Track visitors and load purchase count on mount
   useEffect(() => {
-    const count = trackVisitor();
-    setVisitorCount(count);
-    setTotalVisitorCount(getTotalVisitorCount());
-    setPurchaseCount(getTodayPurchaseCount());
+    (async () => {
+      try {
+        const count = await trackVisitor();
+        setVisitorCount(count);
+        const totalCount = await getTotalVisitorCount();
+        setTotalVisitorCount(totalCount);
+        const purchaseCount = await getTodayPurchaseCount();
+        setPurchaseCount(purchaseCount);
+      } catch (error) {
+        console.error("Failed to load visitor data:", error);
+      }
+    })();
 
     // 사용자 상태 초기화
     setUserStatusLocal(getUserStatus());
@@ -424,18 +433,23 @@ function App() {
 
   // 그래프 데이터 업데이트
   useEffect(() => {
-    if (graphPeriod === "daily") {
-      const data = getDailyVisitorsForMonth(graphMonthOffset);
-      setGraphData(data.map(d => ({ label: d.date, count: d.count })));
-    } else if (graphPeriod === "weekly") {
-      const data = getWeeklyVisitorsForMonth(graphMonthOffset);
-      setGraphData(data.map(d => ({ label: d.week, count: d.count })));
-    } else if (graphPeriod === "monthly") {
-      const data = getMonthlyVisitors();
-      setGraphData(data.map(d => ({ label: d.month, count: d.count })));
-    }
-    setGraphZoom(1);
-    setGraphScroll(0);
+    (async () => {
+      try {
+        if (graphPeriod === "daily") {
+          const data = await getDailyVisitorsForMonth(graphMonthOffset);
+          setGraphData(data.map(d => ({ label: d.date, count: d.count })));
+        } else if (graphPeriod === "weekly") {
+          const data = await getWeeklyVisitorsForMonth(graphMonthOffset);
+          setGraphData(data.map(d => ({ label: d.week, count: d.count })));
+        } else if (graphPeriod === "monthly") {
+          const data = await getMonthlyVisitors();
+          setGraphData(data.map(d => ({ label: d.month, count: d.count })));
+        }
+        setGraphZoom(1);
+      } catch (error) {
+        console.error("Failed to load graph data:", error);
+      }
+    })();
   }, [graphPeriod, graphMonthOffset, graphWeekIndex]);
 
   const onNodeClick = (id: string | null) => {
@@ -461,6 +475,43 @@ function App() {
     setError(null);
   };
 
+  // 그래프 패널 리사이징
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const mainArea = document.querySelector('.main-area') as HTMLElement;
+      if (!mainArea) return;
+
+      const rect = mainArea.getBoundingClientRect();
+      const newX = e.clientX - rect.left;
+      const newWidth = (newX / rect.width) * 100;
+
+      // 최소 25%, 최대 75% 제약
+      if (newWidth >= 25 && newWidth <= 75) {
+        setGraphPanelWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+  }, [isResizing]);
+
   const handleGenerateProblem = async () => {
     if (slots.length === 0) return;
 
@@ -482,7 +533,7 @@ function App() {
         return node?.name || id;
       });
 
-      const diff = (difficulty || "medium") as "easy" | "medium" | "hard";
+      const diff = (difficulty || "medium") as "medium" | "hard" | "challenge";
       const generatedProblem = await generateSAAProblem(serviceNames, diff, locale);
       setProblem(generatedProblem);
 
@@ -621,9 +672,9 @@ function App() {
         )}
       </div>
 
-      <div className="main-area">
+      <div className="main-area" style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
         {/* Left: Controls */}
-        <div className="controls-panel">
+        <div className="controls-panel" style={{ flex: `0 0 ${100 - graphPanelWidth}%` }}>
           {tab === "quiz" && (
             <>
               {/* Category filter */}
@@ -643,10 +694,10 @@ function App() {
                 <div className="slots-header">
                   <span className="slots-title">&#9881; {t("slotsTitle")} ({slots.length}/4)</span>
                   <div className="difficulty-buttons">
-                    {(["easy", "medium", "hard"] as const).map(d => (
+                    {(["medium", "hard", "challenge"] as const).map(d => (
                       <button key={d} className={`diff-btn ${difficulty === d ? "active" : ""}`}
                         onClick={() => setDifficulty(difficulty === d ? null : d)}>
-                        {d === "easy" ? t("diffEasy") : d === "medium" ? t("diffMedium") : t("diffHard")}
+                        {d === "medium" ? t("diffMedium") : d === "hard" ? t("diffHard") : t("diffChallenge")}
                       </button>
                     ))}
                     <button className="diff-btn reset" onClick={resetSlots}>{t("btnReset")}</button>
@@ -710,350 +761,6 @@ function App() {
                 {error && (
                   <div className="error-message" style={{ color: "#ff6b6b", marginTop: "12px", padding: "10px", background: "rgba(255,107,107,0.1)", borderRadius: "6px" }}>
                     ⚠️ {error}
-                  </div>
-                )}
-
-                {/* 시험 시작일 설정 모달 */}
-                {showExamDateModal && (
-                  <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
-                    zIndex: 1001
-                  }} onClick={() => setShowExamDateModal(false)}>
-                    <div style={{
-                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
-                      padding: "32px", maxWidth: "450px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
-                    }} onClick={e => e.stopPropagation()}>
-                      <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>📅 시험 시작일 설정</h2>
-
-                      <div style={{ marginBottom: "24px" }}>
-                        <label style={{ display: "block", color: "#cbd5e1", fontSize: "12px", marginBottom: "8px", fontWeight: "bold" }}>
-                          SAA-C03 시험 날짜 (84일 후가 시험일입니다)
-                        </label>
-                        <input type="date"
-                          defaultValue={new Date().toISOString().split("T")[0]}
-                          id="examDateInput"
-                          style={{
-                            width: "100%", padding: "10px", background: "rgba(255,255,255,0.1)",
-                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px",
-                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box"
-                          }} />
-
-                        <div style={{
-                          marginTop: "16px", padding: "12px", background: "rgba(59,130,246,0.1)",
-                          border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "12px", color: "#cbd5e1"
-                        }}>
-                          ✨ <strong>팁:</strong> 시작일부터 84일 후가 시험 예정일입니다.
-                          <br />📍 우측 상단에서 D-day를 확인할 수 있습니다!
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: "12px" }}>
-                        <button onClick={() => {
-                          setExamStartDate();
-                          setDday(getExamDday());
-                          setShowExamDateModal(false);
-                        }} style={{
-                          flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
-                          border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
-                        }}>
-                          ✅ 설정 완료
-                        </button>
-                        <button onClick={() => setShowExamDateModal(false)} style={{
-                          flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
-                          border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
-                        }}>
-                          취소
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Firebase 로그인/회원가입 모달 */}
-                {showLoginModal && (
-                  <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
-                    zIndex: 1001
-                  }}>
-                    <div style={{
-                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px",
-                      padding: "48px 40px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
-                    }} onClick={e => e.stopPropagation()}>
-                      <h2 style={{ color: "#fff", marginBottom: "12px", fontSize: "24px", fontWeight: "bold", textAlign: "center" }}>
-                        {isSignUp ? "📝 " + t("btnSignUp") : "🔐 " + t("btnLogIn")}
-                      </h2>
-                      <p style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", marginBottom: "24px" }}>
-                        {t("verifyEmailDesc")}
-                      </p>
-
-                      {/* Google 로그인 버튼 */}
-                      <button
-                        onClick={async () => {
-                          setLoginError(null);
-                          setLoginLoading(true);
-                          try {
-                            const user = await signInWithGoogle();
-                            setUserEmail(user.email);
-                            setUserStatusLocal("loggedIn");
-                            localStorage.setItem("userEmail", user.email || "");
-                            localStorage.setItem("userStatus", "loggedIn");
-                            setDailyCount(0);
-                            localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                            localStorage.setItem("problemCount", "0");
-                            setShowLoginModal(false);
-                            // 시험일정이 설정되지 않았을 때만 팝업 띄우기
-                            const examDate = localStorage.getItem("examStartDate");
-                            if (!examDate) {
-                              setTimeout(() => setShowExamDateModal(true), 300);
-                            }
-                          } catch (err: any) {
-                            setLoginError(err.message);
-                          } finally {
-                            setLoginLoading(false);
-                          }
-                        }}
-                        disabled={loginLoading}
-                        style={{
-                          width: "100%", padding: "12px", background: "#fff", color: "#000",
-                          border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
-                          fontSize: "14px", fontWeight: "bold", marginTop: "16px", display: "flex",
-                          alignItems: "center", justifyContent: "center", gap: "8px", opacity: loginLoading ? 0.6 : 1
-                        }}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC04"/>
-                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                        {t("continueWithGoogle")}
-                      </button>
-
-                      {/* 또는 구분선 */}
-                      <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: "12px" }}>
-                        <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
-                        <span style={{ color: "#94a3b8", fontSize: "12px" }}>또는</span>
-                        <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
-                      </div>
-
-                      {/* 에러 메시지 */}
-                      {loginError && (
-                        <div style={{
-                          marginBottom: "16px", padding: "12px", background: "rgba(239,68,68,0.1)",
-                          border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", color: "#fca5a5",
-                          fontSize: "12px", textAlign: "center"
-                        }}>
-                          ⚠️ {loginError}
-                        </div>
-                      )}
-
-                      {/* 이메일/비밀번호 입력 */}
-                      <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        setLoginError(null);
-                        setLoginLoading(true);
-
-                        const email = (document.getElementById("loginEmail") as HTMLInputElement).value;
-                        const password = (document.getElementById("loginPassword") as HTMLInputElement).value;
-
-                        try {
-                          if (isSignUp) {
-                            await signUp(email, password);
-                          } else {
-                            await signIn(email, password);
-                          }
-
-                          // 성공 시 상태 업데이트
-                          setUserEmail(email);
-                          setUserStatusLocal("loggedIn");
-                          localStorage.setItem("userEmail", email);
-                          localStorage.setItem("userStatus", "loggedIn");
-                          setDailyCount(0);
-                          localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                          localStorage.setItem("problemCount", "0");
-                          setShowLoginModal(false);
-
-                          // 시험일정이 설정되지 않았을 때만 팝업 띄우기
-                          const examDate = localStorage.getItem("examStartDate");
-                          if (!examDate) {
-                            setTimeout(() => setShowExamDateModal(true), 300);
-                          }
-                        } catch (err: any) {
-                          setLoginError(err.message);
-                        } finally {
-                          setLoginLoading(false);
-                        }
-                      }} style={{ marginBottom: "24px" }}>
-                        <input type="email"
-                          id="loginEmail"
-                          placeholder={t("verifyEmailPlaceholder")}
-                          required
-                          style={{
-                            width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
-                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
-                            marginBottom: "12px"
-                          }} />
-
-                        <input type="password"
-                          id="loginPassword"
-                          placeholder={t("passwordPlaceholder")}
-                          required
-                          minLength={6}
-                          style={{
-                            width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
-                            color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
-                            marginBottom: "12px"
-                          }} />
-
-                        <button type="submit"
-                          disabled={loginLoading}
-                          style={{
-                            width: "100%", padding: "12px", background: "#3b82f6", color: "#fff",
-                            border: "none", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
-                            fontSize: "14px", fontWeight: "bold", opacity: loginLoading ? 0.6 : 1
-                          }}>
-                          {loginLoading ? t("btnGenerating") : (isSignUp ? t("btnSignUp") : t("btnLogIn"))}
-                        </button>
-                      </form>
-
-                      {/* 로그인/회원가입 토글 */}
-                      <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                          {isSignUp ? t("alreadyHaveAccount") + " " : t("dontHaveAccount") + " "}
-                          <button onClick={() => { setIsSignUp(!isSignUp); setLoginError(null); }}
-                            style={{
-                              background: "none", border: "none", color: "#3b82f6",
-                              cursor: "pointer", textDecoration: "underline", fontSize: "13px"
-                            }}>
-                            {isSignUp ? t("btnLogIn") : t("btnSignUp")}
-                          </button>
-                        </span>
-                      </div>
-
-                      {/* 정보 박스 */}
-                      <div style={{
-                        textAlign: "center", color: "#cbd5e1", fontSize: "12px",
-                        padding: "16px", background: "rgba(139,92,246,0.1)", borderRadius: "8px",
-                        border: "1px solid rgba(139,92,246,0.3)", lineHeight: "1.6"
-                      }}>
-                        <p style={{ marginBottom: "8px" }}><strong>{t("loginGetTitle")}</strong></p>
-                        <p style={{ marginBottom: "12px", color: "#a8d5ff", fontWeight: 500 }}>{t("aiFeature")}</p>
-                        <p>{t("loginFreeAttempts")}</p>
-                        <p style={{ marginTop: "12px", color: "#8b5cf6", fontWeight: "bold" }}>{t("loginUpgradeOffer")}</p>
-                      </div>
-
-                      <button onClick={() => { setShowLoginModal(false); setLoginError(null); }} style={{
-                        width: "100%", padding: "12px", background: "transparent", color: "#94a3b8",
-                        border: "none", cursor: "pointer", fontSize: "14px", marginTop: "20px"
-                      }}>
-                        {t("cancelBtn")}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 인증 모달 */}
-                {showAuthModal && (
-                  <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
-                    zIndex: 1000
-                  }} onClick={() => setShowAuthModal(false)}>
-                    <div style={{
-                      background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
-                      padding: "32px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
-                    }} onClick={e => e.stopPropagation()}>
-                      <h2 style={{ color: "#fff", marginBottom: "16px", fontSize: "20px" }}>🚀 {t("labelQuotaFull") || "Quota Limited"}</h2>
-
-                      <div style={{ marginBottom: "24px", color: "#cbd5e1", lineHeight: "1.6", fontSize: "14px" }}>
-                        {userStatus === "guest" && (
-                          <>
-                            <p>📌 <strong>Guest (비로그인):</strong> 하루 2회 무료</p>
-                            <p style={{ marginTop: "12px" }}>로그인하면 하루 <strong>2회 무료</strong>를 이용할 수 있으며, 결제 후에는 <strong>하루 20개 문제</strong>를 생성할 수 있습니다.</p>
-                            <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
-                              <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
-                              <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
-                              <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
-                            </div>
-                          </>
-                        )}
-                        {userStatus === "loggedIn" && (
-                          <>
-                            <p>✨ <strong>Logged In (로그인):</strong> 2회 무료 이용 완료</p>
-                            <p style={{ marginTop: "12px" }}>결제하시면 <strong>하루 20개 문제</strong>를 무제한으로 생성하실 수 있습니다!</p>
-                            <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
-                              <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
-                              <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
-                              <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
-                            </div>
-                          </>
-                        )}
-                        {userStatus === "paid" && (
-                          <>
-                            <p>💎 <strong>Premium (결제):</strong> 하루 20개 문제 이용 중</p>
-                            <p style={{ marginTop: "12px" }}>내일 자정에 카운트가 초기화됩니다.</p>
-                          </>
-                        )}
-                      </div>
-
-                      <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-                        {userStatus === "guest" && (
-                          <>
-                            <button onClick={() => {
-                              setUserStatus("loggedIn");
-                              setUserStatusLocal("loggedIn");
-                              setDailyCount(0);
-                              localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                              localStorage.setItem("problemCount", "0");
-                              setShowAuthModal(false);
-                            }} style={{
-                              flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
-                              border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
-                            }}>
-                              📝 로그인
-                            </button>
-                            <button onClick={() => {
-                              setUserStatus("paid");
-                              setUserStatusLocal("paid");
-                              setDailyCount(0);
-                              localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                              localStorage.setItem("problemCount", "0");
-                              setShowAuthModal(false);
-                            }} style={{
-                              flex: 1, padding: "12px", background: "#8b5cf6", color: "#fff",
-                              border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
-                            }}>
-                              💳 프리미엄 업그레이드
-                            </button>
-                          </>
-                        )}
-                        {userStatus === "loggedIn" && (
-                          <button onClick={() => {
-                            setUserStatus("paid");
-                            setUserStatusLocal("paid");
-                            setDailyCount(0);
-                            localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                            localStorage.setItem("problemCount", "0");
-                            setShowAuthModal(false);
-                          }} style={{
-                            width: "100%", padding: "12px", background: "#8b5cf6", color: "#fff",
-                            border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
-                          }}>
-                            💳 프리미엄 업그레이드
-                          </button>
-                        )}
-                        <button onClick={() => setShowAuthModal(false)} style={{
-                          flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
-                          border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
-                        }}>
-                          닫기
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 )}
 
@@ -1479,8 +1186,32 @@ function App() {
           )}
         </div>
 
+        {/* Resizer Handle */}
+        <div
+          onMouseDown={() => setIsResizing(true)}
+          style={{
+            width: '6px',
+            background: isResizing ? '#3b82f6' : 'rgba(255,255,255,0.15)',
+            cursor: 'col-resize',
+            transition: isResizing ? 'none' : 'all 0.2s',
+            userSelect: 'none',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            if (!isResizing) {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.5)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isResizing) {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)';
+            }
+          }}
+          title="드래그해서 패널 크기 조절"
+        />
+
         {/* Right: Graph or Admin Chart */}
-        <div className="graph-panel">
+        <div className="graph-panel" style={{ flex: `0 0 ${graphPanelWidth}%`, position: 'relative' }}>
           {tab === "admin" ? (
             <>
               {/* Admin Bar Graph */}
@@ -1541,35 +1272,55 @@ function App() {
                     fontSize: "12px",
                     color: "rgba(255,255,255,0.6)"
                   }}>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                      {graphPeriod !== "monthly" && (
-                        <button
-                          onClick={() => {
-                            if (graphPeriod === "daily") {
-                              setGraphPeriod("weekly");
-                            } else if (graphPeriod === "weekly") {
-                              setGraphPeriod("monthly");
-                            }
-                          }}
-                          style={{
-                            padding: "4px 8px",
-                            background: "rgba(59,130,246,0.2)",
-                            border: "1px solid rgba(59,130,246,0.3)",
-                            borderRadius: "4px",
-                            color: "#fff",
-                            cursor: "pointer",
-                            fontSize: "11px"
-                          }}>
-                          ← {locale === "en" ? "Back" : locale === "ja" ? "戻る" : "뒤로"}
-                        </button>
-                      )}
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ fontWeight: "500" }}>
                         {graphPeriod === "monthly"
                           ? locale === "en" ? "Monthly Overview" : locale === "ja" ? "月別概要" : "월별 현황"
                           : graphPeriod === "weekly"
-                          ? locale === "en" ? `Weekly - ${new Date(new Date().getFullYear(), new Date().getMonth() - graphMonthOffset, 1).toLocaleDateString(locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR", { month: "long", year: "numeric" })}` : "주별 현황"
-                          : locale === "en" ? `Daily - ${new Date(new Date().getFullYear(), new Date().getMonth() - graphMonthOffset, 1).toLocaleDateString(locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR", { month: "long", year: "numeric" })}` : "일별 현황"}
+                          ? locale === "en" ? "Weekly" : locale === "ja" ? "週別" : "주별"
+                          : locale === "en" ? "Daily" : locale === "ja" ? "日別" : "일별"}
                       </span>
+                      {graphPeriod !== "monthly" && (
+                        <select
+                          value={graphMonthOffset}
+                          onChange={(e) => {
+                            setGraphMonthOffset(parseInt(e.target.value));
+                            setGraphZoom(1);
+                            setGraphWeekIndex(0);
+                          }}
+                          style={{
+                            padding: "6px 10px",
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: "6px",
+                            color: "#cbd5e1",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            fontWeight: "bold"
+                          }}>
+                          {Array.from({ length: new Date().getMonth() + 1 }, (_, i) => {
+                            const date = new Date();
+                            date.setMonth(date.getMonth() - i);
+                            const monthName = date.toLocaleDateString(
+                              locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR",
+                              { month: "long", year: "numeric" }
+                            );
+                            return (
+                              <option key={i} value={i}>
+                                {monthName}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
+                      {graphPeriod !== "monthly" && (
+                        <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
+                          {new Date(new Date().getFullYear(), new Date().getMonth() - graphMonthOffset, 1).toLocaleDateString(
+                            locale === "ja" ? "ja-JP" : locale === "en" ? "en-US" : "ko-KR",
+                            { month: "long", year: "numeric" }
+                          )}
+                        </span>
+                      )}
                     </div>
                     <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>
                       {graphPeriod === "monthly"
@@ -1580,39 +1331,35 @@ function App() {
                   {graphData && graphData.length > 0 ? (
                     <div style={{
                       flex: 1,
-                      overflow: "auto",
-                      cursor: "grab"
+                      overflow: "hidden",
+                      cursor: "default"
                     }}
                       onWheel={(e) => {
                         e.preventDefault();
                         const delta = e.deltaY > 0 ? 1.2 : 0.9;
-                        setGraphZoom(Math.max(0.5, Math.min(5, graphZoom * delta)));
-                      }}
-                      onMouseDown={(e) => {
-                        const startX = e.clientX;
-                        const startScroll = graphScroll;
-                        const handleMouseMove = (moveEvent: MouseEvent) => {
-                          const delta = moveEvent.clientX - startX;
-                          setGraphScroll(Math.max(0, startScroll - delta * 2));
-                        };
-                        const handleMouseUp = () => {
-                          document.removeEventListener("mousemove", handleMouseMove);
-                          document.removeEventListener("mouseup", handleMouseUp);
-                        };
-                        document.addEventListener("mousemove", handleMouseMove);
-                        document.addEventListener("mouseup", handleMouseUp);
+                        setGraphZoom(Math.max(0.5, Math.min(60, graphZoom * delta)));
                       }}
                     >
                       {(() => {
-                        const maxScale = 100 / graphZoom;
-                        const gridStep = Math.ceil(maxScale / 5 / 10) * 10; // Round to nearest 10
+                        const maxScale = Math.max(30000 / graphZoom, 200); // Y축 최대값이 200 이상
+
+                        // Calculate appropriate gridStep based on maxScale
+                        let gridStep = 1;
+                        const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+                        for (const step of steps) {
+                          if (maxScale / step <= 6) {
+                            gridStep = step;
+                            break;
+                          }
+                        }
+
                         const gridValues = [];
                         for (let i = 0; i <= maxScale; i += gridStep) {
                           gridValues.push(i);
                         }
 
                         return (
-                          <svg viewBox={`${graphScroll} 0 500 250`} style={{ width: `${graphZoom * 100}%`, height: "100%", minWidth: "100%" }}>
+                          <svg viewBox="0 0 500 250" style={{ width: "100%", height: "100%" }}>
                             {/* X-axis */}
                             <line x1="40" y1="200" x2="480" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
                             {/* Y-axis */}
@@ -1708,6 +1455,350 @@ function App() {
             </>
           )}
         </div>
+
+        {/* 시험 시작일 설정 모달 */}
+        {showExamDateModal && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1001
+          }} onClick={() => setShowExamDateModal(false)}>
+            <div style={{
+              background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
+              padding: "32px", maxWidth: "450px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+            }} onClick={e => e.stopPropagation()}>
+              <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>📅 시험 시작일 설정</h2>
+
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", fontSize: "12px", marginBottom: "8px", fontWeight: "bold" }}>
+                  SAA-C03 시험 날짜 (84일 후가 시험일입니다)
+                </label>
+                <input type="date"
+                  defaultValue={new Date().toISOString().split("T")[0]}
+                  id="examDateInput"
+                  style={{
+                    width: "100%", padding: "10px", background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px",
+                    color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box"
+                  }} />
+
+                <div style={{
+                  marginTop: "16px", padding: "12px", background: "rgba(59,130,246,0.1)",
+                  border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "12px", color: "#cbd5e1"
+                }}>
+                  ✨ <strong>팁:</strong> 시작일부터 84일 후가 시험 예정일입니다.
+                  <br />📍 우측 상단에서 D-day를 확인할 수 있습니다!
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button onClick={() => {
+                  setExamStartDate();
+                  setDday(getExamDday());
+                  setShowExamDateModal(false);
+                }} style={{
+                  flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
+                  border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                }}>
+                  ✅ 설정 완료
+                </button>
+                <button onClick={() => setShowExamDateModal(false)} style={{
+                  flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
+                  border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
+                }}>
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Firebase 로그인/회원가입 모달 */}
+        {showLoginModal && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1001
+          }}>
+            <div style={{
+              background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px",
+              padding: "48px 40px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+            }} onClick={e => e.stopPropagation()}>
+              <h2 style={{ color: "#fff", marginBottom: "12px", fontSize: "24px", fontWeight: "bold", textAlign: "center" }}>
+                {isSignUp ? "📝 " + t("btnSignUp") : "🔐 " + t("btnLogIn")}
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", marginBottom: "24px" }}>
+                {t("verifyEmailDesc")}
+              </p>
+
+              {/* Google 로그인 버튼 */}
+              <button
+                onClick={async () => {
+                  setLoginError(null);
+                  setLoginLoading(true);
+                  try {
+                    const user = await signInWithGoogle();
+                    setUserEmail(user.email);
+                    setUserStatusLocal("loggedIn");
+                    localStorage.setItem("userEmail", user.email || "");
+                    localStorage.setItem("userStatus", "loggedIn");
+                    setDailyCount(0);
+                    localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                    localStorage.setItem("problemCount", "0");
+                    setShowLoginModal(false);
+                    // 시험일정이 설정되지 않았을 때만 팝업 띄우기
+                    const examDate = localStorage.getItem("examStartDate");
+                    if (!examDate) {
+                      setTimeout(() => setShowExamDateModal(true), 300);
+                    }
+                  } catch (err: any) {
+                    setLoginError(err.message);
+                  } finally {
+                    setLoginLoading(false);
+                  }
+                }}
+                disabled={loginLoading}
+                style={{
+                  width: "100%", padding: "12px", background: "#fff", color: "#000",
+                  border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
+                  fontSize: "14px", fontWeight: "bold", marginTop: "16px", display: "flex",
+                  alignItems: "center", justifyContent: "center", gap: "8px", opacity: loginLoading ? 0.6 : 1
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC04"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                {t("continueWithGoogle")}
+              </button>
+
+              {/* 또는 구분선 */}
+              <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: "12px" }}>
+                <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
+                <span style={{ color: "#94a3b8", fontSize: "12px" }}>또는</span>
+                <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }}></div>
+              </div>
+
+              {/* 에러 메시지 */}
+              {loginError && (
+                <div style={{
+                  marginBottom: "16px", padding: "12px", background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", color: "#fca5a5",
+                  fontSize: "12px", textAlign: "center"
+                }}>
+                  ⚠️ {loginError}
+                </div>
+              )}
+
+              {/* 이메일/비밀번호 입력 */}
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setLoginError(null);
+                setLoginLoading(true);
+
+                const email = (document.getElementById("loginEmail") as HTMLInputElement).value;
+                const password = (document.getElementById("loginPassword") as HTMLInputElement).value;
+
+                try {
+                  if (isSignUp) {
+                    await signUp(email, password);
+                  } else {
+                    await signIn(email, password);
+                  }
+
+                  // 성공 시 상태 업데이트
+                  setUserEmail(email);
+                  setUserStatusLocal("loggedIn");
+                  localStorage.setItem("userEmail", email);
+                  localStorage.setItem("userStatus", "loggedIn");
+                  setDailyCount(0);
+                  localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                  localStorage.setItem("problemCount", "0");
+                  setShowLoginModal(false);
+
+                  // 시험일정이 설정되지 않았을 때만 팝업 띄우기
+                  const examDate = localStorage.getItem("examStartDate");
+                  if (!examDate) {
+                    setTimeout(() => setShowExamDateModal(true), 300);
+                  }
+                } catch (err: any) {
+                  setLoginError(err.message);
+                } finally {
+                  setLoginLoading(false);
+                }
+              }} style={{ marginBottom: "24px" }}>
+                <input type="email"
+                  id="loginEmail"
+                  placeholder={t("verifyEmailPlaceholder")}
+                  required
+                  style={{
+                    width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
+                    color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
+                    marginBottom: "12px"
+                  }} />
+
+                <input type="password"
+                  id="loginPassword"
+                  placeholder={t("passwordPlaceholder")}
+                  required
+                  minLength={6}
+                  style={{
+                    width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
+                    color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
+                    marginBottom: "12px"
+                  }} />
+
+                <button type="submit"
+                  disabled={loginLoading}
+                  style={{
+                    width: "100%", padding: "12px", background: "#3b82f6", color: "#fff",
+                    border: "none", borderRadius: "8px", cursor: loginLoading ? "not-allowed" : "pointer",
+                    fontSize: "14px", fontWeight: "bold", opacity: loginLoading ? 0.6 : 1
+                  }}>
+                  {loginLoading ? t("btnGenerating") : (isSignUp ? t("btnSignUp") : t("btnLogIn"))}
+                </button>
+              </form>
+
+              {/* 로그인/회원가입 토글 */}
+              <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                <span style={{ color: "#94a3b8", fontSize: "13px" }}>
+                  {isSignUp ? t("alreadyHaveAccount") + " " : t("dontHaveAccount") + " "}
+                  <button onClick={() => { setIsSignUp(!isSignUp); setLoginError(null); }}
+                    style={{
+                      background: "none", border: "none", color: "#3b82f6",
+                      cursor: "pointer", textDecoration: "underline", fontSize: "13px"
+                    }}>
+                    {isSignUp ? t("btnLogIn") : t("btnSignUp")}
+                  </button>
+                </span>
+              </div>
+
+              {/* 정보 박스 */}
+              <div style={{
+                textAlign: "center", color: "#cbd5e1", fontSize: "12px",
+                padding: "16px", background: "rgba(139,92,246,0.1)", borderRadius: "8px",
+                border: "1px solid rgba(139,92,246,0.3)", lineHeight: "1.6"
+              }}>
+                <p style={{ marginBottom: "8px" }}><strong>{t("loginGetTitle")}</strong></p>
+                <p style={{ marginBottom: "12px", color: "#a8d5ff", fontWeight: 500 }}>{t("aiFeature")}</p>
+                <p>{t("loginFreeAttempts")}</p>
+                <p style={{ marginTop: "12px", color: "#8b5cf6", fontWeight: "bold" }}>{t("loginUpgradeOffer")}</p>
+              </div>
+
+              <button onClick={() => { setShowLoginModal(false); setLoginError(null); }} style={{
+                width: "100%", padding: "12px", background: "transparent", color: "#94a3b8",
+                border: "none", cursor: "pointer", fontSize: "14px", marginTop: "20px"
+              }}>
+                {t("cancelBtn")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 인증 모달 */}
+        {showAuthModal && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000
+          }} onClick={() => setShowAuthModal(false)}>
+            <div style={{
+              background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
+              padding: "32px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+            }} onClick={e => e.stopPropagation()}>
+              <h2 style={{ color: "#fff", marginBottom: "16px", fontSize: "20px" }}>🚀 {t("labelQuotaFull") || "Quota Limited"}</h2>
+
+              <div style={{ marginBottom: "24px", color: "#cbd5e1", lineHeight: "1.6", fontSize: "14px" }}>
+                {userStatus === "guest" && (
+                  <>
+                    <p>📌 <strong>Guest (비로그인):</strong> 하루 2회 무료</p>
+                    <p style={{ marginTop: "12px" }}>로그인하면 하루 <strong>2회 무료</strong>를 이용할 수 있으며, 결제 후에는 <strong>하루 20개 문제</strong>를 생성할 수 있습니다.</p>
+                    <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
+                      <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
+                      <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
+                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                    </div>
+                  </>
+                )}
+                {userStatus === "loggedIn" && (
+                  <>
+                    <p>✨ <strong>Logged In (로그인):</strong> 2회 무료 이용 완료</p>
+                    <p style={{ marginTop: "12px" }}>결제하시면 <strong>하루 20개 문제</strong>를 무제한으로 생성하실 수 있습니다!</p>
+                    <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
+                      <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
+                      <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
+                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                    </div>
+                  </>
+                )}
+                {userStatus === "paid" && (
+                  <>
+                    <p>💎 <strong>Premium (결제):</strong> 하루 20개 문제 이용 중</p>
+                    <p style={{ marginTop: "12px" }}>내일 자정에 카운트가 초기화됩니다.</p>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                {userStatus === "guest" && (
+                  <>
+                    <button onClick={() => {
+                      setUserStatus("loggedIn");
+                      setUserStatusLocal("loggedIn");
+                      setDailyCount(0);
+                      localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                      localStorage.setItem("problemCount", "0");
+                      setShowAuthModal(false);
+                    }} style={{
+                      flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
+                      border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                    }}>
+                      📝 로그인
+                    </button>
+                    <button onClick={() => {
+                      setUserStatus("paid");
+                      setUserStatusLocal("paid");
+                      setDailyCount(0);
+                      localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                      localStorage.setItem("problemCount", "0");
+                      setShowAuthModal(false);
+                    }} style={{
+                      flex: 1, padding: "12px", background: "#8b5cf6", color: "#fff",
+                      border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                    }}>
+                      💳 프리미엄 업그레이드
+                    </button>
+                  </>
+                )}
+                {userStatus === "loggedIn" && (
+                  <button onClick={() => {
+                    setUserStatus("paid");
+                    setUserStatusLocal("paid");
+                    setDailyCount(0);
+                    localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+                    localStorage.setItem("problemCount", "0");
+                    setShowAuthModal(false);
+                  }} style={{
+                    width: "100%", padding: "12px", background: "#8b5cf6", color: "#fff",
+                    border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                  }}>
+                    💳 프리미엄 업그레이드
+                  </button>
+                )}
+                <button onClick={() => setShowAuthModal(false)} style={{
+                  flex: 1, padding: "12px", background: "rgba(255,255,255,0.1)", color: "#cbd5e1",
+                  border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", cursor: "pointer"
+                }}>
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

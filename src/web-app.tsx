@@ -487,7 +487,7 @@ function App() {
       const rect = mainArea.getBoundingClientRect();
       const deltaX = e.clientX - resizeStartPosRef.current.startX;
       const deltaPercent = (deltaX / rect.width) * 100;
-      const newWidth = resizeStartPosRef.current.startWidth + deltaPercent;
+      const newWidth = resizeStartPosRef.current.startWidth - deltaPercent;
 
       // 최소 25%, 최대 75% 제약
       if (newWidth >= 25 && newWidth <= 75) {

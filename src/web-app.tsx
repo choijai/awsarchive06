@@ -1773,6 +1773,25 @@ function App() {
                 )}
               </div>
             </>
+          ) : tab === "status" ? (
+            <>
+              <div className="graph-label">📊 Statistics</div>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+                color: "#64748b",
+                fontSize: "13px",
+                textAlign: "center",
+                padding: "20px"
+              }}>
+                <div>
+                  <div style={{ fontSize: "32px", marginBottom: "8px" }}>📈</div>
+                  <p>PDF 통계 및 다운로드는<br/>좌측 현황 탭에서<br/>확인하실 수 있습니다.</p>
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <div className="graph-label">{t("graphLabel")}</div>

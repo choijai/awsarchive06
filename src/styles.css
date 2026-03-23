@@ -393,12 +393,19 @@ body {
 select {
   background-color: rgba(255,255,255,0.05) !important;
 }
+select:hover {
+  background-color: rgba(255,255,255,0.1) !important;
+}
 select option {
   background: #0b0f1e;
   color: #cbd5e1;
 }
 select option:checked {
   background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+select option:hover {
+  background: rgba(255,255,255,0.15);
   color: #fff;
 }
 

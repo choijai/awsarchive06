@@ -4,7 +4,7 @@ import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
 import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
-import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, uploadPDFToStorage, ADMIN_UID } from "./firebase";
+import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, uploadPDFToStorage, ADMIN_UID, ADMIN_EMAIL } from "./firebase";
 import html2pdf from "html2pdf.js/dist/html2pdf.js";
 import "./styles.css";
 
@@ -46,10 +46,10 @@ function getDailyLimit(): number {
 }
 
 /**
- * 운영자 계정 확인 (imjaichoipro@gmail.com)
+ * 운영자 계정 확인 (환경변수 VITE_ADMIN_EMAIL)
  */
 function isAdminUser(email: string | null): boolean {
-  return email === "imjaichoipro@gmail.com";
+  return email === ADMIN_EMAIL && ADMIN_EMAIL !== "";
 }
 
 /**

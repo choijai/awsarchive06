@@ -44,8 +44,9 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// 관리자 UID (환경변수에서 가져오기)
-export const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || "";
+// 관리자 UID와 이메일 (환경변수에서 가져오기)
+export const ADMIN_UID = (import.meta as any).env?.VITE_ADMIN_UID || "";
+export const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL || "";
 
 // 로컬 저장소에 세션 유지
 setPersistence(auth, browserLocalPersistence);

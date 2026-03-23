@@ -698,7 +698,7 @@ function App() {
                   <div className="difficulty-buttons">
                     {(["medium", "hard", "challenge"] as const).map(d => (
                       <button key={d} className={`diff-btn ${difficulty === d ? "active" : ""}`}
-                        onClick={() => setDifficulty(difficulty === d ? null : d)}>
+                        onClick={() => setDifficulty(d)}>
                         {d === "medium" ? t("diffMedium") : d === "hard" ? t("diffHard") : t("diffChallenge")}
                       </button>
                     ))}

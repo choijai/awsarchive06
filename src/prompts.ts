@@ -951,7 +951,14 @@ export function generatePrompt(
   }
 
   const diffLabel = DIFFICULTY_LABELS[locale][difficulty as "medium" | "hard" | "challenge"] || difficulty;
-  return prompt
+
+  const tokenConstraint = locale === "ko"
+    ? `\n\n⚠️ **중요한 제약사항**:\n- 응답은 최대 2500 토큰으로 제한됩니다.\n- 불필요한 설명이나 중복은 제거하세요.\n- JSON 구조는 반드시 완전해야 합니다 (빠짐 없이 모든 필드 포함).\n- 각 필드는 간결하면서도 명확하게 작성하세요.`
+    : locale === "ja"
+    ? `\n\n⚠️ **重要な制約**:\n- レスポンスは最大2500トークンに制限されています。\n- 不要な説明や重複は削除してください。\n- JSON構造は完全である必要があります（すべてのフィールドが含まれている）。\n- 各フィールドは簡潔でありながら明確に記述してください。`
+    : `\n\n⚠️ **Important Token Constraint**:\n- Keep your response within 2500 tokens maximum.\n- Remove unnecessary explanations or duplications.\n- The JSON structure must be complete (all fields must be included).\n- Write each field concisely but clearly.`;
+
+  return (prompt
     .replace("${SERVICE_NAMES}", serviceNames.join(", "))
-    .replace("${DIFFICULTY}", diffLabel);
+    .replace("${DIFFICULTY}", diffLabel) + tokenConstraint);
 }

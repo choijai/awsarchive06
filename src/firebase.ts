@@ -19,10 +19,14 @@ import {
   updateDoc,
   collection,
   getDocs,
-  addDoc,
-  query,
-  where
+  addDoc
 } from "firebase/firestore";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getBytes
+} from "firebase/storage";
 
 // Firebase 설정 (환경변수에서 가져오기)
 const firebaseConfig = {
@@ -257,30 +261,35 @@ export async function getAdminStats(): Promise<{
 // ===== 퀴즈 통계 함수 =====
 
 /**
- * 퀴즈 결과 저장
+ * 퀴즈 결과 저장 (전체 문제 객체 포함)
  */
 export async function recordQuizResult(
   userId: string,
-  question: string,
-  correctAnswer: string,
+  problem: any,
   selectedAnswer: string,
   difficulty: "medium" | "hard" | "challenge"
-): Promise<void> {
+): Promise<string> {
   try {
-    const isCorrect = selectedAnswer === correctAnswer;
+    const isCorrect = selectedAnswer === problem.answer;
     const resultsRef = collection(db, "users", userId, "quizResults");
+    const sessionId = `${Date.now()}`; // 생성 세션 ID
 
-    await addDoc(resultsRef, {
-      question,
-      correctAnswer,
+    const docRef = await addDoc(resultsRef, {
+      sessionId, // 같은 시간대 생성 문제들 그룹화
+      fullProblem: problem, // 전체 문제 객체 저장
+      question: problem.question,
+      correctAnswer: problem.answer,
       selectedAnswer,
       isCorrect,
       difficulty,
       createdAt: new Date().toISOString(),
       timestamp: new Date().getTime()
     });
+
+    return sessionId;
   } catch (error) {
     console.error("퀴즈 결과 저장 실패:", error);
+    throw error;
   }
 }
 
@@ -351,5 +360,60 @@ export async function getUserQuizStats(userId: string): Promise<{
         challenge: { total: 0, correct: 0, accuracy: 0 }
       }
     };
+  }
+}
+
+/**
+ * 사용자의 생성 세션별 문제 목록 조회
+ */
+export async function getUserProblemSessions(userId: string): Promise<Array<{
+  date: string;
+  time: string;
+  problemCount: number;
+  difficulty: string;
+  problems: any[];
+  sessionTimestamp: number;
+}>> {
+  try {
+    const resultsRef = collection(db, "users", userId, "quizResults");
+    const snapshot = await getDocs(resultsRef);
+
+    // sessionId별로 그룹화
+    const sessionMap = new Map<string, any[]>();
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const sessionId = data.sessionId;
+      if (!sessionMap.has(sessionId)) {
+        sessionMap.set(sessionId, []);
+      }
+      sessionMap.get(sessionId)!.push({
+        ...data,
+        docId: doc.id
+      });
+    });
+
+    // 날짜/시간별로 포맷
+    const sessions = Array.from(sessionMap.entries()).map(([sessionId, problems]) => {
+      const timestamp = problems[0].timestamp;
+      const date = new Date(timestamp);
+      const dateStr = date.toLocaleDateString("ko-KR");
+      const timeStr = date.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+
+      return {
+        date: dateStr,
+        time: timeStr,
+        problemCount: problems.length,
+        difficulty: problems[0].difficulty,
+        problems: problems.map(p => p.fullProblem),
+        sessionTimestamp: timestamp
+      };
+    });
+
+    // 최신순 정렬
+    return sessions.sort((a, b) => b.sessionTimestamp - a.sessionTimestamp);
+  } catch (error) {
+    console.error("세션 조회 실패:", error);
+    return [];
   }
 }

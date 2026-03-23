@@ -4,7 +4,8 @@ import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
 import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
-import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, ADMIN_UID } from "./firebase";
+import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, ADMIN_UID } from "./firebase";
+import { jsPDF } from "jspdf";
 import "./styles.css";
 
 // ===== 사용자 인증 및 일일 제한 관리 =====
@@ -857,8 +858,7 @@ function App() {
                             if (user && problem) {
                               await recordQuizResult(
                                 user.uid,
-                                problem.question,
-                                problem.answer,
+                                problem,
                                 selectedAnswer,
                                 difficulty as "medium" | "hard" | "challenge"
                               );

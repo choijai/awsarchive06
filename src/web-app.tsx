@@ -912,14 +912,14 @@ function App() {
                                 e.currentTarget.style.background = showEasyMode ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)";
                               }}
                             >
-                              {showEasyMode ? "🧠 쉬운 설명 닫기" : "👶 초등학교 5학년 수준으로 설명"}
+                              {showEasyMode ? "🧠 이지모드 닫기" : "👶 이지모드"}
                             </button>
                           )}
 
                           {/* easyMode 설명 */}
                           {showEasyMode && (problem as any).easyMode && (
                             <div style={{ fontSize: "12px", color: "#cbd5e1", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "6px", marginBottom: "12px" }}>
-                              <strong style={{ color: "#fbbf24" }}>🎈 쉬운 설명:</strong>
+                              <strong style={{ color: "#fbbf24" }}>🎈 이지모드 설명:</strong>
                               <p style={{ marginTop: "6px", lineHeight: "1.6" }}>{(problem as any).easyMode.explanation}</p>
                               <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(245,158,11,0.2)" }}>
                                 <strong style={{ color: "#fbbf24" }}>각 보기 설명:</strong>

@@ -652,22 +652,22 @@ function App() {
     element.style.padding = '20px';
     element.style.fontFamily = 'Arial, sans-serif';
     element.innerHTML = `
-      <h1 style="text-align: center; margin-bottom: 10px;">AWS SAA-C03 Quiz Problems</h1>
-      <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 12px;">
-        Date: ${session.date} ${session.time} | Problems: ${session.problemCount} | Difficulty: ${session.difficulty}
+      <h1 style="text-align: center; margin-bottom: 10px; color: black;">AWS SAA-C03 Quiz Problems</h1>
+      <p style="text-align: center; color: black; margin-bottom: 20px; font-size: 12px;">
+        Date: ${session.date} ${session.time}
       </p>
       <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
       ${session.problems.map((problem, index) => `
         <div style="margin-bottom: 30px; page-break-inside: avoid;">
-          <h3 style="margin-bottom: 10px;">Q${index + 1}. ${problem.question}</h3>
+          <h3 style="margin-bottom: 10px; color: black;">Q${index + 1}. ${problem.question}</h3>
           <div style="margin-left: 20px; margin-bottom: 15px;">
             ${["A", "B", "C", "D"].map(opt => `
-              <div style="margin-bottom: 8px; ${opt === problem.answer ? 'color: green; font-weight: bold;' : ''}">
+              <div style="margin-bottom: 8px; color: black;">
                 <strong>${opt}.</strong> ${problem.options[opt as keyof typeof problem.options]}
               </div>
             `).join('')}
           </div>
-          <div style="margin-left: 20px; color: green; font-weight: bold; margin-bottom: 15px;">
+          <div style="margin-left: 20px; color: black; font-weight: bold; margin-bottom: 15px;">
             Answer: ${problem.answer}
           </div>
           <hr style="border: 1px solid #eee;">

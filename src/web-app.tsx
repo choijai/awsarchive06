@@ -518,6 +518,12 @@ function App() {
   const handleGenerateProblem = async () => {
     if (slots.length === 0) return;
 
+    // 난이도 선택 확인
+    if (!difficulty) {
+      setError(locale === "ko" ? "난이도를 선택해주세요." : locale === "ja" ? "難易度を選択してください。" : "Please select a difficulty level.");
+      return;
+    }
+
     // 일일 제한 확인
     const limit = getDailyLimit();
     if (dailyCount >= limit) {

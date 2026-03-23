@@ -668,8 +668,11 @@ function App() {
       </p>
       <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
       ${session.problems.map((problem, index) => `
-        <div style="margin-bottom: 30px; page-break-inside: avoid;">
-          <h3 style="margin-bottom: 10px; color: black;">Q${index + 1}. ${problem.question}</h3>
+        <div style="margin-bottom: 40px; page-break-inside: avoid;">
+          <!-- 문제 번호 및 제목 -->
+          <h3 style="margin-bottom: 12px; color: black; border-bottom: 2px solid #333; padding-bottom: 8px;">Q${index + 1}. ${problem.question}</h3>
+
+          <!-- 보기 -->
           <div style="margin-left: 20px; margin-bottom: 15px;">
             ${["A", "B", "C", "D"].map(opt => `
               <div style="margin-bottom: 8px; color: black;">
@@ -677,10 +680,46 @@ function App() {
               </div>
             `).join('')}
           </div>
-          <div style="margin-left: 20px; color: black; font-weight: bold; margin-bottom: 15px;">
-            Answer: ${problem.answer}
+
+          <!-- 정답 -->
+          <div style="margin-left: 20px; color: black; font-weight: bold; margin-bottom: 20px; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+            ✓ Answer: ${problem.answer}
           </div>
-          <hr style="border: 1px solid #eee;">
+
+          <!-- 핵심 키워드 -->
+          <div style="margin-left: 20px; margin-bottom: 15px;">
+            <strong style="color: #333; font-size: 13px;">📌 Keywords:</strong>
+            <div style="color: black; font-size: 12px; margin-top: 4px;">
+              ${problem.keywords?.join(', ') || 'N/A'}
+            </div>
+          </div>
+
+          <!-- 정답 설명 -->
+          <div style="margin-left: 20px; margin-bottom: 15px;">
+            <strong style="color: #333; font-size: 13px;">📚 Answer Explanation:</strong>
+            <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6;">
+              <div style="margin-bottom: 8px;"><strong>Architecture:</strong> ${problem.explanation?.architecture || 'N/A'}</div>
+              <div style="margin-bottom: 8px;"><strong>Why Correct:</strong> ${problem.explanation?.correct || 'N/A'}</div>
+              <div style="margin-bottom: 8px;"><strong>Service Features:</strong> ${problem.explanation?.service_features || 'N/A'}</div>
+              <div style="margin-bottom: 6px;"><strong>Trap A:</strong> ${problem.explanation?.trap_A || 'N/A'}</div>
+              <div style="margin-bottom: 6px;"><strong>Trap B:</strong> ${problem.explanation?.trap_B || 'N/A'}</div>
+              <div style="margin-bottom: 0;"><strong>Trap C:</strong> ${problem.explanation?.trap_C || 'N/A'}</div>
+            </div>
+          </div>
+
+          <!-- 이지 모드 (쉬운 설명) -->
+          <div style="margin-left: 20px; margin-bottom: 0;">
+            <strong style="color: #333; font-size: 13px;">🎓 Easy Mode (Simplified Explanation):</strong>
+            <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 4px;">
+              <div style="margin-bottom: 8px;"><strong>Simple Explanation:</strong> ${problem.easyMode?.explanation || 'N/A'}</div>
+              <div style="margin-bottom: 6px;"><strong>Option A (Easy):</strong> ${problem.easyMode?.A || 'N/A'}</div>
+              <div style="margin-bottom: 6px;"><strong>Option B (Easy):</strong> ${problem.easyMode?.B || 'N/A'}</div>
+              <div style="margin-bottom: 6px;"><strong>Option C (Easy):</strong> ${problem.easyMode?.C || 'N/A'}</div>
+              <div style="margin-bottom: 0;"><strong>Option D (Easy):</strong> ${problem.easyMode?.D || 'N/A'}</div>
+            </div>
+          </div>
+
+          <hr style="border: 1px solid #ddd; margin-top: 20px;">
         </div>
       `).join('')}
     `;

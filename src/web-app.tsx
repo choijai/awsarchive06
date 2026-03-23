@@ -320,7 +320,7 @@ function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string | null>(null);
-  const [difficulty, setDifficulty] = useState<"medium" | "hard" | "challenge" | null>(null);
+  const [difficulty, setDifficulty] = useState<"medium" | "hard" | "challenge">("medium");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -470,7 +470,7 @@ function App() {
   const resetSlots = () => {
     setSlots([]);
     setSelected(null);
-    setDifficulty(null);
+    setDifficulty("medium");
     setProblem(null);
     setSelectedAnswer(null);
     setError(null);
@@ -518,12 +518,6 @@ function App() {
   const handleGenerateProblem = async () => {
     if (slots.length === 0) return;
 
-    // 난이도 선택 확인
-    if (!difficulty) {
-      setError(locale === "ko" ? "난이도를 선택해주세요." : locale === "ja" ? "難易度を選択してください。" : "Please select a difficulty level.");
-      return;
-    }
-
     // 일일 제한 확인
     const limit = getDailyLimit();
     if (dailyCount >= limit) {
@@ -542,8 +536,7 @@ function App() {
         return node?.name || id;
       });
 
-      const diff = (difficulty || "medium") as "medium" | "hard" | "challenge";
-      const generatedProblem = await generateSAAProblem(serviceNames, diff, locale);
+      const generatedProblem = await generateSAAProblem(serviceNames, difficulty, locale);
       setProblem(generatedProblem);
 
       // 카운트 증가

@@ -75,7 +75,7 @@ export const ko = {
   loginGetTitle: "✨ 로그인하면 다음을 이용할 수 있습니다:",
   aiFeature: "🎯 AWS 노드를 선택하면 AI가 맞춤형 SAA-C03 문제를 자동 생성",
   loginFreeAttempts: "📌 매일 2회 무료 시도",
-  loginUpgradeOffer: "💎 또는 $9.99/월에 업그레이드하여 하루 20개 문제 이용",
+  loginUpgradeOffer: "💎 또는 $14.99/월에 업그레이드하여 하루 20개 문제 이용",
   cancelBtn: "취소",
   btnSignUp: "회원가입",
   btnLogIn: "로그인",
@@ -85,7 +85,7 @@ export const ko = {
 
   // 프리미엄 관련
   premiumTitle: "💎 프리미엄 업그레이드",
-  premiumPrice: "$9.99 / 한 달",
+  premiumPrice: "$14.99 / 한 달",
   premiumFeature1: "✅ 하루 20개 무제한",
   premiumFeature2: "✅ 모든 난이도",
   premiumFeature3: "✅ 완전히 광고 없음",

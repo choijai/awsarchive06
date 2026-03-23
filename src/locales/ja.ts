@@ -77,7 +77,7 @@ export const ja: Strings = {
   loginGetTitle: "✨ ログインで以下が利用できます:",
   aiFeature: "🎯 AWSノードを選択するとAIが自動的にカスタマイズされたSAA-C03問題を生成",
   loginFreeAttempts: "📌 1日2回の無料試行",
-  loginUpgradeOffer: "💎 または $9.99/月にアップグレードして1日20問を利用",
+  loginUpgradeOffer: "💎 または $14.99/月にアップグレードして1日20問を利用",
   cancelBtn: "キャンセル",
   btnSignUp: "サインアップ",
   btnLogIn: "ログイン",
@@ -87,7 +87,7 @@ export const ja: Strings = {
 
   // Premium related
   premiumTitle: "💎 プレミアムにアップグレード",
-  premiumPrice: "$9.99 / 月",
+  premiumPrice: "$14.99 / 月",
   premiumFeature1: "✅ 1日20問の無制限",
   premiumFeature2: "✅ すべての難易度",
   premiumFeature3: "✅ 完全に広告なし",

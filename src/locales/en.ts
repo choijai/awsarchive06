@@ -77,7 +77,7 @@ export const en: Strings = {
   loginGetTitle: "✨ Log in to get:",
   aiFeature: "🎯 Select AWS nodes and AI automatically generates personalized SAA-C03 problems",
   loginFreeAttempts: "📌 2 free attempts per day",
-  loginUpgradeOffer: "💎 Or upgrade to 20 problems/day for $9.99/month",
+  loginUpgradeOffer: "💎 Or upgrade to 20 problems/day for $14.99/month",
   cancelBtn: "Cancel",
   btnSignUp: "Sign Up",
   btnLogIn: "Log In",
@@ -87,7 +87,7 @@ export const en: Strings = {
 
   // Premium related
   premiumTitle: "💎 Upgrade to Premium",
-  premiumPrice: "$9.99 / month",
+  premiumPrice: "$14.99 / month",
   premiumFeature1: "✅ Unlimited 20 problems per day",
   premiumFeature2: "✅ All difficulty levels",
   premiumFeature3: "✅ Completely ad-free",

@@ -87,14 +87,20 @@ export async function generateSAAProblem(
     const content = data.content[0].text;
 
     // JSON 추출 (마크다운 코드 블록 처리)
-    const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) ||
-                      content.match(/(\{[\s\S]*\})/);
+    let jsonStr = content.match(/```json\n?([\s\S]*?)\n?```/)?.[1] ||
+                  content.match(/(\{[\s\S]*\})/)?.[1];
 
-    if (!jsonMatch) {
+    if (!jsonStr) {
       throw new Error("Failed to extract JSON from response");
     }
 
-    const problem = JSON.parse(jsonMatch[1]) as Problem;
+    // 문자열 값 내의 줄바꿈 정규화 (JSON 유효성 보장)
+    // "key": "multi\nline" → "key": "multi line"
+    jsonStr = jsonStr.replace(/(":\s*"[^"]*)\n([^"]*")/g, '$1 $2');
+    jsonStr = jsonStr.replace(/\\n/g, ' '); // \n 이스케이프 제거
+    jsonStr = jsonStr.replace(/\n/g, ''); // 남은 줄바꿈 제거
+
+    const problem = JSON.parse(jsonStr) as Problem;
     return problem;
   } catch (error) {
     if (error instanceof Error) {

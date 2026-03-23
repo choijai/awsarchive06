@@ -736,7 +736,7 @@ function App() {
                   disabled={slots.length === 0 || loading || dailyCount >= getDailyLimit()}
                   onClick={handleGenerateProblem}
                   title={dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
-                  {loading && <span className="loading-icon">⏳</span>}
+                  {loading && <span className="loading-icon">●●●</span>}
                   {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>

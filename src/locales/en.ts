@@ -25,7 +25,7 @@ export const en: Strings = {
   // Buttons
   btnReset: "Reset",
   btnGenerate: "🚀 Generate SAA-C03 Problem",
-  btnGenerating: "⏳ Generating...",
+  btnGenerating: " Generating...",
   btnNextProblem: "Generate Another Problem",
 
   // Problem labels

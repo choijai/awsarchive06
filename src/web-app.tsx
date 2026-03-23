@@ -4,7 +4,7 @@ import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
 import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
-import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, ADMIN_UID } from "./firebase";
+import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, uploadPDFToStorage, ADMIN_UID } from "./firebase";
 import { jsPDF } from "jspdf";
 import "./styles.css";
 
@@ -369,6 +369,16 @@ function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
 
+  // 문제 세션 (PDF 다운로드용)
+  const [problemSessions, setProblemSessions] = useState<Array<{
+    date: string;
+    time: string;
+    problemCount: number;
+    difficulty: string;
+    problems: Problem[];
+    sessionTimestamp: number;
+  }> | null>(null);
+
   // Track visitors and load purchase count on mount
   useEffect(() => {
     (async () => {
@@ -608,6 +618,8 @@ function App() {
         if (user) {
           const stats = await getUserQuizStats(user.uid);
           setQuizStats(stats);
+          const sessions = await getUserProblemSessions(user.uid);
+          setProblemSessions(sessions);
         }
       })();
     }
@@ -620,6 +632,100 @@ function App() {
   }, [tab, selected, locale]);
 
   const selectedNode = selected ? NODES.find(n => n.id === selected) : null;
+
+  // PDF 생성 및 업로드 함수
+  const generatePDF = async (session: typeof problemSessions extends Array<infer U> ? U : never) => {
+    if (!session || !session.problems || session.problems.length === 0) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    // 제목
+    doc.setFontSize(16);
+    doc.text(`AWS SAA-C03 Quiz Problems`, 15, yPos);
+    yPos += 10;
+
+    // 세션 정보
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date: ${session.date} ${session.time} | Problems: ${session.problemCount} | Difficulty: ${session.difficulty}`, 15, yPos);
+    yPos += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, yPos, pageWidth - 15, yPos);
+    yPos += 5;
+
+    doc.setTextColor(0, 0, 0);
+
+    // 각 문제 표시
+    session.problems.forEach((problem, index) => {
+      // 페이지 부족 여부 확인
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // 문제 번호
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Q${index + 1}. ${problem.question.substring(0, 60)}${problem.question.length > 60 ? '...' : ''}`, 15, yPos);
+      yPos += 8;
+
+      // 선택지
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      const options: Array<[string, string]> = [["A", problem.options.A], ["B", problem.options.B], ["C", problem.options.C], ["D", problem.options.D]];
+      options.forEach(([key, value]) => {
+        const isAnswer = key === problem.answer;
+        if (isAnswer) {
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(0, 150, 0);
+        } else {
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(0, 0, 0);
+        }
+        const optionText = `${key}. ${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`;
+        doc.text(optionText, 20, yPos);
+        yPos += 6;
+      });
+
+      // 정답 표시
+      doc.setTextColor(0, 150, 0);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Answer: ${problem.answer}`, 20, yPos);
+      yPos += 8;
+
+      // 분리선
+      doc.setDrawColor(220, 220, 220);
+      doc.line(15, yPos, pageWidth - 15, yPos);
+      yPos += 6;
+    });
+
+    // PDF를 Blob으로 생성
+    const pdfBlob = doc.output('blob') as Blob;
+    const fileName = `SAA-Problems_${session.date.replace(/\//g, '-')}_${session.time.replace(/:/g, '-')}.pdf`;
+
+    // Cloud Storage에 업로드
+    const user = getCurrentUser();
+    if (user) {
+      try {
+        await uploadPDFToStorage(user.uid, pdfBlob, session.date, session.time);
+      } catch (error) {
+        console.error("Cloud Storage 업로드 실패:", error);
+      }
+    }
+
+    // 로컬 다운로드
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="app">
@@ -1172,6 +1278,67 @@ function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* Problem Sessions */}
+                {problemSessions && problemSessions.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "12px" }}>
+                      📄 Generated Sessions
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {problemSessions.map((session, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "12px"
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "12px", color: "#e2e8f0", fontWeight: 600 }}>
+                              📅 {session.date} {session.time}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                              {session.problemCount} problems • {session.difficulty}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => generatePDF(session)}
+                            disabled={false}
+                            style={{
+                              padding: "6px 14px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: "rgba(245,158,11,0.2)",
+                              border: "1px solid rgba(245,158,11,0.4)",
+                              borderRadius: "6px",
+                              color: "#f59e0b",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                              whiteSpace: "nowrap"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = "rgba(245,158,11,0.3)";
+                              e.currentTarget.style.borderColor = "rgba(245,158,11,0.6)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "rgba(245,158,11,0.2)";
+                              e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)";
+                            }}
+                          >
+                            📥 Download PDF
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Weak Services */}
                 <div>

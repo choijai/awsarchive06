@@ -42,6 +42,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 // 관리자 UID (환경변수에서 가져오기)
 export const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || "";
@@ -415,5 +416,27 @@ export async function getUserProblemSessions(userId: string): Promise<Array<{
   } catch (error) {
     console.error("세션 조회 실패:", error);
     return [];
+  }
+}
+
+/**
+ * PDF 파일을 Cloud Storage에 업로드
+ */
+export async function uploadPDFToStorage(
+  userId: string,
+  pdfBlob: Blob,
+  sessionDate: string,
+  sessionTime: string
+): Promise<string> {
+  try {
+    const fileName = `${sessionDate.replace(/\//g, '-')}_${sessionTime.replace(/:/g, '-')}.pdf`;
+    const filePath = `users/${userId}/pdfs/${fileName}`;
+    const storageRef = ref(storage, filePath);
+
+    await uploadBytes(storageRef, pdfBlob);
+    return filePath;
+  } catch (error) {
+    console.error("PDF 업로드 실패:", error);
+    throw error;
   }
 }

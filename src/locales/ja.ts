@@ -25,7 +25,7 @@ export const ja: Strings = {
   // Buttons
   btnReset: "リセット",
   btnGenerate: "🚀 SAA-C03問題を生成",
-  btnGenerating: "⏳ 生成中...",
+  btnGenerating: " 生成中...",
   btnNextProblem: "別の問題を生成",
 
   // Problem labels

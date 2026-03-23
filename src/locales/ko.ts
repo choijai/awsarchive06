@@ -23,7 +23,7 @@ export const ko = {
   // Buttons
   btnReset: "초기화",
   btnGenerate: "🚀 SAA-C03 문제 생성",
-  btnGenerating: "⏳ 생성 중...",
+  btnGenerating: " 생성 중...",
   btnNextProblem: "다른 문제 생성",
 
   // Problem labels

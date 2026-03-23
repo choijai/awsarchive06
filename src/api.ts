@@ -113,8 +113,37 @@ export async function generateSAAProblem(
     // 마지막 정리: 여러 줄 남은 것들
     jsonStr = jsonStr.replace(/\n/g, '');
 
-    const problem = JSON.parse(jsonStr) as Problem;
-    return problem;
+    try {
+      const problem = JSON.parse(jsonStr) as Problem;
+      return problem;
+    } catch (parseError) {
+      // 파싱 실패 시 더 공격적으로 정리
+      console.error("Initial JSON parse failed, attempting aggressive cleanup");
+
+      // 모든 종류의 이스케이프 문자 처리
+      let cleaned = jsonStr;
+
+      // 탭과 다중 공백을 단일 공백으로
+      cleaned = cleaned.replace(/\t/g, ' ');
+      cleaned = cleaned.replace(/\s+/g, ' ');
+
+      // 따옴표 안의 특수 문자 처리
+      // "key": "value" 패턴만 추출
+      cleaned = cleaned.replace(/: "/g, ':"').replace(/", /g, '",');
+      cleaned = cleaned.replace(/": \{/g, '":{').replace(/": \[/g, '":');
+
+      // 마지막 시도
+      try {
+        const problem = JSON.parse(cleaned) as Problem;
+        return problem;
+      } catch (secondError) {
+        // 디버깅 정보 로깅
+        console.error("JSON Parse Error at position:", (parseError as any).message);
+        console.error("Failed JSON (first 500 chars):", jsonStr.substring(0, 500));
+        console.error("Failed JSON (around error):", jsonStr.substring(Math.max(0, 2100-50), Math.min(jsonStr.length, 2100+50)));
+        throw parseError;
+      }
+    }
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Problem generation failed: ${error.message}`);

@@ -94,11 +94,24 @@ export async function generateSAAProblem(
       throw new Error("Failed to extract JSON from response");
     }
 
-    // 문자열 값 내의 줄바꿈 정규화 (JSON 유효성 보장)
-    // "key": "multi\nline" → "key": "multi line"
-    jsonStr = jsonStr.replace(/(":\s*"[^"]*)\n([^"]*")/g, '$1 $2');
-    jsonStr = jsonStr.replace(/\\n/g, ' '); // \n 이스케이프 제거
-    jsonStr = jsonStr.replace(/\n/g, ''); // 남은 줄바꿈 제거
+    // JSON 내 문자열 값의 줄바꿈을 공백으로 치환
+    // 더 강력한 정규화 로직
+    jsonStr = jsonStr.replace(/\\n/g, ' '); // 이스케이프된 \n을 공백으로
+
+    // 문자열 내 실제 줄바꿈을 공백으로 치환 (JSON 객체 내에서만)
+    // "key": "value with
+    // newline" → "key": "value with newline"
+    jsonStr = jsonStr.replace(/"([^"]*)\n([^"]*)"/g, (_match: string, before: string, after: string) => {
+      return `"${before.trim()} ${after.trim()}"`;
+    });
+
+    // 배열 내 줄바꿈 정리
+    jsonStr = jsonStr.replace(/\[\n\s*/g, '[');
+    jsonStr = jsonStr.replace(/\n\s*\]/g, ']');
+    jsonStr = jsonStr.replace(/,\n\s*/g, ', ');
+
+    // 마지막 정리: 여러 줄 남은 것들
+    jsonStr = jsonStr.replace(/\n/g, '');
 
     const problem = JSON.parse(jsonStr) as Problem;
     return problem;

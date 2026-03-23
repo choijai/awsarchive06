@@ -776,9 +776,11 @@ function App() {
                     <div className="problem-content">
                       <div className="problem-section" style={{ marginBottom: "16px" }}>
                         <p style={{ color: "#cbd5e1", lineHeight: "1.6", marginBottom: "8px" }}>{problem.question}</p>
-                        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "8px" }}>
-                          <strong>{t("labelConstraints")}</strong> {problem.constraint.join(" + ")}
-                        </div>
+                        {isSubmitted && (
+                          <div style={{ fontSize: "12px", color: "#64748b", marginTop: "8px" }}>
+                            <strong>{t("labelConstraints")}</strong> {problem.constraint.join(" + ")}
+                          </div>
+                        )}
                       </div>
 
                       <div className="options" style={{ marginBottom: "16px" }}>

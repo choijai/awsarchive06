@@ -5,7 +5,7 @@ import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
 import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
 import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, uploadPDFToStorage, ADMIN_UID } from "./firebase";
-import { jsPDF } from "jspdf";
+import html2pdf from "html2pdf.js/dist/html2pdf.js";
 import "./styles.css";
 
 // ===== 사용자 인증 및 일일 제한 관리 =====
@@ -615,11 +615,21 @@ function App() {
     if (tab === "status") {
       (async () => {
         const user = getCurrentUser();
+        console.log("📊 Status tab opened, current user:", user?.uid);
         if (user) {
-          const stats = await getUserQuizStats(user.uid);
-          setQuizStats(stats);
-          const sessions = await getUserProblemSessions(user.uid);
-          setProblemSessions(sessions);
+          try {
+            const stats = await getUserQuizStats(user.uid);
+            console.log("📈 Quiz stats loaded:", stats);
+            setQuizStats(stats);
+
+            const sessions = await getUserProblemSessions(user.uid);
+            console.log("📄 Problem sessions loaded:", sessions);
+            setProblemSessions(sessions);
+          } catch (error) {
+            console.error("❌ Error loading status data:", error);
+          }
+        } else {
+          console.log("⚠️ No user logged in");
         }
       })();
     }
@@ -633,98 +643,76 @@ function App() {
 
   const selectedNode = selected ? NODES.find(n => n.id === selected) : null;
 
-  // PDF 생성 및 업로드 함수
-  const generatePDF = async (session: typeof problemSessions extends Array<infer U> ? U : never) => {
+  // PDF 생성 및 업로드 함수 (html2pdf로 한글 지원)
+  const generatePDF = async (session: any) => {
     if (!session || !session.problems || session.problems.length === 0) return;
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let yPos = 20;
+    // HTML 요소 생성
+    const element = document.createElement('div');
+    element.style.padding = '20px';
+    element.style.fontFamily = 'Arial, sans-serif';
+    element.innerHTML = `
+      <h1 style="text-align: center; margin-bottom: 10px;">AWS SAA-C03 Quiz Problems</h1>
+      <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 12px;">
+        Date: ${session.date} ${session.time} | Problems: ${session.problemCount} | Difficulty: ${session.difficulty}
+      </p>
+      <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
+      ${session.problems.map((problem, index) => `
+        <div style="margin-bottom: 30px; page-break-inside: avoid;">
+          <h3 style="margin-bottom: 10px;">Q${index + 1}. ${problem.question}</h3>
+          <div style="margin-left: 20px; margin-bottom: 15px;">
+            ${["A", "B", "C", "D"].map(opt => `
+              <div style="margin-bottom: 8px; ${opt === problem.answer ? 'color: green; font-weight: bold;' : ''}">
+                <strong>${opt}.</strong> ${problem.options[opt as keyof typeof problem.options]}
+              </div>
+            `).join('')}
+          </div>
+          <div style="margin-left: 20px; color: green; font-weight: bold; margin-bottom: 15px;">
+            Answer: ${problem.answer}
+          </div>
+          <hr style="border: 1px solid #eee;">
+        </div>
+      `).join('')}
+    `;
 
-    // 제목
-    doc.setFontSize(16);
-    doc.text(`AWS SAA-C03 Quiz Problems`, 15, yPos);
-    yPos += 10;
-
-    // 세션 정보
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Date: ${session.date} ${session.time} | Problems: ${session.problemCount} | Difficulty: ${session.difficulty}`, 15, yPos);
-    yPos += 10;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(15, yPos, pageWidth - 15, yPos);
-    yPos += 5;
-
-    doc.setTextColor(0, 0, 0);
-
-    // 각 문제 표시
-    session.problems.forEach((problem, index) => {
-      // 페이지 부족 여부 확인
-      if (yPos > pageHeight - 40) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      // 문제 번호
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.text(`Q${index + 1}. ${problem.question.substring(0, 60)}${problem.question.length > 60 ? '...' : ''}`, 15, yPos);
-      yPos += 8;
-
-      // 선택지
-      doc.setFontSize(9);
-      doc.setFont(undefined, 'normal');
-      const options: Array<[string, string]> = [["A", problem.options.A], ["B", problem.options.B], ["C", problem.options.C], ["D", problem.options.D]];
-      options.forEach(([key, value]) => {
-        const isAnswer = key === problem.answer;
-        if (isAnswer) {
-          doc.setFont(undefined, 'bold');
-          doc.setTextColor(0, 150, 0);
-        } else {
-          doc.setFont(undefined, 'normal');
-          doc.setTextColor(0, 0, 0);
-        }
-        const optionText = `${key}. ${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`;
-        doc.text(optionText, 20, yPos);
-        yPos += 6;
-      });
-
-      // 정답 표시
-      doc.setTextColor(0, 150, 0);
-      doc.setFont(undefined, 'bold');
-      doc.text(`Answer: ${problem.answer}`, 20, yPos);
-      yPos += 8;
-
-      // 분리선
-      doc.setDrawColor(220, 220, 220);
-      doc.line(15, yPos, pageWidth - 15, yPos);
-      yPos += 6;
-    });
-
-    // PDF를 Blob으로 생성
-    const pdfBlob = doc.output('blob') as Blob;
     const fileName = `SAA-Problems_${session.date.replace(/\//g, '-')}_${session.time.replace(/:/g, '-')}.pdf`;
 
-    // Cloud Storage에 업로드
-    const user = getCurrentUser();
-    if (user) {
-      try {
-        await uploadPDFToStorage(user.uid, pdfBlob, session.date, session.time);
-      } catch (error) {
-        console.error("Cloud Storage 업로드 실패:", error);
-      }
-    }
+    // html2pdf 옵션
+    const options = {
+      margin: 10,
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
 
-    // 로컬 다운로드
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      // PDF 생성
+      const pdfBlob = await html2pdf().set(options).from(element).outputPdf('blob');
+
+      // Cloud Storage에 업로드
+      const user = getCurrentUser();
+      if (user) {
+        try {
+          await uploadPDFToStorage(user.uid, pdfBlob, session.date, session.time);
+          console.log("✅ PDF Cloud Storage에 업로드 완료");
+        } catch (error) {
+          console.error("❌ Cloud Storage 업로드 실패:", error);
+        }
+      }
+
+      // 로컬 다운로드
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("❌ PDF 생성 실패:", error);
+    }
   };
 
   return (

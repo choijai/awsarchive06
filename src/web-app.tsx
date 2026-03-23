@@ -4,7 +4,7 @@ import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
 import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
 import { useLocale } from "./LocaleContext";
 import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
-import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, ADMIN_UID } from "./firebase";
+import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, ADMIN_UID } from "./firebase";
 import "./styles.css";
 
 // ===== 사용자 인증 및 일일 제한 관리 =====
@@ -343,6 +343,18 @@ function App() {
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
 
+  // 퀴즈 통계
+  const [quizStats, setQuizStats] = useState<{
+    totalAttempts: number;
+    correctCount: number;
+    accuracy: number;
+    byDifficulty: {
+      medium: { total: number; correct: number; accuracy: number };
+      hard: { total: number; correct: number; accuracy: number };
+      challenge: { total: number; correct: number; accuracy: number };
+    };
+  } | null>(null);
+
   // 사용자 상태 및 일일 제한
   const [userStatus, setUserStatusLocal] = useState<UserStatus>("guest");
   const [dailyCount, setDailyCount] = useState(0);
@@ -580,6 +592,19 @@ function App() {
   };
 
   const [concept, setConcept] = useState<Concept | null>(null);
+
+  // 현황 탭에서 퀴즈 통계 로드
+  useEffect(() => {
+    if (tab === "status") {
+      (async () => {
+        const user = getCurrentUser();
+        if (user) {
+          const stats = await getUserQuizStats(user.uid);
+          setQuizStats(stats);
+        }
+      })();
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (tab === "concept" && selected) {
@@ -819,7 +844,20 @@ function App() {
 
                       {!isSubmitted && selectedAnswer && (
                         <button
-                          onClick={() => setIsSubmitted(true)}
+                          onClick={async () => {
+                            setIsSubmitted(true);
+                            // 로그인된 사용자면 결과 저장
+                            const user = getCurrentUser();
+                            if (user && problem) {
+                              await recordQuizResult(
+                                user.uid,
+                                problem.question,
+                                problem.answer,
+                                selectedAnswer,
+                                difficulty as "medium" | "hard" | "challenge"
+                              );
+                            }
+                          }}
                           style={{
                             width: "100%",
                             padding: "12px",
@@ -1089,7 +1127,7 @@ function App() {
                     border: "1px solid rgba(255,255,255,0.08)"
                   }}>
                     <div style={{ fontSize: "24px", fontWeight: 700, color: "#e2e8f0", marginBottom: "8px" }}>
-                      0
+                      {quizStats?.totalAttempts ?? 0}
                     </div>
                     <div style={{ fontSize: "11px", color: "#64748b" }}>
                       {t("totalProblems")}
@@ -1104,11 +1142,11 @@ function App() {
                     textAlign: "center",
                     border: "1px solid rgba(255,255,255,0.08)"
                   }}>
-                    <div style={{ fontSize: "24px", fontWeight: 700, color: "#e2e8f0", marginBottom: "8px" }}>
-                      0%
+                    <div style={{ fontSize: "24px", fontWeight: 700, color: quizStats && quizStats.accuracy >= 70 ? "#10b981" : quizStats && quizStats.accuracy >= 50 ? "#f59e0b" : "#ef4444", marginBottom: "8px" }}>
+                      {quizStats?.accuracy ?? 0}%
                     </div>
                     <div style={{ fontSize: "11px", color: "#64748b" }}>
-                      {t("correctRate")}
+                      {t("correctRate")} ({quizStats?.correctCount ?? 0}/{quizStats?.totalAttempts ?? 0})
                     </div>
                   </div>
 
@@ -1128,6 +1166,68 @@ function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* 난이도별 정답률 */}
+                {quizStats && quizStats.totalAttempts > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "12px" }}>
+                      📊 난이도별 정답률
+                    </h3>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: "10px"
+                    }}>
+                      {/* 보통 */}
+                      <div style={{
+                        background: "rgba(255,255,255,0.04)",
+                        borderRadius: "6px",
+                        padding: "12px",
+                        border: "1px solid rgba(255,255,255,0.08)"
+                      }}>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "6px" }}>보통</div>
+                        <div style={{ fontSize: "20px", fontWeight: 700, color: "#e2e8f0", marginBottom: "4px" }}>
+                          {quizStats.byDifficulty.medium.accuracy}%
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#64748b" }}>
+                          {quizStats.byDifficulty.medium.correct}/{quizStats.byDifficulty.medium.total}
+                        </div>
+                      </div>
+
+                      {/* 어려움 */}
+                      <div style={{
+                        background: "rgba(255,255,255,0.04)",
+                        borderRadius: "6px",
+                        padding: "12px",
+                        border: "1px solid rgba(255,255,255,0.08)"
+                      }}>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "6px" }}>어려움</div>
+                        <div style={{ fontSize: "20px", fontWeight: 700, color: "#e2e8f0", marginBottom: "4px" }}>
+                          {quizStats.byDifficulty.hard.accuracy}%
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#64748b" }}>
+                          {quizStats.byDifficulty.hard.correct}/{quizStats.byDifficulty.hard.total}
+                        </div>
+                      </div>
+
+                      {/* 챌린지 */}
+                      <div style={{
+                        background: "rgba(255,255,255,0.04)",
+                        borderRadius: "6px",
+                        padding: "12px",
+                        border: "1px solid rgba(255,255,255,0.08)"
+                      }}>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "6px" }}>챌린지</div>
+                        <div style={{ fontSize: "20px", fontWeight: 700, color: "#e2e8f0", marginBottom: "4px" }}>
+                          {quizStats.byDifficulty.challenge.accuracy}%
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#64748b" }}>
+                          {quizStats.byDifficulty.challenge.correct}/{quizStats.byDifficulty.challenge.total}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Weak Services */}
                 <div>

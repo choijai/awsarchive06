@@ -18,7 +18,10 @@ import {
   setDoc,
   updateDoc,
   collection,
-  getDocs
+  getDocs,
+  addDoc,
+  query,
+  where
 } from "firebase/firestore";
 
 // Firebase 설정 (환경변수에서 가져오기)
@@ -247,6 +250,106 @@ export async function getAdminStats(): Promise<{
       totalUsers: 0,
       paidUsers: 0,
       freeUsers: 0
+    };
+  }
+}
+
+// ===== 퀴즈 통계 함수 =====
+
+/**
+ * 퀴즈 결과 저장
+ */
+export async function recordQuizResult(
+  userId: string,
+  question: string,
+  correctAnswer: string,
+  selectedAnswer: string,
+  difficulty: "medium" | "hard" | "challenge"
+): Promise<void> {
+  try {
+    const isCorrect = selectedAnswer === correctAnswer;
+    const resultsRef = collection(db, "users", userId, "quizResults");
+
+    await addDoc(resultsRef, {
+      question,
+      correctAnswer,
+      selectedAnswer,
+      isCorrect,
+      difficulty,
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().getTime()
+    });
+  } catch (error) {
+    console.error("퀴즈 결과 저장 실패:", error);
+  }
+}
+
+/**
+ * 사용자의 퀴즈 통계 조회
+ */
+export async function getUserQuizStats(userId: string): Promise<{
+  totalAttempts: number;
+  correctCount: number;
+  accuracy: number;
+  byDifficulty: {
+    medium: { total: number; correct: number; accuracy: number };
+    hard: { total: number; correct: number; accuracy: number };
+    challenge: { total: number; correct: number; accuracy: number };
+  };
+}> {
+  try {
+    const resultsRef = collection(db, "users", userId, "quizResults");
+    const snapshot = await getDocs(resultsRef);
+
+    let totalAttempts = 0;
+    let correctCount = 0;
+    const byDifficulty = {
+      medium: { total: 0, correct: 0, accuracy: 0 },
+      hard: { total: 0, correct: 0, accuracy: 0 },
+      challenge: { total: 0, correct: 0, accuracy: 0 }
+    };
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const difficulty = data.difficulty as "medium" | "hard" | "challenge";
+      const isCorrect = data.isCorrect === true;
+
+      totalAttempts++;
+      if (isCorrect) correctCount++;
+
+      byDifficulty[difficulty].total++;
+      if (isCorrect) byDifficulty[difficulty].correct++;
+    });
+
+    // 정확도 계산
+    const accuracy = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
+    byDifficulty.medium.accuracy = byDifficulty.medium.total > 0
+      ? Math.round((byDifficulty.medium.correct / byDifficulty.medium.total) * 100)
+      : 0;
+    byDifficulty.hard.accuracy = byDifficulty.hard.total > 0
+      ? Math.round((byDifficulty.hard.correct / byDifficulty.hard.total) * 100)
+      : 0;
+    byDifficulty.challenge.accuracy = byDifficulty.challenge.total > 0
+      ? Math.round((byDifficulty.challenge.correct / byDifficulty.challenge.total) * 100)
+      : 0;
+
+    return {
+      totalAttempts,
+      correctCount,
+      accuracy,
+      byDifficulty
+    };
+  } catch (error) {
+    console.error("퀴즈 통계 조회 실패:", error);
+    return {
+      totalAttempts: 0,
+      correctCount: 0,
+      accuracy: 0,
+      byDifficulty: {
+        medium: { total: 0, correct: 0, accuracy: 0 },
+        hard: { total: 0, correct: 0, accuracy: 0 },
+        challenge: { total: 0, correct: 0, accuracy: 0 }
+      }
     };
   }
 }

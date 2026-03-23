@@ -87,12 +87,24 @@ export async function generateSAAProblem(
     const content = data.content[0].text;
 
     // JSON 추출 (마크다운 코드 블록 처리)
-    let jsonStr = content.match(/```json\n?([\s\S]*?)\n?```/)?.[1] ||
-                  content.match(/(\{[\s\S]*\})/)?.[1];
+    // 마크다운 코드 블록부터 시도
+    let jsonStr = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1];
+
+    // 마크다운이 없으면 가장 첫 { 부터 마지막 } 까지
+    if (!jsonStr) {
+      const startIdx = content.indexOf('{');
+      const lastIdx = content.lastIndexOf('}');
+
+      if (startIdx !== -1 && lastIdx !== -1 && lastIdx > startIdx) {
+        jsonStr = content.substring(startIdx, lastIdx + 1);
+      }
+    }
 
     if (!jsonStr) {
       throw new Error("Failed to extract JSON from response");
     }
+
+    console.log("Extracted JSON length:", jsonStr.length);
 
     // JSON 내 문자열 값의 줄바꿈을 공백으로 치환
     // 더 강력한 정규화 로직

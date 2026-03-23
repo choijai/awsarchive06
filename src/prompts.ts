@@ -588,6 +588,236 @@ JSON形式で応答してください:
   "patterns": ["この問題の重要なパターン 1", "重要なパターン 2"]
 }`;
 
+export const SAA_PROBLEM_PROMPT_EN_HARD = `You are an AWS SAA-C03 exam expert.
+The following shows a "Hard" difficulty-level example. Analyze complex constraints and sophisticated trap answer structures.
+
+## Example: Complex Multi-Service Problem (Hard Difficulty)
+
+**Characteristics:**
+- Combines 2-3 AWS services to solve
+- 2-3 interconnected constraints
+- Trick answers: Almost correct but missing one aspect (cost, performance, or operational efficiency)
+- Real-world scenarios with specific numbers and business context
+
+**Example Scenario:** "500GB monthly data, 2000 requests/sec, 99.9% availability required"
+**Constraints:**
+1. Performance: Latency < 100ms
+2. Cost: Under $5,000/month
+3. Availability: 99.9% (Multi-AZ)
+
+**Trap Answer Structure:**
+- A: Meets cost but lacks performance (single AZ)
+- B: Performance + availability OK but exceeds budget
+- C: All constraints satisfied ✅
+- D: Highest performance but 2x cost + unnecessary features
+
+**New Problem Requirements:**
+- Scenario: 3-4 specific numbers (data volume, traffic, retention, cost)
+- Constraints: Technical + Business + Operational (3 types)
+- Options: Each 3-4 lines with service names + config values
+- Correct answer: Satisfies all constraints perfectly
+- Trap answers: Each fails 1 different constraint
+
+**Given Services:** \${SERVICE_NAMES}
+**Difficulty:** \${DIFFICULTY}
+
+Response in JSON format:
+{
+  "question": "Complex scenario (specific numbers included)",
+  "constraint": ["Technical constraint", "Business constraint", "Operational constraint"],
+  "options": {
+    "A": "Option A (almost correct but misses 1 constraint)",
+    "B": "Option B (almost correct but misses different constraint)",
+    "C": "Option C (satisfies all constraints)",
+    "D": "Option D (possible but excessive)"
+  },
+  "answer": "C",
+  "explanation": {
+    "architecture": "2-3 service combination, architecture flow",
+    "correct": "How each constraint is satisfied + cost/performance calculation",
+    "service_features": "Each AWS service characteristics + limitations",
+    "trap_A": "Which constraint is missed + why this choice fails",
+    "trap_B": "Which constraint is missed + specific cost/performance numbers",
+    "trap_C": "Which constraint is missed + alternative solution"
+  },
+  "patterns": ["Core pattern 1", "Core pattern 2"]
+}`;
+
+export const SAA_PROBLEM_PROMPT_EN_CHALLENGE = `You are an AWS SAA-C03 exam expert.
+The following shows a "Challenge" difficulty-level example. Analyze highly sophisticated and realistic architecture problems.
+
+## Example: Highest Difficulty Problem (Challenge)
+
+**Characteristics:**
+- 3-4 AWS services combined (e.g., VPC + Auto Scaling + RDS + CloudFront)
+- 3+ interconnected constraints with high correlation
+- Trick answers: Extremely sophisticated (satisfies almost all conditions but misses 1 critical detail)
+- Real-world situations: "On-premises ↔ AWS hybrid", "Multi-region", "Compliance requirements"
+
+**Example Scenario:**
+"Bank migrating legacy on-premises system to AWS.
+Monthly 10TB transaction data, 99.99% availability, HIPAA compliance, $50K monthly budget"
+
+**Constraints:**
+1. Technical: Direct Connect + Multi-AZ + Encryption
+2. Business: $50K monthly, data integrity guaranteed
+3. Operational: Manageable by existing staff (AWS-inexperienced)
+4. Regulatory: HIPAA compliance, data residency within US
+
+**Trap Answer Structure:**
+- A: Direct Connect + RDS Multi-AZ but HIPAA audit functions insufficient
+- B: All technical + HIPAA but hard for existing staff to operate (too complex)
+- C: All constraints perfectly satisfied ✅
+- D: Highest tech (Global Table) but cost exceeds budget + unnecessary complexity
+
+**New Problem Requirements:**
+- Scenario: On-premises ↔ AWS, multi-region, compliance, migration context
+- Specific numbers: Data volume, traffic, cost, availability, compliance requirements
+- Constraints: Technical (4) + Business (2) + Operational (2) = minimum 3 combined
+- Options: Each 4-5 lines with architecture, security, cost, and performance details
+- Correct answer: All constraints satisfied + highly persuasive reasoning
+- Trap answers: A/B/D each misses different aspects + almost correct
+
+**Given Services:** \${SERVICE_NAMES}
+**Difficulty:** \${DIFFICULTY}
+
+Response in JSON format:
+{
+  "question": "Production-grade complex scenario (on-premises migration, multi-region, compliance)",
+  "constraint": ["Technical constraint 1", "Technical constraint 2", "Business constraint", "Operational constraint"],
+  "options": {
+    "A": "Option A (good technical solution but regulatory/operational weakness)",
+    "B": "Option B (almost correct but exceeds budget or operationally complex)",
+    "C": "Option C (all constraints perfectly satisfied)",
+    "D": "Option D (excessive high availability/performance, over-budget, unnecessarily complex)"
+  },
+  "answer": "C",
+  "explanation": {
+    "architecture": "3-4 services, on-premises connectivity, migration path, detailed data flow",
+    "correct": "Constraint fulfillment proof + why this is optimal + comparison with alternatives",
+    "service_features": "Each service's purpose + limitations + synergy when combined",
+    "trap_A": "Which constraint missed (e.g., regulatory requirement) + specific reason",
+    "trap_B": "Which constraint missed (e.g., operational complexity) + why existing team cannot manage",
+    "trap_C": "Which constraint missed (e.g., budget exceeded) + cost overage calculation"
+  },
+  "patterns": ["Core pattern 1", "Core pattern 2", "Core pattern 3"]
+}`;
+
+export const SAA_PROBLEM_PROMPT_JA_HARD = `あなたはAWS SAA-C03試験の専門家です。
+以下の「難しい」難易度の例題を分析してください。複雑な制約条件と洗練されたトリック選択肢の構造を理解します。
+
+## 例: 複合マルチサービス問題 (難しい難易度)
+
+**特徴:**
+- 2~3個のAWSサービスを組み合わせて解決
+- 2~3個の相互に関連する制約条件
+- トリック選択肢: ほぼ正しいが、コスト、パフォーマンス、運用効率のいずれかが欠落
+- 実世界シナリオ(具体的な数値とビジネスコンテキスト含む)
+
+**シナリオ例:** 「月間500GBデータ、毎秒2000リクエスト、99.9%可用性要件」
+**制約条件:**
+1. パフォーマンス: レイテンシ < 100ms
+2. コスト: 月額5,000ドル以下
+3. 可用性: 99.9% (マルチAZ)
+
+**トリック選択肢構造:**
+- A: コストは満たすがパフォーマンス不足 (シングルAZ)
+- B: パフォーマンス + 可用性OK だが予算超過
+- C: すべての制約を満たす ✅
+- D: 最高パフォーマンスだが2倍コスト + 不必要な機能
+
+**新しい問題の要件:**
+- シナリオ: 3~4個の具体的な数値 (データ量、トラフィック、保持期間、コスト)
+- 制約条件: 技術 + ビジネス + 運用 (3タイプ)
+- 選択肢: 各3~4行でサービス名 + 設定値を明記
+- 正解: すべての制約を完璧に満たす
+- トリック選択肢: 各々異なる1つの制約を欠落
+
+**与えられたサービス:** \${SERVICE_NAMES}
+**難易度:** \${DIFFICULTY}
+
+JSON形式で応答:
+{
+  "question": "複雑なシナリオ(具体的な数値含む)",
+  "constraint": ["技術的制約", "ビジネス制約", "運用的制約"],
+  "options": {
+    "A": "選択肢 A (ほぼ正しいが1つの制約欠落)",
+    "B": "選択肢 B (ほぼ正しいが異なる1つの制約欠落)",
+    "C": "選択肢 C (すべての制約を満たす)",
+    "D": "選択肢 D (可能だが過度)"
+  },
+  "answer": "C",
+  "explanation": {
+    "architecture": "2~3個サービス組み合わせ、アーキテクチャフロー",
+    "correct": "各制約がどのように満たされるか + コスト/パフォーマンス計算",
+    "service_features": "各AWSサービスの特性 + 制限事項",
+    "trap_A": "どの制約が欠落 + なぜこの選択肢がダメか",
+    "trap_B": "どの制約が欠落 + 具体的なコスト/パフォーマンス数値",
+    "trap_C": "どの制約が欠落 + 代替案提示"
+  },
+  "patterns": ["コアパターン 1", "コアパターン 2"]
+}`;
+
+export const SAA_PROBLEM_PROMPT_JA_CHALLENGE = `あなたはAWS SAA-C03試験の専門家です。
+以下は「チャレンジ」難易度の例題です。非常に高度で現実的なアーキテクチャ問題を分析してください。
+
+## 例: 最高難易度問題 (チャレンジ)
+
+**特徴:**
+- 3~4個のAWSサービス組み合わせ (例: VPC + Auto Scaling + RDS + CloudFront)
+- 3個以上の相互に関連する制約条件(相関性高い)
+- トリック選択肢: 非常に高度 (ほぼすべての条件を満たすが1つの重要な詳細を見落とし)
+- 実務状況: 「オンプレミス ↔ AWS ハイブリッド」「マルチリージョン」「コンプライアンス要件」
+
+**シナリオ例:**
+「銀行がオンプレミスのレガシーシステムをAWSに移行。
+月間10TBトランザクションデータ、99.99%可用性、HIPAA準拠、月額50K予算」
+
+**制約条件:**
+1. 技術: Direct Connect + マルチAZ + 暗号化
+2. ビジネス: 月額50K、データ完全性保証
+3. 運用: 既存スタッフ(AWS未経験)で管理可能
+4. 規制: HIPAA準拠、データレジデンシ米国内
+
+**トリック選択肢構造:**
+- A: Direct Connect + RDS マルチAZ だがHIPAA監査機能不足
+- B: すべての技術 + HIPAA だが既存スタッフの運用困難 (複雑)
+- C: すべての制約を完璧に満たす ✅
+- D: 最高技術 (グローバルテーブル) だが予算超過 + 不必要な複雑性
+
+**新しい問題の要件:**
+- シナリオ: オンプレミス ↔ AWS、マルチリージョン、コンプライアンス、移行コンテキスト
+- 具体的な数値: データ量、トラフィック、コスト、可用性、コンプライアンス要件
+- 制約条件: 技術(4個) + ビジネス(2個) + 運用(2個) = 最小3個組み合わせ
+- 選択肢: 各4~5行でアーキテクチャ、セキュリティ、コスト、パフォーマンス詳細含む
+- 正解: すべての制約を満たす + 説得力高い
+- トリック選択肢: A/B/D 各々異なる部分欠落 + ほぼ正しい
+
+**与えられたサービス:** \${SERVICE_NAMES}
+**難易度:** \${DIFFICULTY}
+
+JSON形式で応答:
+{
+  "question": "実務レベル複合シナリオ(オンプレミス移行、マルチリージョン、規制対応)",
+  "constraint": ["技術的制約 1", "技術的制約 2", "ビジネス制約", "運用的制約"],
+  "options": {
+    "A": "選択肢 A (技術は良好だが規制/運用の弱点)",
+    "B": "選択肢 B (ほぼ正しいが予算超過または運用複雑)",
+    "C": "選択肢 C (すべての制約を完璧に満たす)",
+    "D": "選択肢 D (過度な高可用性/パフォーマンス、予算超過、不必要に複雑)"
+  },
+  "answer": "C",
+  "explanation": {
+    "architecture": "3~4個サービス、オンプレミス接続、移行パス、詳細なデータフロー",
+    "correct": "制約満たし証明 + なぜこれが最適か + 代替案との比較",
+    "service_features": "各サービスの目的 + 制限事項 + 組み合わせ時のシナジー",
+    "trap_A": "どの制約が欠落 (例: 規制要件) + 具体的理由",
+    "trap_B": "どの制約が欠落 (例: 運用複雑性) + なぜ既存チームでは管理不可",
+    "trap_C": "どの制約が欠落 (例: 予算超過) + 超過額計算"
+  },
+  "patterns": ["コアパターン 1", "コアパターン 2", "コアパターン 3"]
+}`;
+
 export const DIFFICULTY_LABELS = {
   ko: { medium: "보통", hard: "어려움", challenge: "챌린지" },
   ja: { medium: "普通", hard: "難しい", challenge: "チャレンジ" },
@@ -611,9 +841,21 @@ export function generatePrompt(
       prompt = SAA_PROBLEM_PROMPT_MEDIUM;
     }
   } else if (locale === "ja") {
-    prompt = SAA_PROBLEM_PROMPT_JA;
+    if (difficulty === "hard") {
+      prompt = SAA_PROBLEM_PROMPT_JA_HARD;
+    } else if (difficulty === "challenge") {
+      prompt = SAA_PROBLEM_PROMPT_JA_CHALLENGE;
+    } else {
+      prompt = SAA_PROBLEM_PROMPT_JA;
+    }
   } else {
-    prompt = SAA_PROBLEM_PROMPT_EN;
+    if (difficulty === "hard") {
+      prompt = SAA_PROBLEM_PROMPT_EN_HARD;
+    } else if (difficulty === "challenge") {
+      prompt = SAA_PROBLEM_PROMPT_EN_CHALLENGE;
+    } else {
+      prompt = SAA_PROBLEM_PROMPT_EN;
+    }
   }
 
   const diffLabel = DIFFICULTY_LABELS[locale][difficulty as "medium" | "hard" | "challenge"] || difficulty;

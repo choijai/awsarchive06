@@ -436,6 +436,8 @@ function App() {
     timeSpent: number;
   } | null>(null);
   const [mockExamTimeRemaining, setMockExamTimeRemaining] = useState(130 * 60); // 130분 (초)
+  const [mockExamAlreadyTaken, setMockExamAlreadyTaken] = useState(false); // 오늘 이미 본 여부
+  const [mockExamNextAvailableTime, setMockExamNextAvailableTime] = useState<string>(""); // 다시 볼 수 있는 시간
 
   // 퀴즈 통계
   const [quizStats, setQuizStats] = useState<{
@@ -846,6 +848,30 @@ function App() {
     }
   }, [tab, userEmail]);
 
+  // 모의시험 일일 제한 체크
+  useEffect(() => {
+    if (tab === "mockExam") {
+      const today = new Date().toISOString().split("T")[0];
+      const lastMockExamDate = localStorage.getItem("lastMockExamDate");
+
+      if (lastMockExamDate === today) {
+        // 오늘 이미 본 경우
+        setMockExamAlreadyTaken(true);
+        // 내일 자정까지의 남은 시간 계산
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const now = new Date();
+        const remainingMs = tomorrow.getTime() - now.getTime();
+        const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+        const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+        setMockExamNextAvailableTime(`${hours}시간 ${minutes}분`);
+      } else {
+        setMockExamAlreadyTaken(false);
+        setMockExamNextAvailableTime("");
+      }
+    }
+  }, [tab]);
+
   // 모의시험 타이머
   useEffect(() => {
     if (!mockExamRunning) return;
@@ -861,15 +887,22 @@ function App() {
           const score = Math.round((correct / mockExamProblems.length) * 1000);
           const timeSpent = mockExamStartTime ? Math.floor((Date.now() - mockExamStartTime) / 1000) : 0;
 
-          setMockExamResults({
+          const results = {
             totalScore: score,
             correct: correct,
             wrong: mockExamProblems.length - correct,
             correctRate: Math.round((correct / mockExamProblems.length) * 100),
             passed: score >= 720,
             timeSpent: timeSpent
-          });
+          };
+          setMockExamResults(results);
           setMockExamRunning(false);
+
+          // 오늘 날짜 저장 (일일 제한)
+          const today = new Date().toISOString().split("T")[0];
+          localStorage.setItem("lastMockExamDate", today);
+          setMockExamAlreadyTaken(true);
+
           return 0;
         }
         return prev - 1;
@@ -2381,15 +2414,21 @@ function App() {
                           const score = Math.round((correct / mockExamProblems.length) * 1000);
                           const timeSpent = mockExamStartTime ? Math.floor((Date.now() - mockExamStartTime) / 1000) : 0;
 
-                          setMockExamResults({
+                          const results = {
                             totalScore: score,
                             correct: correct,
                             wrong: mockExamProblems.length - correct,
                             correctRate: Math.round((correct / mockExamProblems.length) * 100),
                             passed: score >= 720,
                             timeSpent: timeSpent
-                          });
+                          };
+                          setMockExamResults(results);
                           setMockExamRunning(false);
+
+                          // 오늘 날짜 저장 (일일 제한)
+                          const today = new Date().toISOString().split("T")[0];
+                          localStorage.setItem("lastMockExamDate", today);
+                          setMockExamAlreadyTaken(true);
                         }}
                         style={{
                           padding: "8px 16px",
@@ -2490,28 +2529,63 @@ function App() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setMockExamRunning(false);
-                        setMockExamResults(null);
-                        setMockExamProblems([]);
-                        setMockExamAnswers([]);
-                        setMockExamCurrentIndex(0);
-                        setMockExamStartTime(null);
-                      }}
-                      style={{
-                        padding: "12px 16px",
+                    <div style={{
+                      background: "rgba(100, 116, 139, 0.2)",
+                      border: "1px solid rgba(100, 116, 139, 0.3)",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      textAlign: "center"
+                    }}>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0" }}>
+                        ✅ 오늘의 모의시험 완료!
+                      </p>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 0 0" }}>
+                        내일 자정부터 다시 응시할 수 있습니다
+                      </p>
+                    </div>
+                  </div>
+                ) : mockExamAlreadyTaken ? (
+                  // 오늘 이미 본 경우
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%"
+                  }}>
+                    <div style={{
+                      textAlign: "center",
+                      background: "rgba(249, 115, 22, 0.1)",
+                      border: "2px solid rgba(249, 115, 22, 0.4)",
+                      borderRadius: "12px",
+                      padding: "24px",
+                      maxWidth: "400px"
+                    }}>
+                      <h2 style={{ fontSize: "24px", margin: "0 0 12px 0", color: "#fb923c" }}>
+                        📋 이미 응시함
+                      </h2>
+                      <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 16px 0", lineHeight: "1.6" }}>
+                        오늘은 이미 모의시험을 응시했습니다.
+                      </p>
+                      <div style={{
                         background: "rgba(59, 130, 246, 0.2)",
-                        border: "1px solid rgba(59, 130, 246, 0.5)",
-                        borderRadius: "6px",
-                        color: "#60a5fa",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        fontWeight: "600"
-                      }}
-                    >
-                      다시 시도하기
-                    </button>
+                        border: "1px solid rgba(59, 130, 246, 0.3)",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        marginBottom: "16px"
+                      }}>
+                        <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px 0" }}>
+                          ⏰ 다시 응시 가능:
+                        </p>
+                        <p style={{ fontSize: "16px", color: "#60a5fa", fontWeight: "bold", margin: "0" }}>
+                          내일 자정 (약 {mockExamNextAvailableTime})
+                        </p>
+                      </div>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0" }}>
+                        💡 팁: 매일 같은 시간에 모의시험을 풀면 시험 감각을 유지할 수 있습니다!
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   // 모의시험 시작 전

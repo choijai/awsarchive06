@@ -606,6 +606,12 @@ function App() {
   // 로그인 후 streak 업데이트 + 시험 시작일 불러오기
   useEffect(() => {
     if (userEmail) {
+      // Admin 자동 프리미엄 설정
+      if (isAdminUser(userEmail)) {
+        setUserStatusLocal("paid");
+        localStorage.setItem("userStatus", "paid");
+      }
+
       (async () => {
         try {
           // Firebase Auth의 실제 uid를 사용하여 업데이트
@@ -2806,7 +2812,7 @@ function App() {
                             if (!problems) {
                               problems = [];
                               for (let i = 0; i < 50; i++) {
-                                const problem = await generateSAAProblem("medium", locale);
+                                const problem = await generateSAAProblem([], "medium", locale);
                                 problems.push(problem);
                               }
                               await saveTodayMockExamProblems(problems);
@@ -2850,7 +2856,7 @@ function App() {
                           if (!problems) {
                             problems = [];
                             for (let i = 0; i < 50; i++) {
-                              const problem = await generateSAAProblem("medium", locale);
+                              const problem = await generateSAAProblem([], "medium", locale);
                               problems.push(problem);
                             }
                             // 3단계: 생성된 문제 저장 (다른 사용자들이 공유하도록)

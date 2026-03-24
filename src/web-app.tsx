@@ -2811,8 +2811,21 @@ function App() {
                             let problems = await getTodayMockExamProblems();
                             if (!problems) {
                               problems = [];
+                              // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
+                              const difficulties = [
+                                ...Array(20).fill("medium"),
+                                ...Array(20).fill("hard"),
+                                ...Array(10).fill("challenge")
+                              ];
+                              // 순서 섞기 (shuffle)
+                              for (let i = difficulties.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
+                              }
+
                               for (let i = 0; i < 50; i++) {
-                                const problem = await generateSAAProblem([], "medium", locale);
+                                const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
+                                const problem = await generateSAAProblem([], difficulty, locale);
                                 problems.push(problem);
                               }
                               await saveTodayMockExamProblems(problems);
@@ -2855,8 +2868,21 @@ function App() {
                           // 2단계: 없으면 새로 생성
                           if (!problems) {
                             problems = [];
+                            // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
+                            const difficulties = [
+                              ...Array(20).fill("medium"),
+                              ...Array(20).fill("hard"),
+                              ...Array(10).fill("challenge")
+                            ];
+                            // 순서 섞기 (shuffle)
+                            for (let i = difficulties.length - 1; i > 0; i--) {
+                              const j = Math.floor(Math.random() * (i + 1));
+                              [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
+                            }
+
                             for (let i = 0; i < 50; i++) {
-                              const problem = await generateSAAProblem([], "medium", locale);
+                              const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
+                              const problem = await generateSAAProblem([], difficulty, locale);
                               problems.push(problem);
                             }
                             // 3단계: 생성된 문제 저장 (다른 사용자들이 공유하도록)

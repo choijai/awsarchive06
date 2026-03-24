@@ -2502,14 +2502,14 @@ function App() {
 
                           {/* 보기 */}
                           <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
-                            {mockExamProblems[mockExamCurrentIndex].options.map((option, idx) => (
-                              <label key={idx} style={{
+                            {Object.entries(mockExamProblems[mockExamCurrentIndex].options).map(([key, value]) => (
+                              <label key={key} style={{
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "10px",
                                 padding: "12px",
-                                background: mockExamAnswers[mockExamCurrentIndex] === option ? "rgba(59, 130, 246, 0.2)" : "rgba(71, 85, 105, 0.3)",
-                                border: mockExamAnswers[mockExamCurrentIndex] === option ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(100, 116, 139, 0.3)",
+                                background: mockExamAnswers[mockExamCurrentIndex] === key ? "rgba(59, 130, 246, 0.2)" : "rgba(71, 85, 105, 0.3)",
+                                border: mockExamAnswers[mockExamCurrentIndex] === key ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(100, 116, 139, 0.3)",
                                 borderRadius: "6px",
                                 cursor: "pointer",
                                 transition: "all 0.2s"
@@ -2517,16 +2517,17 @@ function App() {
                                 <input
                                   type="radio"
                                   name="mock-answer"
-                                  value={option}
-                                  checked={mockExamAnswers[mockExamCurrentIndex] === option}
+                                  value={key}
+                                  checked={mockExamAnswers[mockExamCurrentIndex] === key}
                                   onChange={() => {
                                     const newAnswers = [...mockExamAnswers];
-                                    newAnswers[mockExamCurrentIndex] = option;
+                                    newAnswers[mockExamCurrentIndex] = key;
                                     setMockExamAnswers(newAnswers);
                                   }}
                                   style={{ cursor: "pointer" }}
                                 />
-                                <span>{option}</span>
+                                <span style={{ fontWeight: "bold", marginRight: "8px" }}>{key})</span>
+                                <span>{value}</span>
                               </label>
                             ))}
                           </div>

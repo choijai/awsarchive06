@@ -9,8 +9,24 @@ export const en: Strings = {
   tabQuiz: "Quiz",
   tabConcept: "Concepts",
   tabStatus: "Progress",
+  tabMockExam: "📋 Mock Exam",
   tabPosts: "Posts",
   tabUsers: "Users",
+
+  // Mock Exam
+  mockExamTitle: "🎓 SAA-C03 Mock Exam",
+  mockExamDescription: "Practice with the same format as the real exam",
+  mockExamStart: "Start Exam (130 minutes)",
+  mockExamInfo: "Questions: 50 | Time Limit: 130 min | Passing Score: 720",
+  mockExamEmpty: "You haven't started a mock exam yet",
+  mockExamTimeRemaining: "Time Remaining",
+  mockExamScore: "Estimated Score",
+  mockExamResult: "Mock Exam Results",
+  mockExamTotalScore: "Total Score",
+  mockExamCorrect: "Correct",
+  mockExamWrong: "Incorrect",
+  mockExamPassScore: "Passing Score (720)",
+  mockExamRatio: "Correct Rate",
 
   // Filter
   filterAll: "All",

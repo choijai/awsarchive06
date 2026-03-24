@@ -391,7 +391,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 function App() {
   const { locale, setLocale, t } = useLocale();
   const { pos, setPos, posRef, dragRef } = useForce();
-  const [tab, setTab] = useState<"quiz" | "concept" | "status" | "posts" | "admin" | "users">("quiz");
+  const [tab, setTab] = useState<"quiz" | "concept" | "status" | "mockExam" | "posts" | "admin" | "users">("quiz");
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string | null>(null);
@@ -420,6 +420,22 @@ function App() {
   const [graphZoom, setGraphZoom] = useState(1);
   const [conceptCache, setConceptCache] = useState<Map<string, Concept>>(new Map());
   const [conceptTranslating, setConceptTranslating] = useState(false);
+
+  // 모의시험
+  const [mockExamRunning, setMockExamRunning] = useState(false);
+  const [mockExamProblems, setMockExamProblems] = useState<Problem[]>([]);
+  const [mockExamStartTime, setMockExamStartTime] = useState<number | null>(null);
+  const [mockExamCurrentIndex, setMockExamCurrentIndex] = useState(0);
+  const [mockExamAnswers, setMockExamAnswers] = useState<(string | null)[]>([]);
+  const [mockExamResults, setMockExamResults] = useState<{
+    totalScore: number;
+    correct: number;
+    wrong: number;
+    correctRate: number;
+    passed: boolean;
+    timeSpent: number;
+  } | null>(null);
+  const [mockExamTimeRemaining, setMockExamTimeRemaining] = useState(130 * 60); // 130분 (초)
 
   // 퀴즈 통계
   const [quizStats, setQuizStats] = useState<{
@@ -830,6 +846,39 @@ function App() {
     }
   }, [tab, userEmail]);
 
+  // 모의시험 타이머
+  useEffect(() => {
+    if (!mockExamRunning) return;
+
+    const timer = setInterval(() => {
+      setMockExamTimeRemaining(prev => {
+        if (prev <= 1) {
+          // 시간 종료 - 자동 채점
+          let correct = 0;
+          mockExamProblems.forEach((problem, idx) => {
+            if (mockExamAnswers[idx] === problem.answer) correct++;
+          });
+          const score = Math.round((correct / mockExamProblems.length) * 1000);
+          const timeSpent = mockExamStartTime ? Math.floor((Date.now() - mockExamStartTime) / 1000) : 0;
+
+          setMockExamResults({
+            totalScore: score,
+            correct: correct,
+            wrong: mockExamProblems.length - correct,
+            correctRate: Math.round((correct / mockExamProblems.length) * 100),
+            passed: score >= 720,
+            timeSpent: timeSpent
+          });
+          setMockExamRunning(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [mockExamRunning, mockExamProblems, mockExamAnswers, mockExamStartTime]);
+
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {
     if (tab === "posts") {
@@ -1068,6 +1117,7 @@ function App() {
         <button className={`tab ${tab === "quiz" ? "active" : ""}`} onClick={() => setTab("quiz")}>&#127919; {t("tabQuiz")}</button>
         <button className={`tab ${tab === "concept" ? "active" : ""}`} onClick={() => setTab("concept")}>&#128218; {t("tabConcept")}</button>
         <button className={`tab ${tab === "status" ? "active" : ""}`} onClick={() => setTab("status")}>&#128202; {t("tabStatus")}</button>
+        <button className={`tab ${tab === "mockExam" ? "active" : ""}`} onClick={() => setTab("mockExam")}>{t("tabMockExam")}</button>
         {/* Posts tab - Hidden for now */}
         {/* <button className={`tab ${tab === "posts" ? "active" : ""}`} onClick={() => setTab("posts")}>📰 {t("tabPosts")}</button> */}
         {/* 관리자에게만 Admin 탭 표시 */}
@@ -2192,6 +2242,349 @@ function App() {
                   </div>
                 )}
                   </>
+                )}
+              </div>
+            </>
+          ) : tab === "mockExam" ? (
+            <>
+              <div className="graph-label">{t("mockExamTitle")}</div>
+              <div style={{
+                padding: "20px",
+                overflowY: "auto",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px"
+              }}>
+                {mockExamRunning ? (
+                  // 모의시험 진행 중
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                    height: "100%"
+                  }}>
+                    {/* 진행 상황 헤더 */}
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      background: "rgba(59, 130, 246, 0.1)",
+                      padding: "16px",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(59, 130, 246, 0.3)"
+                    }}>
+                      <div style={{ fontSize: "14px", color: "#e2e8f0" }}>
+                        문제 {mockExamCurrentIndex + 1} / {mockExamProblems.length}
+                      </div>
+                      <div style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: mockExamTimeRemaining < 300 ? "#ef4444" : "#60a5fa"
+                      }}>
+                        ⏱️ {Math.floor(mockExamTimeRemaining / 60)}분 {mockExamTimeRemaining % 60}초
+                      </div>
+                    </div>
+
+                    {/* 문제 표시 영역 (status 탭과 동일한 스타일) */}
+                    {mockExamProblems[mockExamCurrentIndex] && (
+                      <div style={{
+                        background: "rgba(30, 41, 59, 0.8)",
+                        border: "1px solid rgba(100, 116, 139, 0.3)",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        flex: 1,
+                        overflowY: "auto"
+                      }}>
+                        <div style={{ color: "#cbd5e1", lineHeight: "1.6", fontSize: "14px" }}>
+                          <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>
+                            {mockExamProblems[mockExamCurrentIndex].question}
+                          </h3>
+
+                          {/* 보기 */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
+                            {mockExamProblems[mockExamCurrentIndex].options.map((option, idx) => (
+                              <label key={idx} style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                padding: "12px",
+                                background: mockExamAnswers[mockExamCurrentIndex] === option ? "rgba(59, 130, 246, 0.2)" : "rgba(71, 85, 105, 0.3)",
+                                border: mockExamAnswers[mockExamCurrentIndex] === option ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(100, 116, 139, 0.3)",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                transition: "all 0.2s"
+                              }}>
+                                <input
+                                  type="radio"
+                                  name="mock-answer"
+                                  value={option}
+                                  checked={mockExamAnswers[mockExamCurrentIndex] === option}
+                                  onChange={() => {
+                                    const newAnswers = [...mockExamAnswers];
+                                    newAnswers[mockExamCurrentIndex] = option;
+                                    setMockExamAnswers(newAnswers);
+                                  }}
+                                  style={{ cursor: "pointer" }}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 네비게이션 버튼 */}
+                    <div style={{
+                      display: "flex",
+                      gap: "8px",
+                      justifyContent: "center"
+                    }}>
+                      <button
+                        onClick={() => setMockExamCurrentIndex(Math.max(0, mockExamCurrentIndex - 1))}
+                        disabled={mockExamCurrentIndex === 0}
+                        style={{
+                          padding: "8px 16px",
+                          background: mockExamCurrentIndex === 0 ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.2)",
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
+                          borderRadius: "6px",
+                          color: mockExamCurrentIndex === 0 ? "#64748b" : "#60a5fa",
+                          cursor: mockExamCurrentIndex === 0 ? "not-allowed" : "pointer",
+                          fontSize: "12px"
+                        }}
+                      >
+                        ← 이전
+                      </button>
+                      <button
+                        onClick={() => setMockExamCurrentIndex(Math.min(mockExamProblems.length - 1, mockExamCurrentIndex + 1))}
+                        disabled={mockExamCurrentIndex === mockExamProblems.length - 1}
+                        style={{
+                          padding: "8px 16px",
+                          background: mockExamCurrentIndex === mockExamProblems.length - 1 ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.2)",
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
+                          borderRadius: "6px",
+                          color: mockExamCurrentIndex === mockExamProblems.length - 1 ? "#64748b" : "#60a5fa",
+                          cursor: mockExamCurrentIndex === mockExamProblems.length - 1 ? "not-allowed" : "pointer",
+                          fontSize: "12px"
+                        }}
+                      >
+                        다음 →
+                      </button>
+                      <button
+                        onClick={() => {
+                          // 채점 로직
+                          let correct = 0;
+                          mockExamProblems.forEach((problem, idx) => {
+                            if (mockExamAnswers[idx] === problem.answer) correct++;
+                          });
+                          const score = Math.round((correct / mockExamProblems.length) * 1000);
+                          const timeSpent = mockExamStartTime ? Math.floor((Date.now() - mockExamStartTime) / 1000) : 0;
+
+                          setMockExamResults({
+                            totalScore: score,
+                            correct: correct,
+                            wrong: mockExamProblems.length - correct,
+                            correctRate: Math.round((correct / mockExamProblems.length) * 100),
+                            passed: score >= 720,
+                            timeSpent: timeSpent
+                          });
+                          setMockExamRunning(false);
+                        }}
+                        style={{
+                          padding: "8px 16px",
+                          background: "rgba(16, 185, 129, 0.2)",
+                          border: "1px solid rgba(16, 185, 129, 0.5)",
+                          borderRadius: "6px",
+                          color: "#10b981",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          marginLeft: "auto"
+                        }}
+                      >
+                        ✓ 채점하기
+                      </button>
+                    </div>
+                  </div>
+                ) : mockExamResults ? (
+                  // 모의시험 결과
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px"
+                  }}>
+                    <div style={{
+                      textAlign: "center",
+                      padding: "20px",
+                      background: mockExamResults.passed ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                      border: `1px solid ${mockExamResults.passed ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                      borderRadius: "8px"
+                    }}>
+                      <h2 style={{
+                        fontSize: "32px",
+                        color: mockExamResults.passed ? "#10b981" : "#ef4444",
+                        margin: "0 0 8px 0"
+                      }}>
+                        {mockExamResults.totalScore}
+                      </h2>
+                      <p style={{
+                        color: "#cbd5e1",
+                        margin: "0",
+                        fontSize: "14px"
+                      }}>
+                        {mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px"
+                    }}>
+                      <div style={{
+                        background: "rgba(59, 130, 246, 0.1)",
+                        border: "1px solid rgba(59, 130, 246, 0.3)",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center"
+                      }}>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px" }}>정답</div>
+                        <div style={{ fontSize: "20px", color: "#10b981", fontWeight: "bold" }}>
+                          {mockExamResults.correct}/{mockExamProblems.length}
+                        </div>
+                      </div>
+                      <div style={{
+                        background: "rgba(239, 68, 68, 0.1)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center"
+                      }}>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px" }}>오답</div>
+                        <div style={{ fontSize: "20px", color: "#ef4444", fontWeight: "bold" }}>
+                          {mockExamResults.wrong}/{mockExamProblems.length}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: "rgba(100, 116, 139, 0.2)",
+                      border: "1px solid rgba(100, 116, 139, 0.3)",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px"
+                    }}>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>정답률</div>
+                        <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
+                          {mockExamResults.correctRate}%
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>소요 시간</div>
+                        <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
+                          {Math.floor(mockExamResults.timeSpent / 60)}분 {mockExamResults.timeSpent % 60}초
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setMockExamRunning(false);
+                        setMockExamResults(null);
+                        setMockExamProblems([]);
+                        setMockExamAnswers([]);
+                        setMockExamCurrentIndex(0);
+                        setMockExamStartTime(null);
+                      }}
+                      style={{
+                        padding: "12px 16px",
+                        background: "rgba(59, 130, 246, 0.2)",
+                        border: "1px solid rgba(59, 130, 246, 0.5)",
+                        borderRadius: "6px",
+                        color: "#60a5fa",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "600"
+                      }}
+                    >
+                      다시 시도하기
+                    </button>
+                  </div>
+                ) : (
+                  // 모의시험 시작 전
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%"
+                  }}>
+                    <div style={{
+                      textAlign: "center"
+                    }}>
+                      <h2 style={{ fontSize: "20px", color: "#e2e8f0", margin: "0 0 12px 0" }}>
+                        {t("mockExamTitle")}
+                      </h2>
+                      <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 16px 0" }}>
+                        {t("mockExamDescription")}
+                      </p>
+                      <p style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                        background: "rgba(100, 116, 139, 0.2)",
+                        padding: "12px",
+                        borderRadius: "6px",
+                        margin: "0"
+                      }}>
+                        {t("mockExamInfo")}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        if (userStatus === "guest") {
+                          setShowLoginModal(true);
+                          return;
+                        }
+                        setLoading(true);
+                        try {
+                          const problems: Problem[] = [];
+                          for (let i = 0; i < 50; i++) {
+                            const problem = await generateSAAProblem("medium", locale);
+                            problems.push(problem);
+                          }
+                          setMockExamProblems(problems);
+                          setMockExamAnswers(new Array(50).fill(null));
+                          setMockExamStartTime(Date.now());
+                          setMockExamTimeRemaining(130 * 60);
+                          setMockExamCurrentIndex(0);
+                          setMockExamRunning(true);
+                        } catch (err) {
+                          setError("모의시험 생성 실패");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      style={{
+                        padding: "16px 32px",
+                        background: "rgba(59, 130, 246, 0.3)",
+                        border: "2px solid rgba(59, 130, 246, 0.6)",
+                        borderRadius: "8px",
+                        color: "#60a5fa",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        opacity: loading ? 0.6 : 1
+                      }}
+                    >
+                      {loading ? t("btnGenerating") : t("mockExamStart")}
+                    </button>
+                  </div>
                 )}
               </div>
             </>

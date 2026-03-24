@@ -9,8 +9,24 @@ export const ja: Strings = {
   tabQuiz: "クイズ",
   tabConcept: "コンセプト",
   tabStatus: "進捗",
+  tabMockExam: "📋 模擬試験",
   tabPosts: "投稿",
   tabUsers: "ユーザー",
+
+  // Mock Exam
+  mockExamTitle: "🎓 SAA-C03模擬試験",
+  mockExamDescription: "実試験と同じ形式で練習できます",
+  mockExamStart: "試験を開始 (130分)",
+  mockExamInfo: "問題: 50問 | 制限時間: 130分 | 合格点: 720点",
+  mockExamEmpty: "まだ模擬試験を開始していません",
+  mockExamTimeRemaining: "残り時間",
+  mockExamScore: "予想スコア",
+  mockExamResult: "模擬試験の結果",
+  mockExamTotalScore: "総得点",
+  mockExamCorrect: "正解",
+  mockExamWrong: "不正解",
+  mockExamPassScore: "合格点 (720点)",
+  mockExamRatio: "正解率",
 
   // Filter
   filterAll: "すべて",

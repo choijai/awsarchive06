@@ -7,8 +7,24 @@ export const ko = {
   tabQuiz: "퀴즈",
   tabConcept: "개념",
   tabStatus: "현황",
+  tabMockExam: "📋 모의시험",
   tabPosts: "게시글",
   tabUsers: "사용자",
+
+  // Mock Exam
+  mockExamTitle: "🎓 SAA-C03 모의시험",
+  mockExamDescription: "실제 시험과 동일한 형식으로 풀어보세요",
+  mockExamStart: "시험 시작하기 (130분)",
+  mockExamInfo: "문제: 50문제 | 시간제한: 130분 | 합격점: 720점",
+  mockExamEmpty: "아직 모의시험을 시작하지 않았습니다",
+  mockExamTimeRemaining: "남은 시간",
+  mockExamScore: "예상 점수",
+  mockExamResult: "모의시험 결과",
+  mockExamTotalScore: "총점",
+  mockExamCorrect: "정답",
+  mockExamWrong: "오답",
+  mockExamPassScore: "합격점 (720점)",
+  mockExamRatio: "정답률",
 
   // Filter
   filterAll: "전체",

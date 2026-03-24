@@ -867,8 +867,11 @@ function App() {
         setMockExamPdfCreatedAt(pdfCreatedAt);
       }
 
-      if (lastMockExamDate === today) {
-        // 오늘 이미 본 경우
+      // 👨‍💼 Admin은 무제한 응시 가능
+      const isAdmin = isAdminUser(userEmail);
+
+      if (lastMockExamDate === today && !isAdmin) {
+        // 오늘 이미 본 경우 (admin 제외)
         setMockExamAlreadyTaken(true);
         // 내일 자정까지의 남은 시간 계산
         const tomorrow = new Date(today);
@@ -886,7 +889,7 @@ function App() {
         setMockExamPdfCreatedAt(null);
       }
     }
-  }, [tab]);
+  }, [tab, userEmail]);
 
   // 모의시험 타이머
   useEffect(() => {
@@ -914,10 +917,14 @@ function App() {
           setMockExamResults(results);
           setMockExamRunning(false);
 
-          // 오늘 날짜 저장 (일일 제한)
+          // 👨‍💼 Admin은 일일 제한 없음 (lastMockExamDate 저장 안 함)
+          // 일반 사용자는 오늘 날짜 저장 (일일 제한)
           const today = new Date().toISOString().split("T")[0];
-          localStorage.setItem("lastMockExamDate", today);
-          setMockExamAlreadyTaken(true);
+          const isAdmin = isAdminUser(userEmail);
+          if (!isAdmin) {
+            localStorage.setItem("lastMockExamDate", today);
+            setMockExamAlreadyTaken(true);
+          }
 
           return 0;
         }

@@ -20,8 +20,12 @@ import {
   collection,
   getDocs,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  query,
+  where,
+  Timestamp
 } from "firebase/firestore";
+import { Problem } from "./api";
 import {
   getStorage,
   ref,
@@ -848,5 +852,54 @@ export async function deletePost(
     await deleteDoc(postRef);
   } catch (error: any) {
     throw new Error(error.message || "게시글 삭제에 실패했습니다");
+  }
+}
+
+// ===== 모의시험 문제 공유 함수 =====
+
+/**
+ * 오늘의 모의시험 문제 조회 (없으면 null)
+ * 모든 사용자가 같은 날의 같은 문제를 공유
+ */
+export async function getTodayMockExamProblems(): Promise<Problem[] | null> {
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const mockExamRef = doc(db, "mockExamProblems", today);
+    const mockExamDoc = await getDoc(mockExamRef);
+
+    if (!mockExamDoc.exists()) {
+      return null; // 아직 생성되지 않음
+    }
+
+    const data = mockExamDoc.data();
+    return data.problems || null;
+  } catch (error: any) {
+    throw new Error(error.message || "모의시험 문제를 불러올 수 없습니다");
+  }
+}
+
+/**
+ * 오늘의 모의시험 문제 저장 (첫 번째 사용자만 호출)
+ * 생성된 50개 문제를 Firestore에 저장
+ */
+export async function saveTodayMockExamProblems(problems: Problem[]): Promise<void> {
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const mockExamRef = doc(db, "mockExamProblems", today);
+
+    // 이미 저장된 문제가 있으면 덮어쓰지 않음
+    const existingDoc = await getDoc(mockExamRef);
+    if (existingDoc.exists()) {
+      return; // 이미 저장되어 있음
+    }
+
+    // 새로운 문제 저장
+    await setDoc(mockExamRef, {
+      problems: problems,
+      createdAt: Timestamp.now(),
+      date: today
+    });
+  } catch (error: any) {
+    throw new Error(error.message || "모의시험 문제 저장에 실패했습니다");
   }
 }

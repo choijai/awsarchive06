@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signUp, updateStreakInFirebase, uploadPDFToStorage } from "./firebase";
+import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -2721,11 +2721,20 @@ function App() {
                         }
                         setLoading(true);
                         try {
-                          const problems: Problem[] = [];
-                          for (let i = 0; i < 50; i++) {
-                            const problem = await generateSAAProblem("medium", locale);
-                            problems.push(problem);
+                          // 1단계: 오늘의 모의시험 문제 조회
+                          let problems = await getTodayMockExamProblems();
+
+                          // 2단계: 없으면 새로 생성
+                          if (!problems) {
+                            problems = [];
+                            for (let i = 0; i < 50; i++) {
+                              const problem = await generateSAAProblem("medium", locale);
+                              problems.push(problem);
+                            }
+                            // 3단계: 생성된 문제 저장 (다른 사용자들이 공유하도록)
+                            await saveTodayMockExamProblems(problems);
                           }
+
                           setMockExamProblems(problems);
                           setMockExamAnswers(new Array(50).fill(null));
                           setMockExamStartTime(Date.now());

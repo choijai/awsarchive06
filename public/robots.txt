@@ -13,4 +13,4 @@ Disallow: /src/
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://awsarchive.com/sitemap.xml

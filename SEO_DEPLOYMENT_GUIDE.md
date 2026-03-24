@@ -1,4 +1,7 @@
-# 🌍 다국어 SEO 배포 가이드
+# 🌍 AWS Archive - 다국어 SEO 최적화 가이드
+
+**도메인:** https://awsarchive.com
+**타겟:** AWS SAA-C03 시험 준비 사용자 (한국, 미국, 일본)
 
 ## 📋 완료된 SEO 최적화 사항
 

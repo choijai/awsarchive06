@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- 기본 페이지 (한국어) -->
+  <url>
+    <loc>https://saacraft.io/</loc>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://saacraft.io/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://saacraft.io/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://saacraft.io/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saacraft.io/" />
+    <lastmod>2024-03-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- 한국어 버전 -->
+  <url>
+    <loc>https://saacraft.io/?lang=ko</loc>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://saacraft.io/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://saacraft.io/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://saacraft.io/?lang=ja" />
+    <lastmod>2024-03-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- 영어 버전 -->
+  <url>
+    <loc>https://saacraft.io/?lang=en</loc>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://saacraft.io/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://saacraft.io/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://saacraft.io/?lang=ja" />
+    <lastmod>2024-03-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- 일본어 버전 -->
+  <url>
+    <loc>https://saacraft.io/?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://saacraft.io/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://saacraft.io/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://saacraft.io/?lang=ja" />
+    <lastmod>2024-03-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

@@ -1,12 +1,57 @@
-import { useState, useEffect, useRef } from "react";
-import { createRoot } from "react-dom/client";
-import { NODES, LINKS, CAT, CONCEPTS_KO, CONCEPTS_JA } from "./data";
-import { generateSAAProblem, Problem, translateConcept, Concept } from "./api";
-import { useLocale } from "./LocaleContext";
-import { trackVisitor, getTodayVisitorCount, getTotalVisitorCount, getTodayPurchaseCount, recordPaidPurchase, getDailyVisitors, getWeeklyVisitors, getMonthlyVisitors, getDailyVisitorsForMonth, getWeeklyVisitorsForMonth, getDailyVisitorsForWeek } from "./analytics";
-import { signUp, signIn, signInWithGoogle, signOut as firebaseSignOut, updateStreakInFirebase, getAdminStats, recordQuizResult, getUserQuizStats, getCurrentUser, getUserProblemSessions, uploadPDFToStorage, ADMIN_UID, ADMIN_EMAIL } from "./firebase";
 import html2pdf from "html2pdf.js/dist/html2pdf.js";
+import { useEffect, useRef, useState } from "react";
+import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
+import { Concept, generateSAAProblem, Problem } from "./api";
+import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
+import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signUp, updateStreakInFirebase, uploadPDFToStorage } from "./firebase";
+import { useLocale } from "./LocaleContext";
+import Footer from "./components/Footer";
+import PaymentModal from "./components/Modals/PaymentModal";
 import "./styles.css";
+
+// ===== 입력값 검증 함수 =====
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (password.length < 6) return { valid: false, error: "비밀번호는 6자 이상이어야 합니다" };
+  if (password.length > 128) return { valid: false, error: "비밀번호는 128자 이하여야 합니다" };
+  return { valid: true };
+}
+
+function validateDate(dateString: string): boolean {
+  const date = new Date(dateString);
+  return !isNaN(date.getTime()) && date > new Date();
+}
+
+function sanitizeInput(input: string): string {
+  return input.trim().slice(0, 500); // XSS 방지: 길이 제한
+}
+
+// ===== Rate Limiting =====
+const requestTimestamps: { [key: string]: number[] } = {};
+const RATE_LIMIT_REQUESTS = 10; // 10초당 최대 10요청
+const RATE_LIMIT_WINDOW = 10000; // 10초
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  if (!requestTimestamps[userId]) {
+    requestTimestamps[userId] = [];
+  }
+
+  const timestamps = requestTimestamps[userId];
+  const recentTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+
+  if (recentTimestamps.length >= RATE_LIMIT_REQUESTS) {
+    return false; // Rate limit exceeded
+  }
+
+  recentTimestamps.push(now);
+  requestTimestamps[userId] = recentTimestamps;
+  return true;
+}
 
 // ===== 사용자 인증 및 일일 제한 관리 =====
 type UserStatus = "guest" | "loggedIn" | "paid";
@@ -43,6 +88,27 @@ function getDailyLimit(): number {
   if (status === "paid") return 20;
   if (status === "loggedIn") return 2;
   return 2; // 비로그인은 2회
+}
+
+// ===== 세션 타임아웃 =====
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30분
+let sessionTimeoutId: NodeJS.Timeout | null = null;
+
+function resetSessionTimeout(callback: () => void) {
+  if (sessionTimeoutId) {
+    clearTimeout(sessionTimeoutId);
+  }
+
+  sessionTimeoutId = setTimeout(() => {
+    callback(); // 로그아웃 실행
+  }, SESSION_TIMEOUT);
+}
+
+function clearSessionTimeout() {
+  if (sessionTimeoutId) {
+    clearTimeout(sessionTimeoutId);
+    sessionTimeoutId = null;
+  }
 }
 
 /**
@@ -91,16 +157,17 @@ function updateStreak(): number {
 
 function getExamDday(): string {
   if (typeof window === "undefined") return "-";
-  const startDate = localStorage.getItem("examStartDate");
-  if (!startDate) return "-";
+  const examDate = localStorage.getItem("examStartDate");
+  if (!examDate) return "-";
 
-  const start = new Date(startDate);
+  const exam = new Date(examDate);
   const now = new Date();
-  const examDate = new Date(start);
-  examDate.setDate(examDate.getDate() + 84); // 12주 = 84일
 
-  const diff = examDate.getTime() - now.getTime();
-  const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  exam.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  const diff = exam.getTime() - now.getTime();
+  const daysLeft = Math.floor(diff / (1000 * 60 * 60 * 24));
 
   if (daysLeft <= 0) return "D-Day";
   return `D-${daysLeft}`;
@@ -324,7 +391,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 function App() {
   const { locale, setLocale, t } = useLocale();
   const { pos, setPos, posRef, dragRef } = useForce();
-  const [tab, setTab] = useState<"quiz" | "concept" | "status" | "admin">("quiz");
+  const [tab, setTab] = useState<"quiz" | "concept" | "status" | "posts" | "admin" | "users">("quiz");
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string | null>(null);
@@ -343,6 +410,9 @@ function App() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [paidUsers, setPaidUsers] = useState(0);
   const [freeUsers, setFreeUsers] = useState(0);
+  const [allUsers, setAllUsers] = useState<Array<{ userId: string; email: string; userStatus: string; createdAt: string }>>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUserSessions, setSelectedUserSessions] = useState<any[]>([]);
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
   const [graphMonthOffset, setGraphMonthOffset] = useState(0);
   const [graphWeekIndex, setGraphWeekIndex] = useState(0);
@@ -361,6 +431,7 @@ function App() {
       hard: { total: number; correct: number; accuracy: number };
       challenge: { total: number; correct: number; accuracy: number };
     };
+    byService: { [service: string]: { total: number; correct: number; accuracy: number } };
   } | null>(null);
 
   // 사용자 상태 및 일일 제한
@@ -368,6 +439,7 @@ function App() {
   const [dailyCount, setDailyCount] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [dday, setDday] = useState("-");
   const [showExamDateModal, setShowExamDateModal] = useState(false);
@@ -376,6 +448,7 @@ function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [sessionId, setSessionId] = useState<string>(`${Date.now()}`); // 현재 세션 ID
+  const [pdfGeneratingId, setPdfGeneratingId] = useState<string | null>(null); // PDF 생성 중인 세션
 
   // 문제 세션 (PDF 다운로드용)
   const [problemSessions, setProblemSessions] = useState<Array<{
@@ -386,6 +459,86 @@ function App() {
     problems: Problem[];
     sessionTimestamp: number;
   }> | null>(null);
+
+  // 게시글 탭 상태
+  const [posts, setPosts] = useState<any[]>([]);
+  const [postsPage, setPostsPage] = useState(1);
+  const [postsTotalCount, setPostsTotalCount] = useState(0);
+  const [postsSearch, setPostsSearch] = useState("");
+  const [postsFilterMine, setPostsFilterMine] = useState(false);
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [postFormData, setPostFormData] = useState({ title: "", content: "", authorName: "", password: "", isPublic: true });
+  const [postFormLoading, setPostFormLoading] = useState(false);
+
+  // 동적 메타데이터 업데이트 (다국어 SEO)
+  useEffect(() => {
+    const updateMetaTags = () => {
+      const pageTitle = t("pageTitle");
+      const pageDesc = t("pageDescription");
+      const pageKeywords = t("pageKeywords");
+      const ogTitle = t("ogTitle");
+      const ogDesc = t("ogDescription");
+      const twitterTitle = t("twitterTitle");
+      const twitterDesc = t("twitterDescription");
+
+      // 페이지 언어 업데이트
+      const html = document.documentElement;
+      const langMap: { [key: string]: string } = { ko: "ko", en: "en", ja: "ja" };
+      html.lang = langMap[locale] || "ko";
+
+      // title 업데이트
+      document.title = pageTitle;
+
+      // meta description 업데이트
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement("meta");
+        metaDesc.setAttribute("name", "description");
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute("content", pageDesc);
+
+      // meta keywords 업데이트
+      let metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (!metaKeywords) {
+        metaKeywords = document.createElement("meta");
+        metaKeywords.setAttribute("name", "keywords");
+        document.head.appendChild(metaKeywords);
+      }
+      metaKeywords.setAttribute("content", pageKeywords);
+
+      // Open Graph 업데이트
+      const updateOGTag = (property: string, content: string) => {
+        let tag = document.querySelector(`meta[property="${property}"]`);
+        if (!tag) {
+          tag = document.createElement("meta");
+          tag.setAttribute("property", property);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute("content", content);
+      };
+
+      updateOGTag("og:title", ogTitle);
+      updateOGTag("og:description", ogDesc);
+      updateOGTag("og:locale", locale === "ja" ? "ja_JP" : locale === "en" ? "en_US" : "ko_KR");
+
+      // Twitter Card 업데이트
+      const updateTwitterTag = (name: string, content: string) => {
+        let tag = document.querySelector(`meta[name="${name}"]`);
+        if (!tag) {
+          tag = document.createElement("meta");
+          tag.setAttribute("name", name);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute("content", content);
+      };
+
+      updateTwitterTag("twitter:title", twitterTitle);
+      updateTwitterTag("twitter:description", twitterDesc);
+    };
+
+    updateMetaTags();
+  }, [locale, t]);
 
   // Track visitors and load purchase count on mount
   useEffect(() => {
@@ -398,7 +551,7 @@ function App() {
         const purchaseCount = await getTodayPurchaseCount();
         setPurchaseCount(purchaseCount);
       } catch (error) {
-        console.error("Failed to load visitor data:", error);
+        // 에러 처리만 수행 (로깅 제거)
       }
     })();
 
@@ -406,10 +559,10 @@ function App() {
     setUserStatusLocal(getUserStatus());
     setDailyCount(getTodayProblemCount());
 
-    // 저장된 이메일 불러오기
-    const savedEmail = localStorage.getItem("userEmail");
-    if (savedEmail) {
-      setUserEmail(savedEmail);
+    // Firebase Auth에서 현재 사용자 확인
+    const user = getCurrentUser();
+    if (user?.email) {
+      setUserEmail(user.email);
     }
 
     // D-day 초기화
@@ -431,7 +584,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // 로그인 후 streak 업데이트 (Firebase)
+  // 로그인 후 streak 업데이트 + 시험 시작일 불러오기
   useEffect(() => {
     if (userEmail) {
       (async () => {
@@ -441,8 +594,17 @@ function App() {
           setStreak(firebaseStreak);
           // 로컬 저장소에도 백업
           localStorage.setItem("streak", firebaseStreak.toString());
+
+          // Firebase에서 시험 시작일 불러오기
+          const user = getCurrentUser();
+          if (user) {
+            const examStartDate = await getExamStartDate(user.uid);
+            if (examStartDate) {
+              localStorage.setItem("examStartDate", examStartDate);
+              setDday(getExamDday());
+            }
+          }
         } catch (error) {
-          console.error("Firebase streak 업데이트 실패, 로컬로 폴백:", error);
           // Firebase 실패 시 로컬 함수 사용
           setStreak(updateStreak());
         }
@@ -459,7 +621,23 @@ function App() {
           setPaidUsers(stats.paidUsers);
           setFreeUsers(stats.freeUsers);
         } catch (error) {
-          console.error("관리자 통계 로드 실패:", error);
+          // 에러 처리만 수행 (로깅 제거)
+        }
+      })();
+    }
+  }, [tab]);
+
+  // Users 탭 사용자 목록 로드
+  useEffect(() => {
+    if (tab === "users" && ADMIN_UID && userEmail) {
+      (async () => {
+        try {
+          const users = await getAllUsersForAdmin();
+          setAllUsers(users);
+          setSelectedUser(null);
+          setSelectedUserSessions([]);
+        } catch (error) {
+          // 에러 처리만 수행 (로깅 제거)
         }
       })();
     }
@@ -481,7 +659,7 @@ function App() {
         }
         setGraphZoom(1);
       } catch (error) {
-        console.error("Failed to load graph data:", error);
+        // 에러 처리만 수행 (로깅 제거)
       }
     })();
   }, [graphPeriod, graphMonthOffset, graphWeekIndex]);
@@ -567,6 +745,12 @@ function App() {
       }
     }
 
+    // Rate Limiting 확인
+    if (!checkRateLimit(userEmail)) {
+      setError("너무 많은 요청이 발생했습니다. 잠시 후 다시 시도하세요");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
@@ -587,7 +771,7 @@ function App() {
       setDailyCount(getTodayProblemCount());
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGenerate"));
-      console.error(err);
+      // 에러 처리만 수행 (로깅 제거)
     } finally {
       setLoading(false);
     }
@@ -597,10 +781,10 @@ function App() {
   function getQuotaMessage(status: UserStatus, limit: number, current: number): string {
     const remaining = Math.max(0, limit - current);
     if (status === "guest") {
-      return `🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade to unlimited.`;
+      return `🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade your plan.`;
     }
     if (status === "loggedIn") {
-      return `✨ Your free 2 attempts are used. Please upgrade to generate unlimited problems today!`;
+      return `✨ Your free 2 attempts are used. Please upgrade to generate more problems today!`;
     }
     return `Limit reached (${current}/${limit}).`;
   }
@@ -625,25 +809,47 @@ function App() {
     if (tab === "status") {
       (async () => {
         const user = getCurrentUser();
-        console.log("📊 Status tab opened, current user:", user?.uid);
         if (user) {
           try {
+            // 만료된 결과 자동 삭제
+            await deleteExpiredResults(user.uid);
+
             const stats = await getUserQuizStats(user.uid);
-            console.log("📈 Quiz stats loaded:", stats);
             setQuizStats(stats);
 
             const sessions = await getUserProblemSessions(user.uid);
-            console.log("📄 Problem sessions loaded:", sessions);
             setProblemSessions(sessions);
           } catch (error) {
-            console.error("❌ Error loading status data:", error);
+            // 에러 처리만 수행 (로깅 제거)
           }
         } else {
-          console.log("⚠️ No user logged in");
+          setQuizStats(null);
+          setProblemSessions(null);
         }
       })();
     }
-  }, [tab]);
+  }, [tab, userEmail]);
+
+  // 게시글 탭에서 게시글 목록 로드
+  useEffect(() => {
+    if (tab === "posts") {
+      (async () => {
+        try {
+          const result = await getPosts(
+            postsPage,
+            20,
+            postsSearch,
+            postsFilterMine && userEmail ? getCurrentUser()?.uid : "",
+            userEmail ? getCurrentUser()?.uid : ""
+          );
+          setPosts(result.posts);
+          setPostsTotalCount(result.totalCount);
+        } catch (error) {
+          // 에러 처리
+        }
+      })();
+    }
+  }, [tab, postsPage, postsSearch, postsFilterMine, userEmail]);
 
   useEffect(() => {
     if (tab === "concept" && selected) {
@@ -657,85 +863,94 @@ function App() {
   const generatePDF = async (session: any) => {
     if (!session || !session.problems || session.problems.length === 0) return;
 
-    // HTML 요소 생성
-    const element = document.createElement('div');
-    element.style.padding = '20px';
-    element.style.fontFamily = 'Arial, sans-serif';
-    element.innerHTML = `
-      <h1 style="text-align: center; margin-bottom: 10px; color: black;">AWS SAA-C03 Quiz Problems</h1>
-      <p style="text-align: center; color: black; margin-bottom: 20px; font-size: 12px;">
-        Date: ${session.date} ${session.time}
-      </p>
-      <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
-      ${session.problems.map((problem, index) => `
-        <div style="margin-bottom: 40px; page-break-inside: avoid;">
-          <!-- 문제 번호 및 제목 -->
-          <h3 style="margin-bottom: 12px; color: black; border-bottom: 2px solid #333; padding-bottom: 8px;">Q${index + 1}. ${problem.question}</h3>
-
-          <!-- 보기 -->
-          <div style="margin-left: 20px; margin-bottom: 15px;">
-            ${["A", "B", "C", "D"].map(opt => `
-              <div style="margin-bottom: 8px; color: black;">
-                <strong>${opt}.</strong> ${problem.options[opt as keyof typeof problem.options]}
-              </div>
-            `).join('')}
-          </div>
-
-          <!-- 정답 -->
-          <div style="margin-left: 20px; color: black; font-weight: bold; margin-bottom: 20px; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-            ✓ Answer: ${problem.answer}
-          </div>
-
-          <!-- 핵심 키워드 -->
-          <div style="margin-left: 20px; margin-bottom: 15px;">
-            <strong style="color: #333; font-size: 13px;">📌 Keywords:</strong>
-            <div style="color: black; font-size: 12px; margin-top: 4px;">
-              ${problem.keywords?.join(', ') || 'N/A'}
-            </div>
-          </div>
-
-          <!-- 정답 설명 -->
-          <div style="margin-left: 20px; margin-bottom: 15px;">
-            <strong style="color: #333; font-size: 13px;">📚 Answer Explanation:</strong>
-            <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6;">
-              <div style="margin-bottom: 8px;"><strong>Architecture:</strong> ${problem.explanation?.architecture || 'N/A'}</div>
-              <div style="margin-bottom: 8px;"><strong>Why Correct:</strong> ${problem.explanation?.correct || 'N/A'}</div>
-              <div style="margin-bottom: 8px;"><strong>Service Features:</strong> ${problem.explanation?.service_features || 'N/A'}</div>
-              <div style="margin-bottom: 6px;"><strong>Trap A:</strong> ${problem.explanation?.trap_A || 'N/A'}</div>
-              <div style="margin-bottom: 6px;"><strong>Trap B:</strong> ${problem.explanation?.trap_B || 'N/A'}</div>
-              <div style="margin-bottom: 0;"><strong>Trap C:</strong> ${problem.explanation?.trap_C || 'N/A'}</div>
-            </div>
-          </div>
-
-          <!-- 이지 모드 (쉬운 설명) -->
-          <div style="margin-left: 20px; margin-bottom: 0;">
-            <strong style="color: #333; font-size: 13px;">🎓 Easy Mode (Simplified Explanation):</strong>
-            <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 4px;">
-              <div style="margin-bottom: 8px;"><strong>Simple Explanation:</strong> ${problem.easyMode?.explanation || 'N/A'}</div>
-              <div style="margin-bottom: 6px;"><strong>Option A (Easy):</strong> ${problem.easyMode?.A || 'N/A'}</div>
-              <div style="margin-bottom: 6px;"><strong>Option B (Easy):</strong> ${problem.easyMode?.B || 'N/A'}</div>
-              <div style="margin-bottom: 6px;"><strong>Option C (Easy):</strong> ${problem.easyMode?.C || 'N/A'}</div>
-              <div style="margin-bottom: 0;"><strong>Option D (Easy):</strong> ${problem.easyMode?.D || 'N/A'}</div>
-            </div>
-          </div>
-
-          <hr style="border: 1px solid #ddd; margin-top: 20px;">
-        </div>
-      `).join('')}
-    `;
-
-    const fileName = `SAA-Problems_${session.date.replace(/\//g, '-')}_${session.time.replace(/:/g, '-')}.pdf`;
-
-    // html2pdf 옵션
-    const options = {
-      margin: 10,
-      filename: fileName,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-    };
+    // 로딩 상태 시작
+    setPdfGeneratingId(session.sessionTimestamp);
 
     try {
+      // HTML 요소 생성
+      const element = document.createElement('div');
+      element.style.padding = '20px';
+      element.style.fontFamily = 'Arial, sans-serif';
+      element.innerHTML = `
+        <h1 style="text-align: center; margin-bottom: 10px; color: black;">AWS SAA-C03 Quiz Problems</h1>
+        <p style="text-align: center; color: black; margin-bottom: 20px; font-size: 12px;">
+          Date: ${session.date} ${session.time}
+        </p>
+        <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
+        ${session.problems.map((problem, index) => `
+          <div style="margin-bottom: 40px; page-break-inside: avoid;">
+            <!-- 문제 번호 및 제목 -->
+            <h3 style="margin-bottom: 12px; color: black; border-bottom: 2px solid #333; padding-bottom: 8px;">Q${index + 1}. ${problem.question}</h3>
+
+            <!-- 보기 -->
+            <div style="margin-left: 20px; margin-bottom: 15px;">
+              ${["A", "B", "C", "D"].map(opt => `
+                <div style="margin-bottom: 8px; color: black;">
+                  <strong>${opt}.</strong> ${problem.options[opt as keyof typeof problem.options]}
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- 정답 -->
+            <div style="margin-left: 20px; color: black; font-weight: bold; margin-bottom: 20px; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+              ✓ Answer: ${problem.answer}
+            </div>
+
+            <!-- 핵심 키워드 -->
+            <div style="margin-left: 20px; margin-bottom: 15px;">
+              <strong style="color: #333; font-size: 13px;">📌 Keywords:</strong>
+              <div style="color: black; font-size: 12px; margin-top: 4px;">
+                ${problem.keywords?.join(', ') || 'N/A'}
+              </div>
+            </div>
+
+            <!-- 핵심 목표 -->
+            <div style="margin-left: 20px; margin-bottom: 15px;">
+              <strong style="color: #333; font-size: 13px;">🎯 Problem Goal:</strong>
+              <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6;">
+                ${problem.goal || 'N/A'}
+              </div>
+            </div>
+
+            <!-- 정답 설명 -->
+            <div style="margin-left: 20px; margin-bottom: 15px;">
+              <strong style="color: #333; font-size: 13px;">📚 Answer Explanation:</strong>
+              <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6;">
+                <div style="margin-bottom: 8px;"><strong>Why Correct:</strong> ${problem.explanation?.correct || 'N/A'}</div>
+                <div style="margin-bottom: 6px;"><strong>Trap A:</strong> ${problem.explanation?.trap_A || 'N/A'}</div>
+                <div style="margin-bottom: 6px;"><strong>Trap B:</strong> ${problem.explanation?.trap_B || 'N/A'}</div>
+                <div style="margin-bottom: 0;"><strong>Trap C:</strong> ${problem.explanation?.trap_C || 'N/A'}</div>
+              </div>
+            </div>
+
+            <!-- 이지 모드 (쉬운 설명) -->
+            <div style="margin-left: 20px; margin-bottom: 0;">
+              <strong style="color: #333; font-size: 13px;">🎓 Easy Mode (Simplified Explanation):</strong>
+              <div style="color: black; font-size: 12px; margin-top: 6px; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 4px;">
+                <div style="margin-bottom: 8px;"><strong>Simple Explanation:</strong> ${problem.easyMode?.explanation || 'N/A'}</div>
+                <div style="margin-bottom: 6px;"><strong>Option A (Easy):</strong> ${problem.easyMode?.A || 'N/A'}</div>
+                <div style="margin-bottom: 6px;"><strong>Option B (Easy):</strong> ${problem.easyMode?.B || 'N/A'}</div>
+                <div style="margin-bottom: 6px;"><strong>Option C (Easy):</strong> ${problem.easyMode?.C || 'N/A'}</div>
+                <div style="margin-bottom: 0;"><strong>Option D (Easy):</strong> ${problem.easyMode?.D || 'N/A'}</div>
+              </div>
+            </div>
+
+            <hr style="border: 1px solid #ddd; margin-top: 20px;">
+          </div>
+        `).join('')}
+      `;
+
+      const fileName = `SAA-Problems_${session.date.replace(/\//g, '-')}_${session.time.replace(/:/g, '-')}.pdf`;
+
+      // html2pdf 옵션
+      const options = {
+        margin: 10,
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+
       // PDF 생성
       const pdfBlob = await html2pdf().set(options).from(element).outputPdf('blob');
 
@@ -744,9 +959,9 @@ function App() {
       if (user) {
         try {
           await uploadPDFToStorage(user.uid, pdfBlob, session.date, session.time);
-          console.log("✅ PDF Cloud Storage에 업로드 완료");
+          // PDF 업로드 완료
         } catch (error) {
-          console.error("❌ Cloud Storage 업로드 실패:", error);
+          // 에러 처리만 수행 (로깅 제거)
         }
       }
 
@@ -760,7 +975,10 @@ function App() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("❌ PDF 생성 실패:", error);
+      // 에러 처리만 수행 (로깅 제거)
+    } finally {
+      // 로딩 상태 종료
+      setPdfGeneratingId(null);
     }
   };
 
@@ -779,18 +997,19 @@ function App() {
               onChange={(e) => setLocale(e.target.value as "ko" | "ja" | "en")}
               style={{
                 padding: "6px 10px",
-                background: "rgba(255,255,255,0.05)",
+                background: "rgba(59,130,246,0.3)",
                 border: "1px solid rgba(255,255,255,0.2)",
                 borderRadius: "6px",
                 color: "#cbd5e1",
                 cursor: "pointer",
                 fontSize: "12px",
-                fontWeight: "bold"
+                fontWeight: "bold",
+                accentColor: "rgba(59,130,246,0.3)"
               }}
             >
-              <option value="en">English</option>
-              <option value="ko">한국어</option>
-              <option value="ja">日本語</option>
+              <option value="en" style={{ background: "rgba(59,130,246,0.3)", color: "#cbd5e1" }}>English</option>
+              <option value="ko" style={{ background: "rgba(59,130,246,0.3)", color: "#cbd5e1" }}>한국어</option>
+              <option value="ja" style={{ background: "rgba(59,130,246,0.3)", color: "#cbd5e1" }}>日本語</option>
             </select>
           </div>
           <div className="visitor-count">
@@ -810,9 +1029,9 @@ function App() {
                   👤 {userEmail.split("@")[0]}
                 </div>
                 <button onClick={() => {
+                  clearSessionTimeout();
                   setUserEmail(null);
                   setUserStatusLocal("guest");
-                  localStorage.removeItem("userEmail");
                 }} style={{
                   fontSize: "10px", padding: "4px 8px", background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8",
@@ -833,11 +1052,13 @@ function App() {
           </div>
 
           {/* D-day 배지 + 날짜 아이콘 통합 */}
-          <span className="badge" style={{ cursor: userEmail ? "pointer" : "default" }}
-            onClick={() => userEmail && setShowExamDateModal(true)}
-            title={userEmail ? "시작일 변경" : "로그인 후 설정 가능"}>
-            📅 {dday === "-" ? "-" : dday}
-          </span>
+          {userEmail && (
+            <span className="badge" style={{ cursor: "pointer" }}
+              onClick={() => setShowExamDateModal(true)}
+              title="시작일 변경">
+              📅 {dday === "-" ? "-" : dday}
+            </span>
+          )}
           {userEmail && <span className="streak">🔥 {streak}{t("streakSuffix")}</span>}
         </div>
       </div>
@@ -847,15 +1068,20 @@ function App() {
         <button className={`tab ${tab === "quiz" ? "active" : ""}`} onClick={() => setTab("quiz")}>&#127919; {t("tabQuiz")}</button>
         <button className={`tab ${tab === "concept" ? "active" : ""}`} onClick={() => setTab("concept")}>&#128218; {t("tabConcept")}</button>
         <button className={`tab ${tab === "status" ? "active" : ""}`} onClick={() => setTab("status")}>&#128202; {t("tabStatus")}</button>
+        {/* Posts tab - Hidden for now */}
+        {/* <button className={`tab ${tab === "posts" ? "active" : ""}`} onClick={() => setTab("posts")}>📰 {t("tabPosts")}</button> */}
         {/* 관리자에게만 Admin 탭 표시 */}
         {ADMIN_UID && userEmail && (
-          <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
+          <>
+            <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
+            <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>👥 {t("tabUsers")}</button>
+          </>
         )}
       </div>
 
       <div className="main-area" style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
         {/* Left: Controls */}
-        <div className="controls-panel" style={{ flex: `0 0 ${100 - graphPanelWidth}%` }}>
+        <div className="controls-panel" style={{ flex: `0 0 ${tab === "posts" ? "0%" : (100 - graphPanelWidth) + "%"}`, display: tab === "posts" ? "none" : "flex" }}>
           {tab === "quiz" && (
             <>
               {/* Category filter */}
@@ -915,7 +1141,7 @@ function App() {
                   {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
-                    {isAdminUser(userEmail) ? "무제한" : `${dailyCount}/${getDailyLimit()}`}
+                    {isAdminUser(userEmail) ? "관리자" : `${dailyCount}/${getDailyLimit()}`}
                   </span>
                 </button>
 
@@ -931,7 +1157,7 @@ function App() {
                     <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "10px" }}>
                       {t("premiumFeature1")} - <span style={{ color: "#8b5cf6" }}>{t("premiumPrice")}</span>
                     </div>
-                    <button onClick={() => setShowAuthModal(true)} style={{
+                    <button onClick={() => setShowPaymentModal(true)} style={{
                       width: "100%", padding: "10px", background: "#8b5cf6", color: "#fff",
                       border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold"
                     }}>
@@ -1004,7 +1230,8 @@ function App() {
                                 problem,
                                 selectedAnswer,
                                 difficulty as "medium" | "hard" | "challenge",
-                                sessionId
+                                sessionId,
+                                slots // 선택된 서비스 목록 전달
                               );
                             }
                           }}
@@ -1236,7 +1463,7 @@ function App() {
                 </h2>
 
                 {/* Login prompt if not logged in */}
-                {!userEmail && (
+                {!userEmail ? (
                   <div style={{
                     background: "rgba(59, 130, 246, 0.1)",
                     border: "1px solid rgba(59, 130, 246, 0.3)",
@@ -1260,8 +1487,8 @@ function App() {
                       {t("loginButton")}
                     </button>
                   </div>
-                )}
-
+                ) : (
+                  <>
                 {/* Stats cards */}
                 <div style={{
                   display: "grid",
@@ -1321,8 +1548,20 @@ function App() {
                 {problemSessions && problemSessions.length > 0 && (
                   <div>
                     <h3 style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "12px" }}>
-                      📄 Generated Sessions
+                      📄 {t("generatedSessionsTitle")}
                     </h3>
+                    {/* 자동 삭제 안내 */}
+                    <div style={{
+                      fontSize: "12px",
+                      color: "#f59e0b",
+                      background: "rgba(245,158,11,0.1)",
+                      border: "1px solid rgba(245,158,11,0.3)",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      marginBottom: "12px"
+                    }}>
+                      {t("sessionAutoDeleteNotice")}
+                    </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {problemSessions.map((session, idx) => (
                         <div
@@ -1348,45 +1587,51 @@ function App() {
                           </div>
                           <button
                             onClick={() => generatePDF(session)}
-                            disabled={false}
+                            disabled={pdfGeneratingId !== null}
                             style={{
                               padding: "6px 14px",
                               fontSize: "11px",
                               fontWeight: 600,
-                              background: "rgba(245,158,11,0.2)",
+                              background: pdfGeneratingId === session.sessionTimestamp
+                                ? "rgba(245,158,11,0.4)"
+                                : "rgba(245,158,11,0.2)",
                               border: "1px solid rgba(245,158,11,0.4)",
                               borderRadius: "6px",
                               color: "#f59e0b",
-                              cursor: "pointer",
+                              cursor: pdfGeneratingId !== null ? "not-allowed" : "pointer",
                               transition: "all 0.2s",
-                              whiteSpace: "nowrap"
+                              whiteSpace: "nowrap",
+                              opacity: pdfGeneratingId !== null ? 0.6 : 1
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "rgba(245,158,11,0.3)";
-                              e.currentTarget.style.borderColor = "rgba(245,158,11,0.6)";
+                              if (pdfGeneratingId === null) {
+                                e.currentTarget.style.background = "rgba(245,158,11,0.3)";
+                                e.currentTarget.style.borderColor = "rgba(245,158,11,0.6)";
+                              }
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "rgba(245,158,11,0.2)";
-                              e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)";
+                              if (pdfGeneratingId === null) {
+                                e.currentTarget.style.background = "rgba(245,158,11,0.2)";
+                                e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)";
+                              }
                             }}
                           >
-                            📥 Download PDF
+                            {pdfGeneratingId === session.sessionTimestamp ? (
+                              <>
+                                <span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: "4px" }}>
+                                  ⏳
+                                </span>
+                                Generating...
+                              </>
+                            ) : (
+                              "📥 Download PDF"
+                            )}
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* Weak Services */}
-                <div>
-                  <h3 style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "12px" }}>
-                    {t("weakServices")} {t("weakServicesDesc")}
-                  </h3>
-                  <div style={{ color: "#64748b", fontSize: "12px", textAlign: "center", padding: "20px" }}>
-                    {t("noData")}
-                  </div>
-                </div>
 
                 {/* Exam Date */}
                 <div style={{
@@ -1409,9 +1654,11 @@ function App() {
                     {t("setExamDate")}
                   </button>
                 </div>
+                  </>
+                )}
               </div>
             </div>
-          )}
+          )} {/* End of Status tab */}
 
           {/* Admin Panel - 관리자만 접근 가능 */}
           {tab === "admin" && ADMIN_UID && userEmail && (
@@ -1496,41 +1743,6 @@ function App() {
                   </div>
                 </div>
               </div>
-
-              {/* Test Purchase Button */}
-              <div style={{
-                paddingTop: "12px"
-              }}>
-                <button
-                  onClick={() => {
-                    recordPaidPurchase();
-                    setPurchaseCount(getTodayPurchaseCount());
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "10px 16px",
-                    fontSize: "12px",
-                    background: "rgba(34,197,94,0.2)",
-                    border: "1px solid rgba(34,197,94,0.4)",
-                    borderRadius: "6px",
-                    color: "#4ade80",
-                    cursor: "pointer",
-                    fontWeight: 500,
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(34,197,94,0.3)";
-                    e.currentTarget.style.borderColor = "rgba(34,197,94,0.6)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(34,197,94,0.2)";
-                    e.currentTarget.style.borderColor = "rgba(34,197,94,0.4)";
-                  }}
-                >
-                  + Record Purchase (Dev)
-                </button>
-              </div>
-
               {/* Admin Info */}
               <div style={{
                 marginTop: "auto",
@@ -1544,6 +1756,88 @@ function App() {
                 <strong>Development Mode</strong><br/>
                 Visitor and purchase tracking active.<br/>
                 Production will require authentication.
+              </div>
+            </div>
+          )}
+
+          {/* Users Panel - 관리자만 접근 가능 */}
+          {tab === "users" && ADMIN_UID && userEmail && (
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              height: "100%",
+              color: "#e2e8f0",
+              overflow: "auto"
+            }}>
+              <div style={{ fontSize: "14px", color: "#94a3b8" }}>
+                👥 사용자 목록
+              </div>
+
+              {/* Users List */}
+              <div style={{
+                flex: 1,
+                overflow: "auto",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "8px",
+                background: "rgba(255,255,255,0.02)"
+              }}>
+                {allUsers.length === 0 ? (
+                  <div style={{
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#64748b",
+                    fontSize: "12px"
+                  }}>
+                    사용자가 없습니다
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column"
+                  }}>
+                    {allUsers.map((user) => (
+                      <div
+                        key={user.userId}
+                        onClick={async () => {
+                          setSelectedUser(user.userId);
+                          try {
+                            const sessions = await getUserProblemSessions(user.userId);
+                            setSelectedUserSessions(sessions);
+                          } catch (error) {
+                            // 에러 처리만 수행 (로깅 제거)
+                            setSelectedUserSessions([]);
+                          }
+                        }}
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid rgba(255,255,255,0.05)",
+                          cursor: "pointer",
+                          background: selectedUser === user.userId ? "rgba(59,130,246,0.2)" : "transparent",
+                          borderLeft: selectedUser === user.userId ? "3px solid rgba(59,130,246,0.8)" : "3px solid transparent",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedUser !== user.userId) {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedUser !== user.userId) {
+                            e.currentTarget.style.background = "transparent";
+                          }
+                        }}
+                      >
+                        <div style={{ fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
+                          {user.email}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#94a3b8" }}>
+                          {user.userStatus === "paid" ? "💎 유료" : user.userStatus === "loggedIn" ? "✨ 로그인" : "🔐 게스트"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1577,7 +1871,7 @@ function App() {
         />
 
         {/* Right: Graph or Admin Chart */}
-        <div className="graph-panel" style={{ flex: `0 0 ${graphPanelWidth}%`, position: 'relative' }}>
+        <div className="graph-panel" style={{ flex: `0 0 ${tab === "posts" ? "100%" : graphPanelWidth + "%"}`, position: 'relative' }}>
           {tab === "admin" ? (
             <>
               {/* Admin Bar Graph */}
@@ -1813,21 +2107,506 @@ function App() {
             </>
           ) : tab === "status" ? (
             <>
-              <div className="graph-label">📊 Statistics</div>
+              <div className="graph-label">{t("statisticsLabel")}</div>
+              <div style={{
+                padding: "20px",
+                overflowY: "auto",
+                height: "100%"
+              }}>
+                {!userEmail ? (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "#64748b",
+                    fontSize: "13px",
+                    textAlign: "center"
+                  }}>
+                    {t("loginPrompt")}
+                  </div>
+                ) : (
+                  <>
+                <h3 style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "12px" }}>
+                  {t("weakServices")} {t("weakServicesDesc")}
+                </h3>
+                {quizStats && Object.keys(quizStats.byService || {}).length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {/* 정답률 낮은 순서대로 정렬 */}
+                    {Object.entries(quizStats.byService || {})
+                      .map(([service, stats]: any) => ({
+                        service,
+                        accuracy: stats.accuracy,
+                        total: stats.total,
+                        correct: stats.correct
+                      }))
+                      .sort((a, b) => a.accuracy - b.accuracy) // 낮은 정답률부터
+                      .map(({ service, accuracy, total, correct }) => {
+                        const nodeData = NODES.find(n => n.id === service);
+                        return (
+                          <div
+                            key={service}
+                            style={{
+                              background: "rgba(255,255,255,0.04)",
+                              borderRadius: "8px",
+                              padding: "12px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              border: "1px solid rgba(255,255,255,0.08)"
+                            }}
+                          >
+                            <div style={{ fontSize: "24px" }}>{nodeData?.emoji}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "13px", color: "#e2e8f0", fontWeight: 600 }}>
+                                {nodeData?.name || service}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                                {correct}/{total} ({accuracy}%)
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "6px",
+                                background: accuracy < 50 ? "rgba(239,68,68,0.2)" : accuracy < 75 ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.2)",
+                                border: accuracy < 50 ? "1px solid rgba(239,68,68,0.4)" : accuracy < 75 ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(34,197,94,0.4)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                color: accuracy < 50 ? "#ef4444" : accuracy < 75 ? "#f59e0b" : "#4ade80"
+                              }}
+                            >
+                              {accuracy}%
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div style={{ color: "#64748b", fontSize: "12px", textAlign: "center", padding: "20px" }}>
+                    {t("noData")}
+                  </div>
+                )}
+                  </>
+                )}
+              </div>
+            </>
+          ) : tab === "posts" ? (
+            <>
+              <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", height: "100%", overflowY: "auto" }}>
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                  <h2 style={{ fontSize: "18px", color: "#e2e8f0", margin: 0 }}>
+                    📰 {t("tabPosts")} ({postsTotalCount})
+                  </h2>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    {/* Search */}
+                    <input
+                      type="text"
+                      placeholder={t("postsSearch")}
+                      value={postsSearch}
+                      onChange={(e) => {
+                        setPostsSearch(e.target.value);
+                        setPostsPage(1);
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        borderRadius: "6px",
+                        color: "#cbd5e1",
+                        fontSize: "12px",
+                        width: "150px"
+                      }}
+                    />
+                    {/* My Posts Toggle */}
+                    <button
+                      onClick={() => {
+                        setPostsFilterMine(!postsFilterMine);
+                        setPostsPage(1);
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        background: postsFilterMine ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.08)",
+                        border: postsFilterMine ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.2)",
+                        borderRadius: "6px",
+                        color: postsFilterMine ? "#f59e0b" : "#94a3b8",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {t("postsMine")}
+                    </button>
+                    {/* Write Button */}
+                    {userEmail && (
+                      <button
+                        onClick={() => {
+                          setShowPostForm(true);
+                          setPostFormData({ title: "", content: "", authorName: "", password: "", isPublic: true });
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          background: "rgba(139,92,246,0.2)",
+                          border: "1px solid rgba(139,92,246,0.4)",
+                          borderRadius: "6px",
+                          color: "#a78bfa",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        {t("postsWrite")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Posts List */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+                  {posts.length === 0 ? (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "200px",
+                      color: "#64748b",
+                      fontSize: "14px"
+                    }}>
+                      {t("postsEmpty")}
+                    </div>
+                  ) : (
+                    posts.map((post) => (
+                      <div
+                        key={post.id}
+                        style={{
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: "8px",
+                          padding: "16px",
+                          display: "flex",
+                          gap: "12px",
+                          alignItems: "flex-start"
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div style={{
+                          width: "40px",
+                          height: "40px",
+                          minWidth: "40px",
+                          borderRadius: "50%",
+                          background: "rgba(139,92,246,0.3)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#a78bfa",
+                          fontSize: "18px",
+                          fontWeight: 600
+                        }}>
+                          {post.authorName.charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                            <span style={{
+                              fontSize: "11px",
+                              color: post.isPublic ? "#10b981" : "#ef4444",
+                              fontWeight: 600
+                            }}>
+                              {post.isPublic ? t("postsPublic") : t("postsSecret")}
+                            </span>
+                          </div>
+                          <div
+                            onClick={async () => {
+                              try {
+                                const user = getCurrentUser();
+                                const post_data = await getPostById(post.id, user?.uid || "");
+                                setSelectedPost(post_data);
+                              } catch (error: any) {
+                                alert(error.message);
+                              }
+                            }}
+                            style={{
+                              fontSize: "14px",
+                              color: "#e2e8f0",
+                              fontWeight: 600,
+                              marginBottom: "6px",
+                              wordBreak: "break-word",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {post.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#cbd5e1",
+                              marginBottom: "8px",
+                              wordBreak: "break-word",
+                              lineHeight: "1.4"
+                            }}
+                          >
+                            {post.content && (post.content.length > 100 ? post.content.substring(0, 100) + "..." : post.content)}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px" }}>
+                            {t("postsAuthor")}: {post.authorName}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#64748b" }}>
+                            {new Date(post.createdAt).toLocaleDateString(locale === "en" ? "en-US" : locale === "ja" ? "ja-JP" : "ko-KR", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Menu */}
+                        {userEmail && getCurrentUser()?.uid === post.authorId && (
+                          <div style={{ position: "relative" }}>
+                            <button
+                              onClick={() => {
+                                if (confirm(t("postsDeleteConfirm"))) {
+                                  (async () => {
+                                    try {
+                                      await deletePost(post.id, getCurrentUser()!.uid);
+                                      setPostsPage(1);
+                                      const result = await getPosts(1, 20, postsSearch, postsFilterMine ? getCurrentUser()?.uid : "", getCurrentUser()?.uid || "");
+                                      setPosts(result.posts);
+                                      setPostsTotalCount(result.totalCount);
+                                    } catch (error: any) {
+                                      alert(error.message);
+                                    }
+                                  })();
+                                }
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#94a3b8",
+                                cursor: "pointer",
+                                fontSize: "18px",
+                                padding: "4px"
+                              }}
+                            >
+                              ⋮
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Pagination */}
+                {postsTotalCount > 20 && (
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "8px",
+                    paddingTop: "12px",
+                    borderTop: "1px solid rgba(255,255,255,0.08)"
+                  }}>
+                    <button
+                      onClick={() => setPostsPage(p => Math.max(1, p - 1))}
+                      disabled={postsPage === 1}
+                      style={{
+                        padding: "4px 8px",
+                        background: postsPage === 1 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        borderRadius: "4px",
+                        color: postsPage === 1 ? "#475569" : "#94a3b8",
+                        cursor: postsPage === 1 ? "not-allowed" : "pointer",
+                        fontSize: "12px"
+                      }}
+                    >
+                      ← {locale === "en" ? "Prev" : locale === "ja" ? "前へ" : "이전"}
+                    </button>
+                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                      {postsPage} / {Math.ceil(postsTotalCount / 20)}
+                    </span>
+                    <button
+                      onClick={() => setPostsPage(p => p + 1)}
+                      disabled={postsPage >= Math.ceil(postsTotalCount / 20)}
+                      style={{
+                        padding: "4px 8px",
+                        background: postsPage >= Math.ceil(postsTotalCount / 20) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        borderRadius: "4px",
+                        color: postsPage >= Math.ceil(postsTotalCount / 20) ? "#475569" : "#94a3b8",
+                        cursor: postsPage >= Math.ceil(postsTotalCount / 20) ? "not-allowed" : "pointer",
+                        fontSize: "12px"
+                      }}
+                    >
+                      {locale === "en" ? "Next" : locale === "ja" ? "次へ" : "다음"} →
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : tab === "users" ? (
+            <>
+              {/* Users Sessions Panel */}
+              <div className="graph-label">📁 PDF 파일</div>
               <div style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
                 height: "100%",
-                color: "#64748b",
-                fontSize: "13px",
-                textAlign: "center",
-                padding: "20px"
+                gap: "12px",
+                padding: "16px",
+                overflow: "auto"
               }}>
-                <div>
-                  <div style={{ fontSize: "32px", marginBottom: "8px" }}>📈</div>
-                  <p>PDF 통계 및 다운로드는<br/>좌측 현황 탭에서<br/>확인하실 수 있습니다.</p>
-                </div>
+                {!selectedUser ? (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "#64748b",
+                    fontSize: "13px",
+                    textAlign: "center"
+                  }}>
+                    왼쪽에서 사용자를 선택하면<br/>PDF 파일이 표시됩니다
+                  </div>
+                ) : selectedUserSessions.length === 0 ? (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "#64748b",
+                    fontSize: "13px"
+                  }}>
+                    생성된 PDF가 없습니다
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    height: "100%"
+                  }}>
+                    {/* 일괄 다운로드 버튼 */}
+                    {selectedUserSessions.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          for (let i = 0; i < selectedUserSessions.length; i++) {
+                            await generatePDF(selectedUserSessions[i]);
+                            // 다음 다운로드 전 0.5초 딜레이
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                          }
+                        }}
+                        style={{
+                          padding: "10px 16px",
+                          background: "rgba(59,130,246,0.2)",
+                          border: "1px solid rgba(59,130,246,0.4)",
+                          borderRadius: "6px",
+                          color: "#60a5fa",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(59,130,246,0.3)";
+                          e.currentTarget.style.borderColor = "rgba(59,130,246,0.6)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(59,130,246,0.2)";
+                          e.currentTarget.style.borderColor = "rgba(59,130,246,0.4)";
+                        }}
+                      >
+                        📥 전체 PDF 다운로드 ({selectedUserSessions.length}개)
+                      </button>
+                    )}
+
+                    {/* 세션 목록 */}
+                    <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                      overflow: "auto",
+                      flex: 1
+                    }}>
+                      {selectedUserSessions.map((session, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "6px",
+                          padding: "12px",
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                        }}
+                      >
+                        <div style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "start",
+                          marginBottom: "8px"
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              color: "#cbd5e1"
+                            }}>
+                              📅 {session.date} {session.time}
+                            </div>
+                            <div style={{
+                              fontSize: "11px",
+                              color: "#94a3b8",
+                              marginTop: "4px"
+                            }}>
+                              문제 수: {session.problemCount}개
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: "10px",
+                            background: session.difficulty === "medium"
+                              ? "rgba(249,115,22,0.2)"
+                              : session.difficulty === "hard"
+                              ? "rgba(239,68,68,0.2)"
+                              : "rgba(168,85,247,0.2)",
+                            color: session.difficulty === "medium"
+                              ? "#fb923c"
+                              : session.difficulty === "hard"
+                              ? "#ef4444"
+                              : "#d8b4fe",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontWeight: 600
+                          }}>
+                            {session.difficulty === "medium" ? "보통" : session.difficulty === "hard" ? "어려움" : "챌린지"}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: "10px",
+                          color: "#64748b"
+                        }}>
+                          {session.problemCount} 문제의 세부 정보 보기
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -1855,31 +2634,54 @@ function App() {
               <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>📅 시험 시작일 설정</h2>
 
               <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", color: "#cbd5e1", fontSize: "12px", marginBottom: "8px", fontWeight: "bold" }}>
-                  SAA-C03 시험 날짜 (84일 후가 시험일입니다)
-                </label>
                 <input type="date"
-                  defaultValue={new Date().toISOString().split("T")[0]}
+                  defaultValue={localStorage.getItem("examStartDate") || new Date().toISOString().split("T")[0]}
                   id="examDateInput"
+                  onChange={(e) => {
+                    const examDate = new Date(e.target.value);
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    examDate.setHours(0, 0, 0, 0);
+
+                    const diff = examDate.getTime() - today.getTime();
+                    const daysLeft = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+                    const resultDiv = document.getElementById("examDaysResult");
+                    if (resultDiv) {
+                      resultDiv.textContent = daysLeft > 0 ? `시험까지 ${daysLeft}일 남았습니다` : daysLeft === 0 ? "오늘이 시험일입니다" : "시험일이 지났습니다";
+                    }
+                  }}
                   style={{
                     width: "100%", padding: "10px", background: "rgba(255,255,255,0.1)",
                     border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px",
                     color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box"
                   }} />
 
-                <div style={{
+                <div id="examDaysResult" style={{
                   marginTop: "16px", padding: "12px", background: "rgba(59,130,246,0.1)",
-                  border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "12px", color: "#cbd5e1"
+                  border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "14px", color: "#60a5fa", textAlign: "center", fontWeight: 600
                 }}>
-                  ✨ <strong>팁:</strong> 시작일부터 84일 후가 시험 예정일입니다.
-                  <br />📍 우측 상단에서 D-day를 확인할 수 있습니다!
+                  날짜를 선택하세요
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                <button onClick={() => {
-                  setExamStartDate();
+                <button onClick={async () => {
+                  const selectedDate = (document.getElementById("examDateInput") as HTMLInputElement).value;
+                  localStorage.setItem("examStartDate", selectedDate);
                   setDday(getExamDday());
+
+                  // Firebase에 저장
+                  const user = getCurrentUser();
+                  if (user) {
+                    try {
+                      await saveExamStartDate(user.uid, selectedDate);
+                    } catch (error) {
+                      // 에러 처리만 수행 (로깅 제거)
+                    }
+                  }
+
                   setShowExamDateModal(false);
                 }} style={{
                   flex: 1, padding: "12px", background: "#3b82f6", color: "#fff",
@@ -1925,15 +2727,19 @@ function App() {
                     const user = await signInWithGoogle();
                     setUserEmail(user.email);
                     setUserStatusLocal("loggedIn");
-                    localStorage.setItem("userEmail", user.email || "");
                     localStorage.setItem("userStatus", "loggedIn");
                     setDailyCount(0);
                     localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
                     localStorage.setItem("problemCount", "0");
                     setShowLoginModal(false);
-                    // 시험일정이 설정되지 않았을 때만 팝업 띄우기
-                    const examDate = localStorage.getItem("examStartDate");
-                    if (!examDate) {
+
+                    // Firebase에서 시험 시작일 확인
+                    const examStartDate = await getExamStartDate(user.uid);
+                    if (examStartDate) {
+                      localStorage.setItem("examStartDate", examStartDate);
+                      setDday(getExamDday());
+                    } else {
+                      // 시험일정이 설정되지 않았을 때만 팝업 띄우기
                       setTimeout(() => setShowExamDateModal(true), 300);
                     }
                   } catch (err: any) {
@@ -1983,30 +2789,79 @@ function App() {
                 setLoginError(null);
                 setLoginLoading(true);
 
-                const email = (document.getElementById("loginEmail") as HTMLInputElement).value;
+                const email = sanitizeInput((document.getElementById("loginEmail") as HTMLInputElement).value);
                 const password = (document.getElementById("loginPassword") as HTMLInputElement).value;
+                const displayName = isSignUp ? sanitizeInput((document.getElementById("loginName") as HTMLInputElement).value) : "";
+
+                // 입력값 검증
+                if (!validateEmail(email)) {
+                  setLoginError("유효한 이메일 주소를 입력하세요");
+                  setLoginLoading(false);
+                  return;
+                }
+
+                const passwordValidation = validatePassword(password);
+                if (!passwordValidation.valid) {
+                  setLoginError(passwordValidation.error || "비밀번호 오류");
+                  setLoginLoading(false);
+                  return;
+                }
+
+                if (isSignUp && !displayName) {
+                  setLoginError("이름을 입력하세요");
+                  setLoginLoading(false);
+                  return;
+                }
+
+                // Rate Limiting 확인
+                if (!checkRateLimit(email)) {
+                  setLoginError("너무 많은 요청이 발생했습니다. 잠시 후 다시 시도하세요");
+                  setLoginLoading(false);
+                  return;
+                }
 
                 try {
                   if (isSignUp) {
-                    await signUp(email, password);
+                    await signUp(email, password, displayName);
                   } else {
                     await signIn(email, password);
                   }
 
                   // 성공 시 상태 업데이트
                   setUserEmail(email);
+                  const userName = isSignUp ? displayName : (localStorage.getItem("userName") || email.split("@")[0]);
                   setUserStatusLocal("loggedIn");
-                  localStorage.setItem("userEmail", email);
+                  localStorage.setItem("userName", userName);
                   localStorage.setItem("userStatus", "loggedIn");
                   setDailyCount(0);
                   localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
                   localStorage.setItem("problemCount", "0");
                   setShowLoginModal(false);
 
-                  // 시험일정이 설정되지 않았을 때만 팝업 띄우기
-                  const examDate = localStorage.getItem("examStartDate");
-                  if (!examDate) {
-                    setTimeout(() => setShowExamDateModal(true), 300);
+                  // 세션 타임아웃 설정 (30분 비활동 시 자동 로그아웃)
+                  resetSessionTimeout(() => {
+                    setUserEmail(null);
+                    setUserStatusLocal("guest");
+                    localStorage.removeItem("userStatus");
+                  });
+
+                  // Firebase에서 시험 시작일 확인
+                  const user = getCurrentUser();
+                  if (user) {
+                    const examStartDate = await getExamStartDate(user.uid);
+                    if (examStartDate) {
+                      localStorage.setItem("examStartDate", examStartDate);
+                      setDday(getExamDday());
+                    } else {
+                      // 시험일정이 설정되지 않았을 때만 팝업 띄우기
+                      setTimeout(() => setShowExamDateModal(true), 300);
+                    }
+                  } else {
+                    // user가 없으면 localStorage에서 확인
+                    const examDate = localStorage.getItem("examStartDate");
+                    if (!examDate) {
+                      setTimeout(() => setShowExamDateModal(true), 300);
+                    }
                   }
                 } catch (err: any) {
                   setLoginError(err.message);
@@ -2105,18 +2960,18 @@ function App() {
                     <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
                       <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
                       <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
-                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}<br />{t("premiumCancelAnytime")}</p>
                     </div>
                   </>
                 )}
                 {userStatus === "loggedIn" && (
                   <>
-                    <p>✨ <strong>Logged In (로그인):</strong> 2회 무료 이용 완료</p>
-                    <p style={{ marginTop: "12px" }}>결제하시면 <strong>하루 20개 문제</strong>를 무제한으로 생성하실 수 있습니다!</p>
+                    <p>✨ <strong>로그인:</strong> 2회 무료 이용 완료</p>
+                    <p style={{ marginTop: "12px" }}>결제하시면 <strong>하루 20개 문제</strong>를 생성하실 수 있습니다!</p>
                     <div style={{ marginTop: "16px", padding: "12px", background: "rgba(139,92,246,0.15)", borderRadius: "6px", border: "1px solid rgba(139,92,246,0.3)" }}>
                       <p style={{ margin: "0 0 8px 0", color: "#e0e7ff", fontWeight: "bold" }}>💎 {t("premiumPlan")}</p>
                       <p style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#8b5cf6", fontWeight: "bold" }}>{t("premiumPrice")}</p>
-                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}</p>
+                      <p style={{ margin: "0", fontSize: "12px" }}>{t("premiumUnlimited")}<br />{t("premiumAllDifficulty")}<br />{t("premiumAdFree")}<br />{t("premiumCancelAnytime")}</p>
                     </div>
                   </>
                 )}
@@ -2168,7 +3023,7 @@ function App() {
                     localStorage.setItem("problemCount", "0");
                     setShowAuthModal(false);
                   }} style={{
-                    width: "100%", padding: "12px", background: "#8b5cf6", color: "#fff",
+                    flex: 1, padding: "12px", background: "#8b5cf6", color: "#fff",
                     border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
                   }}>
                     💳 프리미엄 업그레이드
@@ -2184,7 +3039,232 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Payment Modal (Stripe) */}
+        {showPaymentModal && (
+          <PaymentModal
+            onClose={() => setShowPaymentModal(false)}
+            onSuccess={() => {
+              setUserStatusLocal("paid");
+              setUserStatus("paid");
+              setDailyCount(0);
+              localStorage.setItem("userStatus", "paid");
+              localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+              localStorage.setItem("problemCount", "0");
+              setTimeout(() => setShowPaymentModal(false), 1000);
+            }}
+            userEmail={userEmail || ""}
+          />
+        )}
+
+        {/* Write Post Modal */}
+        {showPostForm && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: "#0b0f1e",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "12px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "90%",
+              maxHeight: "80vh",
+              overflowY: "auto"
+            }}>
+              <h3 style={{ fontSize: "16px", color: "#e2e8f0", marginBottom: "16px" }}>
+                📝 {t("postsWrite")}
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Title */}
+                <input
+                  type="text"
+                  placeholder={t("postsTitle")}
+                  value={postFormData.title}
+                  onChange={(e) => setPostFormData({ ...postFormData, title: e.target.value })}
+                  maxLength={100}
+                  style={{
+                    padding: "10px",
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "6px",
+                    color: "#cbd5e1",
+                    fontSize: "13px"
+                  }}
+                />
+                {/* Author Name */}
+                <input
+                  type="text"
+                  placeholder={userEmail?.split("@")[0] || t("postsAuthor")}
+                  value={userEmail?.split("@")[0] || ""}
+                  disabled={true}
+                  maxLength={50}
+                  style={{
+                    padding: "10px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "6px",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                    cursor: "not-allowed"
+                  }}
+                />
+                {/* Content */}
+                <textarea
+                  placeholder={t("postsContent")}
+                  value={postFormData.content}
+                  onChange={(e) => setPostFormData({ ...postFormData, content: e.target.value.slice(0, 800) })}
+                  maxLength={800}
+                  style={{
+                    padding: "10px",
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "6px",
+                    color: "#cbd5e1",
+                    fontSize: "13px",
+                    minHeight: "150px",
+                    fontFamily: "inherit",
+                    resize: "vertical"
+                  }}
+                />
+                <div style={{ fontSize: "11px", color: "#64748b", textAlign: "right" }}>
+                  {postFormData.content.length}/800
+                </div>
+                {/* Public/Private Toggle */}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => setPostFormData({ ...postFormData, isPublic: true, password: "" })}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: postFormData.isPublic ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.05)",
+                      border: postFormData.isPublic ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "6px",
+                      color: postFormData.isPublic ? "#10b981" : "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "12px"
+                    }}
+                  >
+                    {t("postsPublic")}
+                  </button>
+                  <button
+                    onClick={() => setPostFormData({ ...postFormData, isPublic: false })}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: !postFormData.isPublic ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.05)",
+                      border: !postFormData.isPublic ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "6px",
+                      color: !postFormData.isPublic ? "#ef4444" : "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "12px"
+                    }}
+                  >
+                    {t("postsSecret")}
+                  </button>
+                </div>
+                {/* Password (if private) */}
+                {!postFormData.isPublic && (
+                  <input
+                    type="password"
+                    placeholder={t("postsPassword")}
+                    value={postFormData.password}
+                    onChange={(e) => setPostFormData({ ...postFormData, password: e.target.value.slice(0, 20) })}
+                    maxLength={20}
+                    autoComplete="new-password"
+                    style={{
+                      padding: "10px",
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "6px",
+                      color: "#cbd5e1",
+                      fontSize: "13px"
+                    }}
+                  />
+                )}
+                {/* Buttons */}
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                  <button
+                    onClick={async () => {
+                      if (!postFormData.title.trim() || !postFormData.content.trim()) {
+                        alert(locale === "en" ? "Please fill in all fields" : locale === "ja" ? "すべてのフィールドに入力してください" : "모든 항목을 입력하세요");
+                        return;
+                      }
+                      if (!postFormData.isPublic && !postFormData.password.trim()) {
+                        alert(t("postsPasswordRequired"));
+                        return;
+                      }
+                      setPostFormLoading(true);
+                      try {
+                        const user = getCurrentUser();
+                        await createPost(
+                          postFormData.title,
+                          postFormData.content,
+                          userEmail?.split("@")[0] || "Guest",
+                          user?.uid || "guest",
+                          postFormData.isPublic,
+                          postFormData.password || undefined
+                        );
+                        setShowPostForm(false);
+                        setPostFormData({ title: "", content: "", authorName: "", password: "", isPublic: true });
+                        setPostsPage(1);
+                        const result = await getPosts(1, 20, postsSearch, postsFilterMine ? user?.uid : "", user?.uid || "");
+                        setPosts(result.posts);
+                        setPostsTotalCount(result.totalCount);
+                      } catch (error: any) {
+                        alert(error.message);
+                      } finally {
+                        setPostFormLoading(false);
+                      }
+                    }}
+                    disabled={postFormLoading}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: postFormLoading ? "rgba(139,92,246,0.1)" : "rgba(139,92,246,0.2)",
+                      border: "1px solid rgba(139,92,246,0.4)",
+                      borderRadius: "6px",
+                      color: "#a78bfa",
+                      cursor: postFormLoading ? "not-allowed" : "pointer",
+                      fontSize: "12px",
+                      fontWeight: 600
+                    }}
+                  >
+                    {postFormLoading ? "등록 중..." : t("postsSubmit")}
+                  </button>
+                  <button
+                    onClick={() => setShowPostForm(false)}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "6px",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "12px"
+                    }}
+                  >
+                    {t("postsCancel")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

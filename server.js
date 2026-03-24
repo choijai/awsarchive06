@@ -54,12 +54,79 @@ async function handleClaudeProxy(req, res) {
 app.post('/api/claude', handleClaudeProxy);
 app.post('/api/claudeProxy', handleClaudeProxy);
 
+// Payment Intent Handler (Stripe)
+app.post('/api/createPaymentIntent', async (req, res) => {
+  try {
+    const { email, fullName, amount, currency } = req.body;
+
+    // 테스트 모드: 실제 Stripe 통합 전 시뮬레이션
+    // 프로덕션: Stripe SDK 필요
+    const stripeSecretKey = process.env.VITE_STRIPE_SECRET_KEY;
+
+    if (!stripeSecretKey) {
+      // 테스트 모드: 더미 clientSecret 반환
+      const dummyClientSecret = `pi_test_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`;
+
+      return res.json({
+        clientSecret: dummyClientSecret,
+        status: 'test_mode',
+        message: 'Test mode: Payment intent created (simulated)'
+      });
+    }
+
+    // 프로덕션에서는 실제 Stripe API 호출
+    // const stripe = require('stripe')(stripeSecretKey);
+    // const paymentIntent = await stripe.paymentIntents.create({
+    //   amount: amount,
+    //   currency: currency,
+    //   metadata: { email, fullName }
+    // });
+
+    res.json({
+      clientSecret: dummyClientSecret,
+      status: 'success',
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
+// Error Notification Handler
+app.post('/api/notifyError', async (req, res) => {
+  try {
+    const { to, subject, error, apiType, timestamp, difficulty, services, locale } = req.body;
+
+    // 테스트 모드: 에러 로깅만 수행
+    const errorLog = {
+      to,
+      subject,
+      error,
+      apiType,
+      timestamp,
+      difficulty,
+      services,
+      locale,
+      receivedAt: new Date().toISOString()
+    };
+
+    // 실제 환경에서는 Firebase Cloud Function이나 이메일 서비스 호출
+    // console.log('📧 Error notification:', errorLog);
+
+    res.json({
+      status: 'logged',
+      message: 'Error notification logged'
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', port: PORT });
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Proxy server running on http://localhost:${PORT}`);
-  console.log(`   API: http://localhost:${PORT}/api/claude`);
+  // console.log(`✅ Proxy server running on http://localhost:${PORT}`);
+  // console.log(`   API: http://localhost:${PORT}/api/claude`);
 });

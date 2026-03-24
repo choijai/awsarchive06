@@ -7,6 +7,8 @@ export const ko = {
   tabQuiz: "퀴즈",
   tabConcept: "개념",
   tabStatus: "현황",
+  tabPosts: "게시글",
+  tabUsers: "사용자",
 
   // Filter
   filterAll: "전체",
@@ -61,9 +63,9 @@ export const ko = {
   msgLoginTip: "로그인하면 2회 무료 이용 가능",
   googleLoginBtn: "Google로 로그인",
   logoutBtn: "로그아웃",
-  userStatusGuest: "🔐 Guest",
-  userStatusLoggedIn: "✨ Logged In",
-  userStatusPaid: "💎 Premium",
+  userStatusGuest: "🔐 게스트",
+  userStatusLoggedIn: "✨ 로그인",
+  userStatusPaid: "💎 프리미엄",
 
   // 로그인 모달
   verifyEmailTitle: "🔐 이메일 인증",
@@ -86,16 +88,17 @@ export const ko = {
   // 프리미엄 관련
   premiumTitle: "💎 프리미엄 업그레이드",
   premiumPrice: "$14.99 / 한 달",
-  premiumFeature1: "✅ 하루 20개 무제한",
+  premiumFeature1: "✅ 하루 20개",
   premiumFeature2: "✅ 모든 난이도",
   premiumFeature3: "✅ 완전히 광고 없음",
   premiumUpgradeBtn: "✨ 지금 업그레이드하기",
-  premiumPlan: "💎 프리미엄 플랜",
+  premiumPlan: "프리미엄 플랜",
   premiumBenefits: "프리미엄 플랜",
-  premiumUnlimited: "✅ 하루 20개 무제한",
+  premiumUnlimited: "✅ 하루 20개",
   premiumAllDifficulty: "✅ 모든 난이도",
   premiumAdFree: "✅ 완전히 광고 없음",
-  quotaFullGuest: "🔐 일일 제한에 도달했습니다 (2/2). 로그인하여 2회 무료를 받거나 무제한으로 업그레이드하세요.",
+  premiumCancelAnytime: "✅ 언제든 취소 가능",
+  quotaFullGuest: "🔐 일일 제한에 도달했습니다 (2/2). 로그인하여 2회 무료를 받거나 업그레이드하세요.",
   quotaFullLoggedIn: "✨ 무료 2회가 모두 사용되었습니다. 하루 20개 문제를 생성하려면 업그레이드하세요!",
 
   // D-Day 관련
@@ -105,14 +108,20 @@ export const ko = {
   examDateTip: "✨ 팁: 시작일부터 84일 후가 시험 예정일입니다. 📍 우측 상단에서 D-day를 확인할 수 있습니다!",
   examDateSetBtn: "✅ 설정 완료",
   examDateCancelBtn: "취소",
-  labelQuotaFull: "Quota Limited",
+  labelQuotaFull: "업그레이드",
 
-  // Page metadata
-  pageTitle: "AWS SAA-C03 시험 준비 - Claude AI 문제 생성",
-  pageDescription: "AWS SAA-C03 시험을 Claude AI로 준비하세요. 서비스 관계도와 맞춤형 문제 생성을 제공합니다.",
+  // Page metadata & SEO
+  pageTitle: "AWS SAA-C03 시험 준비 - Claude AI 문제 생성기",
+  pageDescription: "AWS SAA-C03 시험을 Claude AI로 준비하세요. 서비스 관계도, 맞춤형 문제 생성, 학습 통계 분석을 제공합니다.",
+  pageKeywords: "AWS SAA-C03, AWS 자격증, AWS 시험, 클라우드 자격증, AWS 문제집, 솔루션 아키텍트, 시험 준비, AI 문제 생성",
+  ogTitle: "AWS SAA-C03 시험 완벽 준비 - Claude AI 문제 생성기",
+  ogDescription: "서비스 관계도와 AI 기반 맞춤형 문제 생성으로 AWS SAA-C03 시험을 효과적으로 준비하세요.",
+  twitterTitle: "AWS SAA-C03 시험 준비 - Claude AI 문제 생성",
+  twitterDescription: "인터랙티브한 AWS 서비스 맵과 Claude AI 기반 자동 문제 생성기로 시험을 준비하세요.",
 
   // Dashboard/Status tab
   dashboardTitle: "📈 학습 진행 통계",
+  statisticsLabel: "📊 통계",
   totalProblems: "총 문제",
   correctRate: "정답률",
   consecutiveDays: "연속 학습일",
@@ -124,6 +133,30 @@ export const ko = {
   loginPrompt: "로그인하면 학습 기록이 저장됩니다",
   loginButton: "Google로 시작하기",
   noData: "아직 데이터가 없습니다",
+  generatedSessionsTitle: "생성된 PDF",
+  sessionAutoDeleteNotice: "⏱️ 생성된 PDF는 3일 뒤에 자동 삭제됩니다",
+
+  // Posts
+  postsWrite: "글쓰기",
+  postsTitle: "제목",
+  postsContent: "내용",
+  postsAuthor: "작성자",
+  postsDate: "날짜",
+  postsPublic: "🌐 공개",
+  postsSecret: "🔒 비밀글",
+  postsPassword: "비밀번호",
+  postsSearch: "제목 검색...",
+  postsMine: "내가 쓴 글",
+  postsSubmit: "등록",
+  postsCancel: "취소",
+  postsEmpty: "게시글이 없습니다",
+  postsPasswordRequired: "비밀번호를 입력하세요",
+  postsPasswordWrong: "비밀번호가 틀렸습니다",
+  postsLoginRequired: "글쓰기는 로그인이 필요합니다",
+  postsDeleteConfirm: "정말 삭제하시겠습니까?",
+  postsDelete: "삭제",
+  postsView: "조회",
+  postsPage: "페이지",
 };
 
 export type Strings = Record<keyof typeof ko, string>;

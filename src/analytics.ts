@@ -75,7 +75,6 @@ export async function trackVisitor(): Promise<number> {
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as VisitorData).count : 0;
   } catch (error) {
-    console.error("Failed to track visitor:", error);
     return 0;
   }
 }
@@ -90,7 +89,6 @@ export async function getTodayVisitorCount(): Promise<number> {
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as VisitorData).count : 0;
   } catch (error) {
-    console.error("Failed to get today's visitor count:", error);
     return 0;
   }
 }
@@ -104,7 +102,6 @@ export async function getTotalVisitorCount(): Promise<number> {
     const snapshot = await getDocs(collectionRef);
     return snapshot.docs.reduce((sum, doc) => sum + ((doc.data() as VisitorData).count || 0), 0);
   } catch (error) {
-    console.error("Failed to get total visitor count:", error);
     return 0;
   }
 }
@@ -142,7 +139,6 @@ export async function recordPaidPurchase(amount?: number): Promise<number> {
 
     return todayData.count;
   } catch (error) {
-    console.error("Failed to record purchase:", error);
     return 0;
   }
 }
@@ -157,7 +153,6 @@ export async function getTodayPurchaseCount(): Promise<number> {
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as PurchaseData).count : 0;
   } catch (error) {
-    console.error("Failed to get today's purchase count:", error);
     return 0;
   }
 }
@@ -175,7 +170,6 @@ export async function getVisitorHistory() {
     });
     return data;
   } catch (error) {
-    console.error("Failed to get visitor history:", error);
     return {};
   }
 }
@@ -193,7 +187,6 @@ export async function getPurchaseHistory() {
     });
     return data;
   } catch (error) {
-    console.error("Failed to get purchase history:", error);
     return {};
   }
 }
@@ -224,7 +217,6 @@ export async function getDailyVisitors() {
 
     return result;
   } catch (error) {
-    console.error("Failed to get daily visitors:", error);
     return [];
   }
 }
@@ -256,7 +248,6 @@ export async function getWeeklyVisitors() {
 
     return result;
   } catch (error) {
-    console.error("Failed to get weekly visitors:", error);
     return [];
   }
 }
@@ -285,7 +276,6 @@ export async function getMonthlyVisitors() {
 
     return result;
   } catch (error) {
-    console.error("Failed to get monthly visitors:", error);
     return [];
   }
 }
@@ -314,7 +304,6 @@ export async function getDailyVisitorsForMonth(monthOffset: number) {
 
     return result;
   } catch (error) {
-    console.error("Failed to get daily visitors for month:", error);
     return [];
   }
 }
@@ -364,7 +353,6 @@ export async function getWeeklyVisitorsForMonth(monthOffset: number) {
 
     return result;
   } catch (error) {
-    console.error("Failed to get weekly visitors for month:", error);
     return [];
   }
 }
@@ -405,7 +393,6 @@ export async function getDailyVisitorsForWeek(monthOffset: number, weekIndex: nu
 
     return result;
   } catch (error) {
-    console.error("Failed to get daily visitors for week:", error);
     return [];
   }
 }

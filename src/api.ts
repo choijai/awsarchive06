@@ -1,5 +1,51 @@
 import { generatePrompt } from "./prompts";
 
+// Gemini API 호출 함수
+async function callGeminiAPI(prompt: string, maxTokens: number, locale: "ko" | "ja" | "en" = "ko"): Promise<string> {
+  const env = (import.meta as any).env;
+  const geminiKey = (globalThis as any).__VITE_GEMINI_API_KEY__ || env.VITE_GEMINI_API_KEY;
+
+  if (!geminiKey) {
+    throw new Error(
+      locale === "en" ? "Gemini API key is not configured." :
+      locale === "ja" ? "Gemini APIキーが設定されていません。" :
+      "Gemini API 키가 설정되지 않았습니다."
+    );
+  }
+
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": geminiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature: 1,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Gemini API Error: ${error.error?.message || "Unknown error"}`);
+  }
+
+  const data = await response.json();
+  const content = data.candidates[0].content.parts[0].text;
+  return content;
+}
+
 export interface Concept {
   title: string;
   subtitle: string;
@@ -31,9 +77,7 @@ export interface Problem {
     D: string;
   };
   explanation: {
-    architecture?: string;  // 전체 아키텍처 흐름 설명
     correct: string;        // 정답인 이유
-    service_features?: string;  // AWS 서비스 특징
     trap_A: string;
     trap_B?: string;
     trap_C: string;
@@ -47,7 +91,8 @@ export async function generateSAAProblem(
   difficulty: string,
   locale: "ko" | "ja" | "en" = "ko"
 ): Promise<Problem> {
-  const apiKey = (globalThis as any).__VITE_API_KEY__ || import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const env = (import.meta as any).env;
+  const apiKey = (globalThis as any).__VITE_API_KEY__ || env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error(
       locale === "en" ? "API key is not configured. Check .env file." :
@@ -58,33 +103,107 @@ export async function generateSAAProblem(
 
   const prompt = generatePrompt(serviceNames, difficulty, locale);
 
-  try {
-    // Firebase Cloud Functions 프록시로 요청
-    const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL || "http://localhost:5000";
-    const response = await fetch(`${backendUrl}/api/claudeProxy`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 3500,  // Token constraint enforced via prompt instruction
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
+  let content: string;
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`API Error: ${error.error?.message || "Unknown error"}`);
+  // ⚠️ 테스트 모드: Gemini API로 먼저 시도 (Claude는 주석 처리)
+  // 프로덕션: 아래 Claude 부분을 주석 제거하고 Gemini 부분을 주석 처리
+
+  try {
+    // 2단계: Gemini API로 테스트 (테스트 모드)
+    content = await callGeminiAPI(prompt, 3500, locale);
+
+  } catch (geminiError) {
+    // 폴백: 실패 시 Claude API 시도
+
+    // 🚨 오류 알림: Firebase Cloud Function으로 메일 발송
+    try {
+      const adminEmail = env?.VITE_ADMIN_EMAIL;
+      const backendUrl = env?.VITE_BACKEND_URL || "http://localhost:5000";
+
+      if (adminEmail) {
+        const errorMsg = geminiError instanceof Error ? geminiError.message : String(geminiError);
+        await fetch(`${backendUrl}/api/notifyError`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: adminEmail,
+            subject: "🚨 Gemini API Error - AWS SAA-C03",
+            error: errorMsg,
+            apiType: "gemini",
+            timestamp: new Date().toISOString(),
+            difficulty: difficulty,
+            services: serviceNames.join(", "),
+          }),
+        });
+      }
+    } catch (notifyError) {
     }
 
-    const data = await response.json();
-    const content = data.content[0].text;
+    try {
+      // 1단계: Claude API 시도 (폴백)
+      const backendUrl = env?.VITE_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/claudeProxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 3500,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Claude API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      content = data.content[0].text;
+
+    } catch (claudeError) {
+      // 🚨 오류 알림: Claude API 오류 메일 발송
+      try {
+        const adminEmail = env?.VITE_ADMIN_EMAIL;
+        const backendUrl = env?.VITE_BACKEND_URL || "http://localhost:5000";
+
+        if (adminEmail) {
+          const errorMsg = claudeError instanceof Error ? claudeError.message : String(claudeError);
+          await fetch(`${backendUrl}/api/notifyError`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: adminEmail,
+              subject: "🚨 Claude API Error - AWS SAA-C03",
+              error: errorMsg,
+              apiType: "claude",
+              timestamp: new Date().toISOString(),
+              difficulty: difficulty,
+              services: serviceNames.join(", "),
+            }),
+          });
+        }
+      } catch (notifyError) {
+      }
+
+      throw new Error(
+        locale === "en" ? `Both Gemini and Claude APIs failed. Gemini: ${geminiError}, Claude: ${claudeError}` :
+        locale === "ja" ? `GeminiとClaude APIの両方が失敗しました。Gemini: ${geminiError}, Claude: ${claudeError}` :
+        `Gemini와 Claude API 모두 실패했습니다. Gemini: ${geminiError}, Claude: ${claudeError}`
+      );
+    }
+  }
+
+  try {
 
     // JSON 추출 (마크다운 코드 블록 처리)
     // 마크다운 코드 블록부터 시도
@@ -103,10 +222,6 @@ export async function generateSAAProblem(
     if (!jsonStr) {
       throw new Error("Failed to extract JSON from response");
     }
-
-    console.log("Extracted JSON length:", jsonStr.length);
-    console.log("JSON starts with:", jsonStr.substring(0, 100));
-    console.log("JSON ends with:", jsonStr.substring(Math.max(0, jsonStr.length - 100)));
 
     // JSON 내 문자열 값의 줄바꿈을 공백으로 치환
     // 더 강력한 정규화 로직
@@ -132,8 +247,6 @@ export async function generateSAAProblem(
       return problem;
     } catch (parseError) {
       // 파싱 실패 시 더 공격적으로 정리
-      console.error("Initial JSON parse failed, attempting aggressive cleanup");
-
       // 모든 종류의 이스케이프 문자 처리
       let cleaned = jsonStr;
 
@@ -151,10 +264,6 @@ export async function generateSAAProblem(
         const problem = JSON.parse(cleaned) as Problem;
         return problem;
       } catch (secondError) {
-        // 디버깅 정보 로깅
-        console.error("JSON Parse Error at position:", (parseError as any).message);
-        console.error("Failed JSON (first 500 chars):", jsonStr.substring(0, 500));
-        console.error("Failed JSON (around error):", jsonStr.substring(Math.max(0, 2100-50), Math.min(jsonStr.length, 2100+50)));
         throw parseError;
       }
     }
@@ -170,7 +279,8 @@ export async function translateConcept(
   concept: Concept,
   locale: "ja" | "en"
 ): Promise<Concept> {
-  const apiKey = (globalThis as any).__VITE_API_KEY__ || import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const env = (import.meta as any).env;
+  const apiKey = (globalThis as any).__VITE_API_KEY__ || env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("API key not configured");
   }
@@ -185,33 +295,73 @@ ${JSON.stringify(concept)}
 
 Output (JSON only):`;
 
+  let content: string;
+
+  // ⚠️ 테스트 모드: Gemini API로 먼저 시도 (테스트용)
   try {
-    // Firebase Cloud Functions 프록시로 요청
-    const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL || "http://localhost:5000";
-    const response = await fetch(`${backendUrl}/api/claudeProxy`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 2500,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
+    // 2단계: Gemini API로 번역 시도 (테스트 모드)
+    content = await callGeminiAPI(prompt, 2500, locale);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`API Error: ${error.error?.message || "Unknown error"}`);
+  } catch (geminiError) {
+    // 폴백: 실패 시 Claude API 시도
+    try {
+      // 1단계: Claude API 시도 (폴백)
+      const backendUrl = env?.VITE_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/claudeProxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2500,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Claude API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      content = data.content[0].text;
+
+    } catch (claudeError) {
+      // 🚨 오류 알림: Claude API 오류 메일 발송
+      try {
+        const adminEmail = env?.VITE_ADMIN_EMAIL;
+        const backendUrl = env?.VITE_BACKEND_URL || "http://localhost:5000";
+
+        if (adminEmail) {
+          const errorMsg = claudeError instanceof Error ? claudeError.message : String(claudeError);
+          await fetch(`${backendUrl}/api/notifyError`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: adminEmail,
+              subject: "🚨 Claude API Error - AWS SAA-C03 Translation",
+              error: errorMsg,
+              apiType: "claude",
+              timestamp: new Date().toISOString(),
+              locale: locale,
+            }),
+          });
+        }
+      } catch (notifyError) {
+      }
+
+      throw new Error(`Both Gemini and Claude APIs failed for translation. Gemini: ${geminiError}, Claude: ${claudeError}`);
     }
+  }
 
-    const data = await response.json();
-    const content = data.content[0].text;
+  try {
 
     // JSON 추출
     const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) ||

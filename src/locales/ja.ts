@@ -9,6 +9,8 @@ export const ja: Strings = {
   tabQuiz: "クイズ",
   tabConcept: "コンセプト",
   tabStatus: "進捗",
+  tabPosts: "投稿",
+  tabUsers: "ユーザー",
 
   // Filter
   filterAll: "すべて",
@@ -64,7 +66,7 @@ export const ja: Strings = {
   googleLoginBtn: "Googleでログイン",
   logoutBtn: "ログアウト",
   userStatusGuest: "🔐 ゲスト",
-  userStatusLoggedIn: "✨ ログイン済み",
+  userStatusLoggedIn: "✨ ログイン",
   userStatusPaid: "💎 プレミアム",
 
   // Login modal
@@ -88,16 +90,17 @@ export const ja: Strings = {
   // Premium related
   premiumTitle: "💎 プレミアムにアップグレード",
   premiumPrice: "$14.99 / 月",
-  premiumFeature1: "✅ 1日20問の無制限",
+  premiumFeature1: "✅ 1日20問",
   premiumFeature2: "✅ すべての難易度",
   premiumFeature3: "✅ 完全に広告なし",
   premiumUpgradeBtn: "✨ 今すぐアップグレード",
-  premiumPlan: "💎 プレミアムプラン",
+  premiumPlan: "プレミアムプラン",
   premiumBenefits: "プレミアムプラン",
-  premiumUnlimited: "✅ 1日20問の無制限",
+  premiumUnlimited: "✅ 1日20問",
   premiumAllDifficulty: "✅ すべての難易度",
   premiumAdFree: "✅ 完全に広告なし",
-  quotaFullGuest: "🔐 1日の制限に達しました (2/2)。ログインして2回の無料試行を取得するか、無制限にアップグレードしてください。",
+  premiumCancelAnytime: "✅ いつでもキャンセル可能",
+  quotaFullGuest: "🔐 1日の制限に達しました (2/2)。ログインして2回の無料試行を取得するか、アップグレードしてください。",
   quotaFullLoggedIn: "✨ 無料の2回の試行は使用済みです。1日20問の問題を生成するにはアップグレードしてください!",
 
   // D-Day related
@@ -107,14 +110,20 @@ export const ja: Strings = {
   examDateTip: "✨ ヒント: 試験日は開始日の84日後です。📍 右上のD-dayで確認できます!",
   examDateSetBtn: "✅ 完了",
   examDateCancelBtn: "キャンセル",
-  labelQuotaFull: "クォータ制限",
+  labelQuotaFull: "アップグレード",
 
-  // Page metadata
-  pageTitle: "AWS SAA-C03試験対策 - Claude AI問題生成",
-  pageDescription: "Claude AIでAWS SAA-C03試験に備えましょう。インタラクティブなサービス地図とカスタマイズされた問題生成を提供します。",
+  // Page metadata & SEO
+  pageTitle: "AWS SAA-C03試験対策 - Claude AI問題自動生成",
+  pageDescription: "Claude AIでAWS SAA-C03試験に備えましょう。サービスアーキテクチャ図、AI自動問題生成、学習分析で合格を実現します。",
+  pageKeywords: "AWS SAA-C03, AWS認定, AWS試験, ソリューションアーキテクト, AWSクラウド資格, 試験対策, AI問題生成, 練習問題",
+  ogTitle: "AWS SAA-C03認定試験 - AI問題自動生成ツール",
+  ogDescription: "AWSサービスアーキテクチャ図とClaude AI搭載の問題生成でAWS SAA-C03試験合格をサポートします。",
+  twitterTitle: "AWS SAA-C03試験対策 - Claude AI",
+  twitterDescription: "インテリジェントな問題生成とサービスアーキテクチャ可視化でAWS SAA-C03試験に合格しましょう。",
 
   // Dashboard/Status tab
   dashboardTitle: "📈 学習進捗",
+  statisticsLabel: "📊 統計",
   totalProblems: "総問題数",
   correctRate: "正答率",
   consecutiveDays: "連続学習日数",
@@ -126,4 +135,28 @@ export const ja: Strings = {
   loginPrompt: "ログインして学習記録を保存しましょう",
   loginButton: "Googleで始める",
   noData: "まだデータがありません",
+  generatedSessionsTitle: "生成されたPDF",
+  sessionAutoDeleteNotice: "⏱️ 生成されたPDFは3日後に自動削除されます",
+
+  // Posts
+  postsWrite: "投稿する",
+  postsTitle: "タイトル",
+  postsContent: "内容",
+  postsAuthor: "投稿者",
+  postsDate: "日付",
+  postsPublic: "🌐 公開",
+  postsSecret: "🔒 非公開",
+  postsPassword: "パスワード",
+  postsSearch: "タイトル検索...",
+  postsMine: "自分の投稿",
+  postsSubmit: "投稿",
+  postsCancel: "キャンセル",
+  postsEmpty: "投稿がありません",
+  postsPasswordRequired: "パスワードを入力してください",
+  postsPasswordWrong: "パスワードが間違っています",
+  postsLoginRequired: "投稿にはログインが必要です",
+  postsDeleteConfirm: "本当に削除しますか？",
+  postsDelete: "削除",
+  postsView: "閲覧",
+  postsPage: "ページ",
 };

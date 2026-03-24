@@ -9,6 +9,8 @@ export const en: Strings = {
   tabQuiz: "Quiz",
   tabConcept: "Concepts",
   tabStatus: "Progress",
+  tabPosts: "Posts",
+  tabUsers: "Users",
 
   // Filter
   filterAll: "All",
@@ -64,7 +66,7 @@ export const en: Strings = {
   googleLoginBtn: "Login with Google",
   logoutBtn: "Logout",
   userStatusGuest: "🔐 Guest",
-  userStatusLoggedIn: "✨ Logged In",
+  userStatusLoggedIn: "✨ Logged in",
   userStatusPaid: "💎 Premium",
 
   // Login modal
@@ -88,16 +90,17 @@ export const en: Strings = {
   // Premium related
   premiumTitle: "💎 Upgrade to Premium",
   premiumPrice: "$14.99 / month",
-  premiumFeature1: "✅ Unlimited 20 problems per day",
+  premiumFeature1: "✅ 20 problems per day",
   premiumFeature2: "✅ All difficulty levels",
   premiumFeature3: "✅ Completely ad-free",
   premiumUpgradeBtn: "✨ Upgrade Now",
-  premiumPlan: "💎 Premium Plan",
+  premiumPlan: "Premium Plan",
   premiumBenefits: "Premium Plan",
-  premiumUnlimited: "✅ Unlimited 20 problems per day",
+  premiumUnlimited: "✅ 20 problems per day",
   premiumAllDifficulty: "✅ All difficulty levels",
   premiumAdFree: "✅ Completely ad-free",
-  quotaFullGuest: "🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade to unlimited.",
+  premiumCancelAnytime: "✅ Cancel anytime",
+  quotaFullGuest: "🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade your plan.",
   quotaFullLoggedIn: "✨ Your free 2 attempts are used. Please upgrade to generate 20 problems per day!",
 
   // D-Day related
@@ -107,14 +110,20 @@ export const en: Strings = {
   examDateTip: "✨ Tip: Exam date is 84 days after the start date. 📍 Check the D-day in the top right corner!",
   examDateSetBtn: "✅ Complete",
   examDateCancelBtn: "Cancel",
-  labelQuotaFull: "Quota Limited",
+  labelQuotaFull: "Upgrade",
 
-  // Page metadata
+  // Page metadata & SEO
   pageTitle: "AWS SAA-C03 Exam Prep - Claude AI Question Generator",
-  pageDescription: "Prepare for AWS SAA-C03 with Claude AI. Interactive service map and personalized problem generation.",
+  pageDescription: "Master AWS SAA-C03 with Claude AI. Interactive service architecture map, AI-powered questions, learning analytics, and unlimited practice.",
+  pageKeywords: "AWS SAA-C03, AWS certification, AWS exam, cloud architect, AWS solutions architect, exam prep, AI question generator, practice exam",
+  ogTitle: "AWS SAA-C03 Certification Exam - AI-Powered Study Tool",
+  ogDescription: "Interactive AWS service map and AI-generated questions to help you pass the AWS SAA-C03 Solutions Architect Associate exam.",
+  twitterTitle: "AWS SAA-C03 Exam Prep - Claude AI",
+  twitterDescription: "Practice AWS SAA-C03 with an intelligent question generator and service architecture visualization.",
 
   // Dashboard/Status tab
   dashboardTitle: "📈 Learning Progress",
+  statisticsLabel: "📊 Statistics",
   totalProblems: "Total Problems",
   correctRate: "Accuracy",
   consecutiveDays: "Streak",
@@ -126,4 +135,28 @@ export const en: Strings = {
   loginPrompt: "Sign in to save your learning progress",
   loginButton: "Get Started with Google",
   noData: "No data yet",
+  generatedSessionsTitle: "Generated PDFs",
+  sessionAutoDeleteNotice: "⏱️ Generated PDFs are automatically deleted after 3 days",
+
+  // Posts
+  postsWrite: "Write Post",
+  postsTitle: "Title",
+  postsContent: "Content",
+  postsAuthor: "Author",
+  postsDate: "Date",
+  postsPublic: "🌐 Public",
+  postsSecret: "🔒 Private",
+  postsPassword: "Password",
+  postsSearch: "Search title...",
+  postsMine: "My Posts",
+  postsSubmit: "Post",
+  postsCancel: "Cancel",
+  postsEmpty: "No posts available",
+  postsPasswordRequired: "Please enter the password",
+  postsPasswordWrong: "Incorrect password",
+  postsLoginRequired: "Login required to write posts",
+  postsDeleteConfirm: "Are you sure you want to delete this post?",
+  postsDelete: "Delete",
+  postsView: "Views",
+  postsPage: "Page",
 };

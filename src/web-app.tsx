@@ -929,6 +929,9 @@ function App() {
   }, [mockExamRunning, mockExamProblems, mockExamAnswers, mockExamStartTime]);
 
   // 📊 모의시험 백그라운드 점진적 로딩 (3 → 10 → 20 → 50)
+  // TEST: 이 useEffect를 임시 비활성화했습니다 (API 호출 중지)
+  // PRODUCTION: 아래 주석을 제거하고, 위의 주석된 부분을 활성화하세요
+  /*
   useEffect(() => {
     if (!mockExamRunning || mockExamProblems.length >= 50) return;
 
@@ -982,6 +985,7 @@ function App() {
       }
     })();
   }, [mockExamRunning]);
+  */
 
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {

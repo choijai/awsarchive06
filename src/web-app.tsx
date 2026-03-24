@@ -928,6 +928,61 @@ function App() {
     return () => clearInterval(timer);
   }, [mockExamRunning, mockExamProblems, mockExamAnswers, mockExamStartTime]);
 
+  // 📊 모의시험 백그라운드 점진적 로딩 (3 → 10 → 20 → 50)
+  useEffect(() => {
+    if (!mockExamRunning || mockExamProblems.length >= 50) return;
+
+    (async () => {
+      try {
+        const storedDifficulties = localStorage.getItem("mockExamDifficulties");
+        const loadedCount = parseInt(localStorage.getItem("mockExamProblemsLoaded") || "3", 10);
+
+        if (!storedDifficulties) return;
+
+        const difficulties = JSON.parse(storedDifficulties);
+        let newProblems = [...mockExamProblems];
+
+        // 점진적 로딩 패턴: 3 → 7 → 10 → 20 → 30 → 50
+        const loadBatches = [
+          { count: 7, target: 10, delay: 1000 },   // 3초 후 7개 추가 (총 10개)
+          { count: 10, target: 20, delay: 3000 },  // 6초 후 10개 추가 (총 20개)
+          { count: 30, target: 50, delay: 5000 }   // 9초 후 30개 추가 (총 50개)
+        ];
+
+        for (const batch of loadBatches) {
+          if (mockExamRunning && newProblems.length < batch.target) {
+            // 대기
+            await new Promise(resolve => setTimeout(resolve, batch.delay));
+
+            if (!mockExamRunning) break;
+
+            // 배치만큼 문제 생성
+            const startIdx = newProblems.length;
+            for (let i = 0; i < batch.count && startIdx + i < 50; i++) {
+              const difficulty = difficulties[startIdx + i] as "medium" | "hard" | "challenge";
+              const problem = await generateSAAProblem([], difficulty, locale);
+              newProblems.push(problem);
+            }
+
+            // 상태 업데이트
+            setMockExamProblems(newProblems);
+            setMockExamAnswers(new Array(newProblems.length).fill(null));
+            localStorage.setItem("mockExamProblemsLoaded", newProblems.length.toString());
+          }
+        }
+
+        // 모든 문제 로드 완료 후 Firestore에 저장
+        if (newProblems.length === 50) {
+          await saveTodayMockExamProblems(newProblems);
+          localStorage.removeItem("mockExamDifficulties");
+          localStorage.removeItem("mockExamProblemsLoaded");
+        }
+      } catch (error) {
+        // 백그라운드 로딩 에러는 무시 (이미 3개는 로드됨)
+      }
+    })();
+  }, [mockExamRunning]);
+
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {
     if (tab === "posts") {
@@ -3009,7 +3064,7 @@ function App() {
                           // 1단계: 오늘의 모의시험 문제 조회
                           let problems = await getTodayMockExamProblems();
 
-                          // 2단계: 없으면 새로 생성
+                          // 2단계: 없으면 새로 생성 (점진적 로딩)
                           if (!problems) {
                             problems = [];
                             // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
@@ -3024,13 +3079,15 @@ function App() {
                               [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
                             }
 
-                            for (let i = 0; i < 50; i++) {
+                            // 🚀 먼저 3개만 로드 (빠른 시작)
+                            for (let i = 0; i < 3; i++) {
                               const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
                               const problem = await generateSAAProblem([], difficulty, locale);
                               problems.push(problem);
                             }
-                            // 3단계: 생성된 문제 저장 (다른 사용자들이 공유하도록)
-                            await saveTodayMockExamProblems(problems);
+                            // 백그라운드에서 나머지 47개 로드 (저장소에 보관)
+                            localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
+                            localStorage.setItem("mockExamProblemsLoaded", "3");
                           }
 
                           setMockExamProblems(problems);

@@ -1,7 +1,12 @@
 import { generatePrompt } from "./prompts";
 
-// Gemini API 호출 함수
-async function callGeminiAPI(prompt: string, maxTokens: number, locale: "ko" | "ja" | "en" = "ko"): Promise<string> {
+// Gemini API 호출 함수 (재시도 로직 포함)
+async function callGeminiAPI(
+  prompt: string,
+  maxTokens: number,
+  locale: "ko" | "ja" | "en" = "ko",
+  retries: number = 3
+): Promise<string> {
   const env = (import.meta as any).env;
   const geminiKey = (globalThis as any).__VITE_GEMINI_API_KEY__ || env.VITE_GEMINI_API_KEY;
 
@@ -13,37 +18,72 @@ async function callGeminiAPI(prompt: string, maxTokens: number, locale: "ko" | "
     );
   }
 
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": geminiKey,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": geminiKey,
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: prompt,
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        maxOutputTokens: maxTokens,
-        temperature: 1,
-      },
-    }),
-  });
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 1,
+          },
+        }),
+      });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Gemini API Error: ${error.error?.message || "Unknown error"}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = `Gemini API Error: ${errorData.error?.message || "Unknown error"}`;
+        lastError = new Error(errorMessage);
+
+        // 5xx 에러 또는 429(너무 많은 요청)만 재시도
+        if (response.status >= 500 || response.status === 429) {
+          if (attempt < retries - 1) {
+            // Exponential backoff: 1초, 2초, 4초
+            const delayMs = Math.pow(2, attempt) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            continue;
+          }
+        } else {
+          // 4xx 에러는 재시도 불가
+          throw lastError;
+        }
+      }
+
+      const data = await response.json();
+      const content = data.candidates[0].content.parts[0].text;
+      return content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // 마지막 시도가 아니면 재시도
+      if (attempt < retries - 1) {
+        // 네트워크 에러인 경우만 재시도
+        if (error instanceof TypeError || error instanceof Error) {
+          const delayMs = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        }
+      }
+    }
   }
 
-  const data = await response.json();
-  const content = data.candidates[0].content.parts[0].text;
-  return content;
+  // 모든 재시도 실패
+  throw lastError || new Error("Gemini API call failed after retries");
 }
 
 export interface Concept {

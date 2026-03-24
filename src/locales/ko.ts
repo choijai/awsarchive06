@@ -25,6 +25,10 @@ export const ko = {
   mockExamWrong: "오답",
   mockExamPassScore: "합격점 (720점)",
   mockExamRatio: "정답률",
+  mockExamAdminForceCreate: "👨‍💼 강제 생성 (관리자)",
+  mockExamPdfDownload: "📥 PDF 다운로드",
+  mockExamPdfInfo: "PDF는 24시간 동안 다운로드 가능합니다",
+  mockExamPdfExpired: "PDF 다운로드 기간이 만료되었습니다 (24시간 지남)",
 
   // Filter
   filterAll: "전체",

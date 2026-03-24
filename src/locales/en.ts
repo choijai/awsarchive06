@@ -27,6 +27,10 @@ export const en: Strings = {
   mockExamWrong: "Incorrect",
   mockExamPassScore: "Passing Score (720)",
   mockExamRatio: "Correct Rate",
+  mockExamAdminForceCreate: "👨‍💼 Force Create (Admin)",
+  mockExamPdfDownload: "📥 Download PDF",
+  mockExamPdfInfo: "PDF is available for download for 24 hours",
+  mockExamPdfExpired: "PDF download period has expired (24 hours have passed)",
 
   // Filter
   filterAll: "All",

@@ -438,6 +438,7 @@ function App() {
   const [mockExamTimeRemaining, setMockExamTimeRemaining] = useState(130 * 60); // 130분 (초)
   const [mockExamAlreadyTaken, setMockExamAlreadyTaken] = useState(false); // 오늘 이미 본 여부
   const [mockExamNextAvailableTime, setMockExamNextAvailableTime] = useState<string>(""); // 다시 볼 수 있는 시간
+  const [mockExamPdfCreatedAt, setMockExamPdfCreatedAt] = useState<number | null>(null); // PDF 생성 시간
 
   // 퀴즈 통계
   const [quizStats, setQuizStats] = useState<{
@@ -848,11 +849,17 @@ function App() {
     }
   }, [tab, userEmail]);
 
-  // 모의시험 일일 제한 체크
+  // 모의시험 일일 제한 체크 및 PDF 초기화
   useEffect(() => {
     if (tab === "mockExam") {
       const today = new Date().toISOString().split("T")[0];
       const lastMockExamDate = localStorage.getItem("lastMockExamDate");
+      const pdfCreatedAtStr = localStorage.getItem("mockExamPdfCreatedAt");
+
+      if (pdfCreatedAtStr) {
+        const pdfCreatedAt = parseInt(pdfCreatedAtStr, 10);
+        setMockExamPdfCreatedAt(pdfCreatedAt);
+      }
 
       if (lastMockExamDate === today) {
         // 오늘 이미 본 경우
@@ -868,6 +875,9 @@ function App() {
       } else {
         setMockExamAlreadyTaken(false);
         setMockExamNextAvailableTime("");
+        // 새로운 날짜이면 PDF 시간 초기화
+        localStorage.removeItem("mockExamPdfCreatedAt");
+        setMockExamPdfCreatedAt(null);
       }
     }
   }, [tab]);
@@ -2638,6 +2648,80 @@ function App() {
                         내일 자정부터 다시 응시할 수 있습니다
                       </p>
                     </div>
+
+                    {(() => {
+                      const pdfExpiresAt = mockExamPdfCreatedAt ? mockExamPdfCreatedAt + 24 * 60 * 60 * 1000 : null;
+                      const now = Date.now();
+                      const isPdfExpired = pdfExpiresAt && now > pdfExpiresAt;
+                      const hoursRemaining = pdfExpiresAt ? Math.floor((pdfExpiresAt - now) / (60 * 60 * 1000)) : 0;
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                          <button
+                            onClick={() => {
+                              if (!mockExamResults || !mockExamProblems) return;
+
+                              const element = document.createElement("div");
+                              element.innerHTML = `
+                                <div style="padding: 20px; color: #000; background: #fff;">
+                                  <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
+                                  <div style="margin-bottom: 20px;">
+                                    <h2 style="font-size: 32px; text-align: center;">총점: ${mockExamResults.totalScore}</h2>
+                                    <p style="text-align: center; font-size: 16px;">상태: ${mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}</p>
+                                  </div>
+                                  <div style="margin-bottom: 20px;">
+                                    <p><strong>정답: ${mockExamResults.correct}/${mockExamProblems.length}</strong></p>
+                                    <p><strong>오답: ${mockExamResults.wrong}/${mockExamProblems.length}</strong></p>
+                                    <p><strong>정답률: ${mockExamResults.correctRate}%</strong></p>
+                                    <p><strong>소요 시간: ${Math.floor(mockExamResults.timeSpent / 60)}분 ${mockExamResults.timeSpent % 60}초</strong></p>
+                                  </div>
+                                </div>
+                              `;
+
+                              const options = {
+                                margin: 10,
+                                filename: 'SAA-C03_mock_exam_results.pdf',
+                                image: { type: 'jpeg', quality: 0.98 },
+                                html2canvas: { scale: 2 },
+                                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+                              };
+
+                              html2pdf().set(options).from(element).save();
+                              const now = Date.now();
+                              setMockExamPdfCreatedAt(now);
+                              localStorage.setItem("mockExamPdfCreatedAt", now.toString());
+                            }}
+                            disabled={isPdfExpired}
+                            style={{
+                              padding: "12px 16px",
+                              background: isPdfExpired ? "rgba(100, 116, 139, 0.5)" : "rgba(59, 130, 246, 0.3)",
+                              border: `1px solid ${isPdfExpired ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.6)"}`,
+                              borderRadius: "6px",
+                              color: isPdfExpired ? "#64748b" : "#60a5fa",
+                              cursor: isPdfExpired ? "not-allowed" : "pointer",
+                              fontSize: "14px",
+                              fontWeight: "500"
+                            }}
+                          >
+                            {isPdfExpired ? t("mockExamPdfExpired") : t("mockExamPdfDownload")}
+                          </button>
+
+                          {mockExamPdfCreatedAt && !isPdfExpired && (
+                            <div style={{
+                              background: "rgba(59, 130, 246, 0.1)",
+                              border: "1px solid rgba(59, 130, 246, 0.3)",
+                              borderRadius: "6px",
+                              padding: "8px 12px",
+                              fontSize: "12px",
+                              color: "#60a5fa",
+                              textAlign: "center"
+                            }}>
+                              {t("mockExamPdfInfo")} ({hoursRemaining}시간 남음)
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : mockExamAlreadyTaken ? (
                   // 오늘 이미 본 경우
@@ -2712,6 +2796,44 @@ function App() {
                         {t("mockExamInfo")}
                       </p>
                     </div>
+
+                    {isAdminUser(userEmail) && (
+                      <button
+                        onClick={async () => {
+                          setLoading(true);
+                          try {
+                            let problems = await getTodayMockExamProblems();
+                            if (!problems) {
+                              problems = [];
+                              for (let i = 0; i < 50; i++) {
+                                const problem = await generateSAAProblem("medium", locale);
+                                problems.push(problem);
+                              }
+                              await saveTodayMockExamProblems(problems);
+                            }
+                            setMockExamProblems(problems);
+                          } catch (err) {
+                            setError(locale === "ko" ? "문제 생성 실패" : locale === "ja" ? "問題生成失敗" : "Failed to generate problems");
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading}
+                        style={{
+                          padding: "16px 32px",
+                          background: "rgba(147, 112, 219, 0.3)",
+                          border: "2px solid rgba(147, 112, 219, 0.6)",
+                          borderRadius: "8px",
+                          color: "#d8b4fe",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "16px",
+                          fontWeight: "bold",
+                          opacity: loading ? 0.6 : 1
+                        }}
+                      >
+                        {loading ? t("btnGenerating") : t("mockExamAdminForceCreate")}
+                      </button>
+                    )}
 
                     <button
                       onClick={async () => {

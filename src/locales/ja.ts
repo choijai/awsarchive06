@@ -27,6 +27,10 @@ export const ja: Strings = {
   mockExamWrong: "不正解",
   mockExamPassScore: "合格点 (720点)",
   mockExamRatio: "正解率",
+  mockExamAdminForceCreate: "👨‍💼 強制生成 (管理者)",
+  mockExamPdfDownload: "📥 PDFをダウンロード",
+  mockExamPdfInfo: "PDFは24時間ダウンロード可能です",
+  mockExamPdfExpired: "PDFダウンロード期間が満了しました (24時間経過)",
 
   // Filter
   filterAll: "すべて",

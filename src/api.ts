@@ -1,4 +1,39 @@
 import { generatePrompt } from "./prompts";
+import examAnalysis from "../constants/saa-c03-exam-analysis.json";
+
+/**
+ * 분석 데이터를 기반으로 AWS 서비스를 선택
+ */
+function selectServicesFromAnalysis(difficulty: string): string[] {
+  const weights = examAnalysis.generationStrategy.serviceSelectionWeights as any;
+
+  // 가중치 기반 서비스 선택 (1-3개)
+  const services: string[] = [];
+  const serviceList = Object.keys(weights).filter(s => s !== "Others");
+
+  // 난이도별 선택 개수
+  let numServices = 1;
+  if (difficulty === "hard") numServices = 2;
+  if (difficulty === "challenge") numServices = 3;
+
+  // 가중치 기반으로 랜덤 선택 (복원 추출)
+  for (let i = 0; i < numServices; i++) {
+    const rand = Math.random();
+    let cumulative = 0;
+
+    for (const service of serviceList) {
+      cumulative += weights[service];
+      if (rand <= cumulative) {
+        if (!services.includes(service)) {
+          services.push(service);
+        }
+        break;
+      }
+    }
+  }
+
+  return services.length > 0 ? services : ["EC2"];
+}
 
 // Gemini API 호출 함수 (재시도 로직 포함)
 async function callGeminiAPI(
@@ -141,7 +176,13 @@ export async function generateSAAProblem(
     );
   }
 
-  const prompt = generatePrompt(serviceNames, difficulty, locale);
+  // 📊 모의시험 모드: 빈 배열이면 분석 데이터 기반으로 서비스 선택
+  let selectedServices = serviceNames;
+  if (serviceNames.length === 0) {
+    selectedServices = selectServicesFromAnalysis(difficulty);
+  }
+
+  const prompt = generatePrompt(selectedServices, difficulty, locale);
 
   let content: string;
 

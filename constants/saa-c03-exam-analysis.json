@@ -1,0 +1,169 @@
+{
+  "examInfo": {
+    "name": "SAA-C03 Examtopics V18.35 Korean",
+    "totalQuestions": 725,
+    "source": "Examtopics + AWS Official",
+    "analyzedDate": "2026-03-24"
+  },
+  "serviceDistribution": {
+    "EC2": {
+      "count": 427,
+      "percentage": 20.0,
+      "keywords": ["인스턴스", "타입", "Auto Scaling", "reserved instances"]
+    },
+    "S3": {
+      "count": 303,
+      "percentage": 14.2,
+      "keywords": ["버킷", "스토리지 클래스", "lifecycle", "versioning"]
+    },
+    "RDS": {
+      "count": 224,
+      "percentage": 10.5,
+      "keywords": ["데이터베이스", "Multi-AZ", "read replica", "backup"]
+    },
+    "Lambda": {
+      "count": 197,
+      "percentage": 9.2,
+      "keywords": ["서버리스", "이벤트", "트리거", "concurrency"]
+    },
+    "IAM": {
+      "count": 143,
+      "percentage": 6.7,
+      "keywords": ["권한", "역할", "정책", "MFA"]
+    },
+    "AutoScaling": {
+      "count": 123,
+      "percentage": 5.8,
+      "keywords": ["스케일링", "policy", "lifecycle hooks"]
+    },
+    "VPC": {
+      "count": 95,
+      "percentage": 4.5,
+      "keywords": ["네트워크", "서브넷", "보안 그룹", "라우팅"]
+    },
+    "DynamoDB": {
+      "count": 94,
+      "percentage": 4.4,
+      "keywords": ["NoSQL", "테이블", "파티션", "throughput"]
+    },
+    "CloudFront": {
+      "count": 85,
+      "percentage": 4.0,
+      "keywords": ["CDN", "배포", "캐싱", "origin"]
+    },
+    "EBS": {
+      "count": 74,
+      "percentage": 3.5,
+      "keywords": ["볼륨", "스냅샷", "encryption", "타입"]
+    }
+  },
+  "problemTypes": {
+    "ArchitectureDesign": {
+      "percentage": 40,
+      "description": "멀티 서비스 조합, 시스템 설계, 스케일링 구조",
+      "examples": ["VPC + EC2 + RDS", "Auto Scaling + ELB", "S3 + CloudFront"]
+    },
+    "CostOptimization": {
+      "percentage": 20,
+      "description": "비용 절감, reserved instances, 스토리지 선택",
+      "examples": ["S3 storage class 변경", "reserved vs on-demand", "data transfer 최소화"]
+    },
+    "HighAvailability": {
+      "percentage": 18,
+      "description": "다중성, 페일오버, 백업 및 복구",
+      "examples": ["Multi-AZ 배포", "read replica", "cross-region replication"]
+    },
+    "Security": {
+      "percentage": 15,
+      "description": "암호화, IAM 정책, 네트워크 보안",
+      "examples": ["encryption at rest/transit", "IAM role 설계", "security group rules"]
+    },
+    "Performance": {
+      "percentage": 7,
+      "description": "성능 최적화, 캐싱, 병렬 처리",
+      "examples": ["ElastiCache 활용", "CloudFront caching", "concurrency"]
+    }
+  },
+  "difficultyEstimation": {
+    "medium": {
+      "percentage": 40,
+      "characteristics": ["단일 또는 이중 서비스", "기본 개념 기반", "표준적인 선택지"],
+      "exampleServices": ["EC2", "S3 기본", "RDS 기본"]
+    },
+    "hard": {
+      "percentage": 40,
+      "characteristics": ["3개 이상 서비스 조합", "트레이드오프 고려", "실제 시나리오"],
+      "exampleServices": ["EC2 + RDS + VPC", "S3 + CloudFront + IAM", "Lambda + DynamoDB + SQS"]
+    },
+    "challenge": {
+      "percentage": 20,
+      "characteristics": ["복잡한 시나리오", "제약 조건 많음", "여러 해결 방법 검토"],
+      "exampleServices": ["다중 리전 아키텍처", "복합 IAM 정책", "Global accelerator"]
+    }
+  },
+  "hotTopics": [
+    {
+      "topic": "Auto Scaling + ELB",
+      "frequency": "높음",
+      "difficulty": "hard"
+    },
+    {
+      "topic": "Multi-AZ + RDS Read Replica",
+      "frequency": "높음",
+      "difficulty": "hard"
+    },
+    {
+      "topic": "S3 Storage Classes + Lifecycle",
+      "frequency": "높음",
+      "difficulty": "medium"
+    },
+    {
+      "topic": "IAM 역할 및 정책",
+      "frequency": "높음",
+      "difficulty": "hard"
+    },
+    {
+      "topic": "CloudFront + S3",
+      "frequency": "중간",
+      "difficulty": "medium"
+    },
+    {
+      "topic": "Lambda + API Gateway",
+      "frequency": "중간",
+      "difficulty": "hard"
+    },
+    {
+      "topic": "VPC 설계 (서브넷, 라우팅)",
+      "frequency": "중간",
+      "difficulty": "hard"
+    },
+    {
+      "topic": "DynamoDB 테이블 설계",
+      "frequency": "중간",
+      "difficulty": "hard"
+    }
+  ],
+  "generationStrategy": {
+    "description": "모의시험 문제 생성 시 이 분포를 따르세요",
+    "rules": [
+      "EC2는 20% 확률로 포함",
+      "S3는 14% 확률로 포함",
+      "다중 서비스 조합은 70% 이상 (hard/challenge)",
+      "아키텍처 설계 유형 (40%)이 가장 많아야 함",
+      "난이도: medium 40%, hard 40%, challenge 20%"
+    ],
+    "serviceSelectionWeights": {
+      "EC2": 0.20,
+      "S3": 0.14,
+      "RDS": 0.11,
+      "Lambda": 0.09,
+      "IAM": 0.07,
+      "AutoScaling": 0.06,
+      "VPC": 0.05,
+      "DynamoDB": 0.04,
+      "CloudFront": 0.04,
+      "EBS": 0.04,
+      "Others": 0.16
+    }
+  }
+}

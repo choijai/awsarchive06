@@ -18,8 +18,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
   const labels = {
     ko: {
       title: '💳 프리미엄 구독',
-      priceLabel: '월 $14.99',
-      features: ['✅ 하루 20개 무제한 문제 생성', '✅ 모든 난이도 (중급, 상급, 도전)', '✅ 완전히 광고 없음'],
+      features: ['✅ 하루 20개 문제 생성', '✅ 매일 모의시험 (50문제, 130분)', '✅ 모든 난이도 (중급, 상급, 도전)', '✅ 완전히 광고 없음'],
       fullNameLabel: '이름',
       emailLabel: '이메일',
       cardLabel: '카드 정보',
@@ -31,8 +30,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
     },
     en: {
       title: '💳 Premium Subscription',
-      priceLabel: '$14.99 per month',
-      features: ['✅ Unlimited 20 problems per day', '✅ All difficulty levels (Medium, Hard, Challenge)', '✅ Completely ad-free'],
+      features: ['✅ 20 problems per day', '✅ Daily mock exam (50 questions, 130 min)', '✅ All difficulty levels (Medium, Hard, Challenge)', '✅ Completely ad-free'],
       fullNameLabel: 'Full Name',
       emailLabel: 'Email',
       cardLabel: 'Card Information',
@@ -44,8 +42,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
     },
     ja: {
       title: '💳 プレミアム購読',
-      priceLabel: '月$14.99',
-      features: ['✅ 1日20問の無制限生成', '✅ すべての難易度 (中級、上級、チャレンジ)', '✅ 完全に広告なし'],
+      features: ['✅ 1日20問生成', '✅ 毎日模擬試験 (50問、130分)', '✅ すべての難易度 (中級、上級、チャレンジ)', '✅ 完全に広告なし'],
       fullNameLabel: '名前',
       emailLabel: 'メールアドレス',
       cardLabel: 'カード情報',

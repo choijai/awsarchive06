@@ -105,10 +105,10 @@ export const en: Strings = {
 
   // Premium related
   premiumTitle: "💎 Upgrade to Premium",
-  premiumPrice: "$14.99 / month",
   premiumFeature1: "✅ 20 problems per day",
-  premiumFeature2: "✅ All difficulty levels",
-  premiumFeature3: "✅ Completely ad-free",
+  premiumFeature2: "✅ Daily mock exam (50 questions, 130 min)",
+  premiumFeature3: "✅ All difficulty levels",
+  premiumFeature4: "✅ Completely ad-free",
   premiumUpgradeBtn: "✨ Upgrade Now",
   premiumPlan: "Premium Plan",
   premiumBenefits: "Premium Plan",

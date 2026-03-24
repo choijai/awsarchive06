@@ -105,10 +105,10 @@ export const ja: Strings = {
 
   // Premium related
   premiumTitle: "💎 プレミアムにアップグレード",
-  premiumPrice: "$14.99 / 月",
   premiumFeature1: "✅ 1日20問",
-  premiumFeature2: "✅ すべての難易度",
-  premiumFeature3: "✅ 完全に広告なし",
+  premiumFeature2: "✅ 毎日模擬試験 (50問、130分)",
+  premiumFeature3: "✅ すべての難易度",
+  premiumFeature4: "✅ 完全に広告なし",
   premiumUpgradeBtn: "✨ 今すぐアップグレード",
   premiumPlan: "プレミアムプラン",
   premiumBenefits: "プレミアムプラン",

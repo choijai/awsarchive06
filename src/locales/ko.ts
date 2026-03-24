@@ -103,10 +103,10 @@ export const ko = {
 
   // 프리미엄 관련
   premiumTitle: "💎 프리미엄 업그레이드",
-  premiumPrice: "$14.99 / 한 달",
-  premiumFeature1: "✅ 하루 20개",
-  premiumFeature2: "✅ 모든 난이도",
-  premiumFeature3: "✅ 완전히 광고 없음",
+  premiumFeature1: "✅ 하루 20개 문제 생성",
+  premiumFeature2: "✅ 매일 모의시험 (50문제, 130분)",
+  premiumFeature3: "✅ 모든 난이도",
+  premiumFeature4: "✅ 완전히 광고 없음",
   premiumUpgradeBtn: "✨ 지금 업그레이드하기",
   premiumPlan: "프리미엄 플랜",
   premiumBenefits: "프리미엄 플랜",

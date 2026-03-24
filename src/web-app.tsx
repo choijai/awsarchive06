@@ -2655,6 +2655,150 @@ function App() {
                       </p>
                     </div>
 
+                    {/* 문제별 상세 정보 */}
+                    <div style={{
+                      marginTop: "20px",
+                      borderTop: "1px solid rgba(100, 116, 139, 0.3)",
+                      paddingTop: "20px"
+                    }}>
+                      <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>📋 문제별 풀이 분석</h3>
+                      {mockExamProblems.map((problem, idx) => {
+                        const userAnswer = mockExamAnswers[idx];
+                        const isCorrect = userAnswer === problem.answer;
+
+                        return (
+                          <div key={idx} style={{
+                            background: isCorrect ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)",
+                            border: `1px solid ${isCorrect ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
+                            borderRadius: "8px",
+                            padding: "16px",
+                            marginBottom: "16px"
+                          }}>
+                            {/* 문제 번호 및 정오 */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                              <h4 style={{ margin: 0, color: "#e2e8f0" }}>Q{idx + 1}. {problem.question.substring(0, 50)}...</h4>
+                              <span style={{
+                                padding: "4px 12px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                fontWeight: "bold",
+                                background: isCorrect ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                                color: isCorrect ? "#10b981" : "#ef4444"
+                              }}>
+                                {isCorrect ? "✅ 정답" : "❌ 오답"}
+                              </span>
+                            </div>
+
+                            {/* 핵심 정보 */}
+                            <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid rgba(100, 116, 139, 0.2)" }}>
+                              <div style={{ marginBottom: "8px" }}>
+                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>🎯 핵심 목표: </span>
+                                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>{problem.goal}</span>
+                              </div>
+                              <div style={{ marginBottom: "8px" }}>
+                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>🔑 핵심 키워드: </span>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                                  {problem.keywords.map((keyword, i) => (
+                                    <span key={i} style={{
+                                      background: "rgba(59, 130, 246, 0.2)",
+                                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                                      color: "#60a5fa",
+                                      padding: "2px 8px",
+                                      borderRadius: "4px",
+                                      fontSize: "11px"
+                                    }}>
+                                      {keyword}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 사용자 답변 vs 정답 */}
+                            <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid rgba(100, 116, 139, 0.2)" }}>
+                              <div style={{ marginBottom: "8px" }}>
+                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>당신의 답: </span>
+                                <span style={{
+                                  color: isCorrect ? "#10b981" : "#ef4444",
+                                  fontWeight: "bold",
+                                  fontSize: "14px"
+                                }}>
+                                  {userAnswer || "선택하지 않음"}
+                                </span>
+                              </div>
+                              <div>
+                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>정답: </span>
+                                <span style={{
+                                  color: "#10b981",
+                                  fontWeight: "bold",
+                                  fontSize: "14px"
+                                }}>
+                                  {problem.answer}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 이지모드 */}
+                            <div style={{ marginBottom: "12px", padding: "12px", background: "rgba(147, 112, 219, 0.1)", borderRadius: "6px" }}>
+                              <h5 style={{ margin: "0 0 8px 0", color: "#d8b4fe", fontSize: "13px" }}>💡 쉽게 이해하기 (초등학생 5학년 수준)</h5>
+                              <p style={{ margin: "0 0 8px 0", color: "#cbd5e1", fontSize: "13px" }}>
+                                {problem.easyMode.explanation}
+                              </p>
+                              <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
+                                <div style={{ marginBottom: "4px" }}>
+                                  <strong>A)</strong> {problem.easyMode.A}
+                                </div>
+                                <div style={{ marginBottom: "4px" }}>
+                                  <strong>B)</strong> {problem.easyMode.B}
+                                </div>
+                                <div style={{ marginBottom: "4px" }}>
+                                  <strong>C)</strong> {problem.easyMode.C}
+                                </div>
+                                <div>
+                                  <strong>D)</strong> {problem.easyMode.D}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 상세 설명 */}
+                            <div style={{ padding: "12px", background: "rgba(59, 130, 246, 0.05)", borderRadius: "6px" }}>
+                              <h5 style={{ margin: "0 0 8px 0", color: "#60a5fa", fontSize: "13px" }}>📖 상세 설명</h5>
+                              <div style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: "1.6" }}>
+                                <div style={{ marginBottom: "8px" }}>
+                                  <strong style={{ color: "#10b981" }}>✅ 정답인 이유:</strong>
+                                  <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.correct}</p>
+                                </div>
+                                {userAnswer === "A" && (
+                                  <div style={{ marginBottom: "8px" }}>
+                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
+                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_A}</p>
+                                  </div>
+                                )}
+                                {userAnswer === "B" && (
+                                  <div style={{ marginBottom: "8px" }}>
+                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
+                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_B || "설명이 없습니다"}</p>
+                                  </div>
+                                )}
+                                {userAnswer === "C" && (
+                                  <div style={{ marginBottom: "8px" }}>
+                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
+                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_C}</p>
+                                  </div>
+                                )}
+                                {userAnswer === "D" && (
+                                  <div style={{ marginBottom: "8px" }}>
+                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
+                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_D}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     {(() => {
                       const pdfExpiresAt = mockExamPdfCreatedAt ? mockExamPdfCreatedAt + 24 * 60 * 60 * 1000 : null;
                       const now = Date.now();

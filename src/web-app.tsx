@@ -3079,15 +3079,16 @@ function App() {
                               [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
                             }
 
-                            // 🚀 먼저 3개만 로드 (빠른 시작)
-                            for (let i = 0; i < 3; i++) {
+                            // 🚀 TEST: 1개만 로드 (빠른 테스트)
+                            // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
+                            for (let i = 0; i < 1; i++) {
                               const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
                               const problem = await generateSAAProblem([], difficulty, locale);
                               problems.push(problem);
                             }
-                            // 백그라운드에서 나머지 47개 로드 (저장소에 보관)
+                            // 백그라운드에서 나머지 로드 (저장소에 보관)
                             localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
-                            localStorage.setItem("mockExamProblemsLoaded", "3");
+                            localStorage.setItem("mockExamProblemsLoaded", "1"); // TEST: "1" → PROD: "3"
                           }
 
                           setMockExamProblems(problems);

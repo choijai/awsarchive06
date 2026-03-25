@@ -158,6 +158,19 @@ async function isAdminUser(email: string | null): Promise<boolean> {
 }
 
 /**
+ * 이메일 마스킹 (개인정보 보호)
+ * 예: imjaichoipro@gmail.com → im****ipro@gmail.com
+ */
+function maskEmail(email: string): string {
+  const [name, domain] = email.split('@');
+  if (!name || !domain) return email;
+
+  // 첫 2글자 + **** + 마지막 4글자
+  const masked = name.substring(0, 2) + '****' + name.slice(-4);
+  return `${masked}@${domain}`;
+}
+
+/**
  * 연속 방문 일수 계산 및 업데이트
  */
 function updateStreak(): number {
@@ -2633,7 +2646,7 @@ function App() {
                         }}
                       >
                         <div style={{ fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                          {user.email}
+                          {maskEmail(user.email)}
                         </div>
                         <div style={{ fontSize: "10px", color: "#94a3b8" }}>
                           {user.userStatus === "paid" ? "💎 유료" : user.userStatus === "loggedIn" ? "✨ 로그인" : "🔐 게스트"}

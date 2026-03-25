@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange } from "./firebase";
+import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -567,15 +567,31 @@ function App() {
 
   // Restore auth state on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChange((user) => {
+    const unsubscribe = onAuthStateChange(async (user) => {
       if (user?.email) {
         setUserEmail(user.email);
-        // Restore userStatus from localStorage
-        const status = (localStorage.getItem("userStatus") as UserStatus) || "loggedIn";
-        setUserStatusLocal(status);
+
+        // 사용자 정보를 Firestore에 저장
+        try {
+          await saveUserInfoToFirebase(user.uid, user.email);
+        } catch (error) {
+          // 에러 처리
+        }
+
+        // Firestore에서 결제 상태 로드
+        try {
+          const isPaid = await getUserPaidStatus(user.uid);
+          const status: UserStatus = isPaid ? "paid" : "loggedIn";
+          setUserStatusLocal(status);
+          localStorage.setItem("userStatus", status);
+        } catch (error) {
+          const status = (localStorage.getItem("userStatus") as UserStatus) || "loggedIn";
+          setUserStatusLocal(status);
+        }
       } else {
         setUserEmail(null);
         setUserStatusLocal("guest");
+        localStorage.removeItem("userStatus");
       }
       setIsAuthChecked(true);
     });
@@ -3667,8 +3683,14 @@ function App() {
                   try {
                     const user = await signInWithGoogle();
                     setUserEmail(user.email);
-                    setUserStatusLocal("loggedIn");
-                    localStorage.setItem("userStatus", "loggedIn");
+
+                    // 사용자 정보 저장 및 결제 상태 로드
+                    await saveUserInfoToFirebase(user.uid, user.email);
+                    const isPaid = await getUserPaidStatus(user.uid);
+                    const status: UserStatus = isPaid ? "paid" : "loggedIn";
+                    setUserStatusLocal(status);
+                    localStorage.setItem("userStatus", status);
+
                     setDailyCount(0);
                     localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
                     localStorage.setItem("problemCount", "0");
@@ -3771,9 +3793,21 @@ function App() {
                   // 성공 시 상태 업데이트
                   setUserEmail(email);
                   const userName = isSignUp ? displayName : (localStorage.getItem("userName") || email.split("@")[0]);
-                  setUserStatusLocal("loggedIn");
+
+                  // 사용자 정보 저장 및 결제 상태 로드
+                  const user = getCurrentUser();
+                  if (user) {
+                    await saveUserInfoToFirebase(user.uid, email);
+                    const isPaid = await getUserPaidStatus(user.uid);
+                    const status: UserStatus = isPaid ? "paid" : "loggedIn";
+                    setUserStatusLocal(status);
+                    localStorage.setItem("userStatus", status);
+                  } else {
+                    setUserStatusLocal("loggedIn");
+                    localStorage.setItem("userStatus", "loggedIn");
+                  }
+
                   localStorage.setItem("userName", userName);
-                  localStorage.setItem("userStatus", "loggedIn");
                   setDailyCount(0);
                   localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
                   localStorage.setItem("problemCount", "0");
@@ -3787,9 +3821,9 @@ function App() {
                   });
 
                   // Firebase에서 시험 시작일 확인
-                  const user = getCurrentUser();
-                  if (user) {
-                    const examStartDate = await getExamStartDate(user.uid);
+                  const currentUser = getCurrentUser();
+                  if (currentUser) {
+                    const examStartDate = await getExamStartDate(currentUser.uid);
                     if (examStartDate) {
                       localStorage.setItem("examStartDate", examStartDate);
                       setDday(getExamDday());
@@ -3985,13 +4019,24 @@ function App() {
         {showPaymentModal && (
           <PaymentModal
             onClose={() => setShowPaymentModal(false)}
-            onSuccess={() => {
+            onSuccess={async () => {
               setUserStatusLocal("paid");
               setUserStatus("paid");
               setDailyCount(0);
               localStorage.setItem("userStatus", "paid");
               localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
               localStorage.setItem("problemCount", "0");
+
+              // Firestore에 결제 상태 저장
+              const user = getCurrentUser();
+              if (user) {
+                try {
+                  await updateUserPaidStatus(user.uid, true);
+                } catch (error) {
+                  // 에러 무시
+                }
+              }
+
               setTimeout(() => setShowPaymentModal(false), 1000);
             }}
             userEmail={userEmail || ""}

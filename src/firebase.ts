@@ -160,6 +160,70 @@ function getErrorMessage(errorCode: string): string {
 // ===== Firestore 함수 =====
 
 /**
+ * 사용자의 결제 상태 조회
+ */
+export async function getUserPaidStatus(userId: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      return userDoc.data()?.isPaid || false;
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * 사용자의 결제 상태 업데이트
+ */
+export async function updateUserPaidStatus(userId: string, isPaid: boolean): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      isPaid,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error: any) {
+    if (error.code === 'not-found') {
+      // 문서가 없으면 생성
+      const userRef = doc(db, "users", userId);
+      await setDoc(userRef, {
+        isPaid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
+ * 사용자 정보를 Firestore에 저장 (로그인/회원가입 시)
+ */
+export async function saveUserInfoToFirebase(userId: string, email: string): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      // 새 사용자 - 문서 생성
+      await setDoc(userRef, {
+        email,
+        isPaid: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    // 에러 무시 (선택사항)
+  }
+}
+
+/**
  * 사용자의 연속 방문 일수를 Firestore에서 가져오기 및 업데이트
  */
 export async function updateStreakInFirebase(userStatus: string = "guest"): Promise<number> {

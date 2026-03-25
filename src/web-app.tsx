@@ -1972,6 +1972,13 @@ function App() {
                       onClick={async () => {
                         try {
                           console.log("시험 생성 시작...");
+
+                          // 캐시 삭제 - 항상 새로 생성
+                          localStorage.removeItem("mockExamProblems");
+                          localStorage.removeItem("mockExamProblemsLoaded");
+                          localStorage.removeItem("mockExamDifficulties");
+                          console.log("캐시 삭제 완료");
+
                           const problems: Problem[] = [];
 
                           // 테스트: API 2번 호출, 문제 2개 생성

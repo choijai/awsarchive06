@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus, getAdminStatsSecure, getAllUsersForAdminSecure, getUserProblemSessionsSecure } from "./firebase";
+import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus, getAdminStatsSecure, getAllUsersForAdminSecure, getUserProblemSessionsSecure, updateMockExamProblemsProgressively } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -1168,12 +1168,14 @@ function App() {
             setMockExamProblems(newProblems);
             setMockExamAnswers(new Array(50).fill(null));
             localStorage.setItem("mockExamProblemsCount", newProblems.length.toString());
+
+            // ✅ 점진적 Firebase 저장 (배치마다)
+            await updateMockExamProblemsProgressively(newProblems, locale);
           }
         }
 
-        // 모든 문제 로드 완료 후 (새로 생성된 경우만 저장)
+        // 모든 문제 로드 완료 후 정리
         if (newProblems.length === 50 && allProblems.length < 50) {
-          await saveTodayMockExamProblems(newProblems, locale);
           localStorage.removeItem("mockExamDifficulties");
           localStorage.removeItem("mockExamProblemsCount");
           localStorage.removeItem("mockExamAllProblems");

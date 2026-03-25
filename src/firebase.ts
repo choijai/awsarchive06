@@ -1054,3 +1054,48 @@ export async function saveTodayMockExamProblems(problems: Problem[], locale: str
     throw new Error(error.message || "모의시험 문제 저장에 실패했습니다");
   }
 }
+
+/**
+ * 모의시험 문제 점진적 저장 (가져오는 대로 저장)
+ * 기존 문제 + 새 문제를 합쳐서 저장
+ */
+export async function updateMockExamProblemsProgressively(
+  newProblems: Problem[],
+  locale: string = "ko"
+): Promise<void> {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const docKey = `${today}_${locale}`;
+    console.log(`📝 점진적 저장 시도: ${docKey}, 새로운 문제 ${newProblems.length}개`);
+
+    const mockExamRef = doc(db, "mockExamProblems", docKey);
+    const existingDoc = await getDoc(mockExamRef);
+
+    let allProblems = [];
+    if (existingDoc.exists()) {
+      allProblems = existingDoc.data().problems || [];
+    }
+
+    // 기존 문제 + 새 문제 합치기
+    allProblems = [...allProblems, ...newProblems].slice(0, 50); // 최대 50개
+
+    // 저장
+    await setDoc(
+      mockExamRef,
+      {
+        problems: allProblems,
+        createdAt: Timestamp.now(),
+        date: today,
+        locale: locale,
+        lastUpdated: Timestamp.now()
+      },
+      { merge: true }
+    );
+
+    console.log(
+      `✅ 점진적 저장 완료: ${docKey}, 총 ${allProblems.length}개 문제`
+    );
+  } catch (error: any) {
+    console.error("점진적 저장 실패:", error.message);
+  }
+}

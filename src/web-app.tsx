@@ -2744,34 +2744,37 @@ function App() {
 
                           {/* 보기 */}
                           <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
-                            {Object.entries(mockExamProblems[mockExamCurrentIndex].options).map(([key, value]) => (
-                              <label key={key} style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "10px",
-                                padding: "12px",
-                                background: mockExamAnswers[mockExamCurrentIndex] === key ? "rgba(59, 130, 246, 0.2)" : "rgba(71, 85, 105, 0.3)",
-                                border: mockExamAnswers[mockExamCurrentIndex] === key ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(100, 116, 139, 0.3)",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                transition: "all 0.2s"
-                              }}>
-                                <input
-                                  type="radio"
-                                  name="mock-answer"
-                                  value={key}
-                                  checked={mockExamAnswers[mockExamCurrentIndex] === key}
-                                  onChange={() => {
-                                    const newAnswers = [...mockExamAnswers];
-                                    newAnswers[mockExamCurrentIndex] = key;
-                                    setMockExamAnswers(newAnswers);
-                                  }}
-                                  style={{ cursor: "pointer" }}
-                                />
-                                <span style={{ fontWeight: "bold", marginRight: "8px" }}>{key})</span>
-                                <span>{value}</span>
-                              </label>
-                            ))}
+                            {(["A", "B", "C", "D"] as const).map((key) => {
+                              const value = mockExamProblems[mockExamCurrentIndex].options[key];
+                              return (
+                                <label key={key} style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  padding: "12px",
+                                  background: mockExamAnswers[mockExamCurrentIndex] === key ? "rgba(59, 130, 246, 0.2)" : "rgba(71, 85, 105, 0.3)",
+                                  border: mockExamAnswers[mockExamCurrentIndex] === key ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(100, 116, 139, 0.3)",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s"
+                                }}>
+                                  <input
+                                    type="radio"
+                                    name="mock-answer"
+                                    value={key}
+                                    checked={mockExamAnswers[mockExamCurrentIndex] === key}
+                                    onChange={() => {
+                                      const newAnswers = [...mockExamAnswers];
+                                      newAnswers[mockExamCurrentIndex] = key;
+                                      setMockExamAnswers(newAnswers);
+                                    }}
+                                    style={{ cursor: "pointer" }}
+                                  />
+                                  <span style={{ fontWeight: "bold", marginRight: "8px" }}>{key})</span>
+                                  <span>{value}</span>
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>

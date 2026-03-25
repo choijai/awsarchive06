@@ -125,6 +125,19 @@ export const ko = {
   premiumAllDifficulty: "✅ 모든 난이도",
   premiumAdFree: "✅ 완전히 광고 없음",
   premiumCancelAnytime: "✅ 언제든 취소 가능",
+
+  // 프리미엄 기능 카드 (모의시험 섹션)
+  mockExamPremiumDaily: "📋 매일 모의시험 1회 (50문제, 130분)",
+  mockExamPremiumAnalysis: "📊 상세한 성과 분석",
+  premiumFeatureList1: "🚀 하루 20개 문제 생성",
+  premiumFeatureList2: "📋 매일 모의시험 1회 (50문제, 130분)",
+  premiumFeatureList3: "📊 상세한 성과 분석",
+  premiumFeatureList4: "🎯 모든 난이도 (보통, 어려움, 챌린지)",
+
+  // 상태 관련
+  guestStatus: "🔐 게스트",
+  loggedInStatus: "✨ 로그인",
+  paidStatus: "💎 프리미엄 (결제)",
   quotaFullGuest: "🔐 일일 제한에 도달했습니다 (2/2). 로그인하여 2회 무료를 받거나 업그레이드하세요.",
   quotaFullLoggedIn: "✨ 무료 2회가 모두 사용되었습니다. 하루 20개 문제를 생성하려면 업그레이드하세요!",
 

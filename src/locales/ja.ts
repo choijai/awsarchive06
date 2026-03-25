@@ -127,6 +127,19 @@ export const ja: Strings = {
   premiumAllDifficulty: "✅ すべての難易度",
   premiumAdFree: "✅ 完全に広告なし",
   premiumCancelAnytime: "✅ いつでもキャンセル可能",
+
+  // Premium features card (Mock Exam section)
+  mockExamPremiumDaily: "📋 毎日1回模擬試験 (50問、130分)",
+  mockExamPremiumAnalysis: "📊 詳細な成績分析",
+  premiumFeatureList1: "🚀 1日20問の生成",
+  premiumFeatureList2: "📋 毎日1回模擬試験 (50問、130分)",
+  premiumFeatureList3: "📊 詳細な成績分析",
+  premiumFeatureList4: "🎯 すべての難易度 (普通、難しい、チャレンジ)",
+
+  // Status related
+  guestStatus: "🔐 ゲスト",
+  loggedInStatus: "✨ ログイン",
+  paidStatus: "💎 プレミアム (有料)",
   quotaFullGuest: "🔐 1日の制限に達しました (2/2)。ログインして2回の無料試行を取得するか、アップグレードしてください。",
   quotaFullLoggedIn: "✨ 無料の2回の試行は使用済みです。1日20問の問題を生成するにはアップグレードしてください!",
 

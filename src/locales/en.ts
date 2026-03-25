@@ -127,6 +127,19 @@ export const en: Strings = {
   premiumAllDifficulty: "✅ All difficulty levels",
   premiumAdFree: "✅ Completely ad-free",
   premiumCancelAnytime: "✅ Cancel anytime",
+
+  // Premium features card (Mock Exam section)
+  mockExamPremiumDaily: "📋 Daily mock exam once per day (50 questions, 130 min)",
+  mockExamPremiumAnalysis: "📊 Detailed performance analysis",
+  premiumFeatureList1: "🚀 20 problems per day",
+  premiumFeatureList2: "📋 Daily mock exam once per day (50 questions, 130 min)",
+  premiumFeatureList3: "📊 Detailed performance analysis",
+  premiumFeatureList4: "🎯 All difficulty levels (Medium, Hard, Challenge)",
+
+  // Status related
+  guestStatus: "🔐 Guest",
+  loggedInStatus: "✨ Logged in",
+  paidStatus: "💎 Premium (Paid)",
   quotaFullGuest: "🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade your plan.",
   quotaFullLoggedIn: "✨ Your free 2 attempts are used. Please upgrade to generate 20 problems per day!",
 

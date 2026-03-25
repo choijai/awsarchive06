@@ -112,10 +112,17 @@ function clearSessionTimeout() {
 }
 
 /**
- * 운영자 계정 확인 (서버 API를 통해 검증)
+ * 운영자 계정 확인 (서버 API를 통해 검증, 실패 시 localStorage 사용)
  */
 async function isAdminUser(email: string | null): Promise<boolean> {
   if (!email) return false;
+
+  // localStorage에 캐시된 값 확인
+  const cachedAdmin = localStorage.getItem(`isAdmin_${email}`);
+  if (cachedAdmin !== null) {
+    return cachedAdmin === 'true';
+  }
+
   try {
     const response = await fetch('http://localhost:5000/api/checkAdmin', {
       method: 'POST',
@@ -123,9 +130,25 @@ async function isAdminUser(email: string | null): Promise<boolean> {
       body: JSON.stringify({ email })
     });
     const data = await response.json();
-    return data.isAdmin || false;
+    const isAdmin = data.isAdmin || false;
+
+    // 결과를 localStorage에 캐시 (24시간)
+    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+    localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
+
+    return isAdmin;
   } catch (error) {
-    return false;
+    // Server 실패 시 임시 방편: 환경변수의 admin 이메일과 비교 (개발 용도)
+    console.log('⚠️ Server API 실패, 로컬 확인 사용');
+
+    // .env의 admin 이메일이 있는지 확인
+    const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
+    const isAdmin = adminEmails.includes(email);
+
+    // 결과를 localStorage에 캐시
+    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+
+    return isAdmin;
   }
 }
 

@@ -650,7 +650,16 @@ function App() {
 
         // Firestore에서 결제 상태 로드
         try {
-          const isPaid = await getUserPaidStatus(user.uid);
+          let isPaid = await getUserPaidStatus(user.uid);
+
+          // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
+          const paidTestEmails = ['imjaichoi@naver.com'];
+          if (paidTestEmails.includes(user.email)) {
+            isPaid = true;
+            await updateUserPaidStatus(user.uid, true); // Firebase에도 저장
+            console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
+          }
+
           const status: UserStatus = isPaid ? "paid" : "loggedIn";
           setUserStatusLocal(status);
           localStorage.setItem("userStatus", status);

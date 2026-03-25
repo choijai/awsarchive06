@@ -1359,7 +1359,7 @@ function App() {
                       🚪 {t("logoutBtn")}
                     </button>
 
-                    {userStatus === "paid" && (
+                    {(userStatus === "paid" || isAdmin) && (
                       <button
                         onClick={() => {
                           setShowAccountMenu(false);

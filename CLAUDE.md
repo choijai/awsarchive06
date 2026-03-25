@@ -103,6 +103,36 @@ examDateHint: "試験日は開始日の84日後です",
 
 ---
 
+## 👨‍💼 운영자(Admin) 권한
+
+### 관리자 이메일
+```
+imjaichoipro@gmail.com
+```
+
+### 운영자만 볼 수 있는 기능
+- ⚙️ **Admin 탭**: 통계 조회 (방문자, 사용자, 매출)
+- 👥 **Users 탭**: 모든 사용자 목록 및 세션 조회
+- 🎓 **시험 생성**: 50문제 모의시험 생성 (일일 제한 없음)
+- 💳 **구독 취소**: 계정 메뉴에서 구독 취소 버튼 표시
+
+### 운영자 구분
+```javascript
+// 운영자 확인 방법
+isAdmin  // React state - 서버에서 검증됨
+
+// 환경변수 (보안)
+VITE_ADMIN_EMAIL=imjaichoipro@gmail.com
+VITE_ADMIN_UID=MLwFybLjNOQk3wRWUyE8sZaInPk1
+```
+
+### 보안
+- 모든 admin 기능은 서버에서 이메일 검증
+- 클라이언트 DevTools에서 수정해도 서버에서 거절
+- 미들웨어: `/api/admin/*` 모든 요청 검증
+
+---
+
 ## 🔄 상태 관리 (localStorage)
 
 ```javascript

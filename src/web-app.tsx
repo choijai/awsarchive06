@@ -3672,8 +3672,17 @@ function App() {
                       <button
                         onClick={async () => {
                           // ✅ 오늘 시험을 이미 시작했는지 확인 (테스트 사용자 & 운영자 제외)
-                          // 환경변수에서 읽은 이메일 목록 사용
-                          const isUnlimitedUser = TEST_PAID_EMAILS.includes(userEmail || '') || ADMIN_EMAILS.includes(userEmail || '') || isAdmin;
+                          // ✅ Firebase를 통해 실제 결제 상태 검증 (보안 강화)
+                          let isPaidUser = TEST_PAID_EMAILS.includes(userEmail || '');
+                          if (!isPaidUser && userStatus === "paid") {
+                            const user = getCurrentUser();
+                            if (user) {
+                              isPaidUser = await verifyUserPaidStatusFromFirebase(user.uid);
+                            }
+                          }
+
+                          // 환경변수에서 읽은 이메일 목록 사용 + Firebase 검증
+                          const isUnlimitedUser = isPaidUser || ADMIN_EMAILS.includes(userEmail || '') || isAdmin;
 
                           const today = new Date().toISOString().split('T')[0];
                           const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");

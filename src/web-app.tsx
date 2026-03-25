@@ -2725,6 +2725,40 @@ function App() {
                         💡 로그인 후 프리미엄으로 업그레이드하면 모의시험을 매일 응시할 수 있습니다!
                       </p>
                     </div>
+
+                    {/* 운영자 시험 생성 버튼 */}
+                    {isAdminUser(userEmail) && (
+                      <button
+                        onClick={async () => {
+                          setMockExamRunning(true);
+                          setMockExamCurrentIndex(0);
+                          setMockExamAnswers({});
+                          setMockExamStartTime(new Date());
+                          const problems = await getTodayMockExamProblems(userEmail || "");
+                          setMockExamProblems(problems);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "12px 16px",
+                          background: "linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(59, 130, 246, 0.3))",
+                          border: "1px solid rgba(249, 115, 22, 0.5)",
+                          borderRadius: "8px",
+                          color: "#fb923c",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(249, 115, 22, 0.4), rgba(59, 130, 246, 0.4))";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(59, 130, 246, 0.3))";
+                        }}
+                      >
+                        🎓 시험 생성하기 (운영자)
+                      </button>
+                    )}
                   </div>
                 ) : mockExamRunning ? (
                   // 모의시험 진행 중

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { Resend } = require('resend');
 require('dotenv').config();
 
@@ -7,7 +8,30 @@ const app = express();
 const PORT = 5000;
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-app.use(cors());
+// ✅ 보안 헤더 설정 (XSS, Clickjacking, MIME-sniffing 방지)
+app.use(helmet());
+
+// ✅ CORS 설정 (awsarchive.com만 허용)
+app.use(cors({
+  origin: [
+    'https://awsarchive.com',
+    'https://www.awsarchive.com',
+    'http://localhost:5173',  // 개발 환경
+    'http://localhost:5000'   // 로컬 테스트
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400  // 24시간
+}));
+
+// ✅ 타임아웃 설정
+app.use((req, res, next) => {
+  req.setTimeout(30000);  // 30초
+  res.setTimeout(30000);
+  next();
+});
+
 app.use(express.json());
 
 // Claude API 프록시 핸들러

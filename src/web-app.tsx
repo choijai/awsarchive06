@@ -456,7 +456,8 @@ function App() {
   } | null>(null);
 
   // 사용자 상태 및 일일 제한
-  const [userStatus, setUserStatusLocal] = useState<UserStatus>(() => getUserStatus());
+  const initialUserStatus = typeof window !== "undefined" ? localStorage.getItem("userStatus") as UserStatus || "guest" : "guest";
+  const [userStatus, setUserStatusLocal] = useState<UserStatus>(initialUserStatus);
   const [dailyCount, setDailyCount] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);

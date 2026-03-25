@@ -2153,21 +2153,114 @@ function App() {
                   })()}
                 </>
               ) : mockExamAlreadyTaken ? (
-                // 오늘 이미 본 경우
-                <div style={{
-                  textAlign: "center",
-                  background: "rgba(249, 115, 22, 0.1)",
-                  border: "1px solid rgba(249, 115, 22, 0.3)",
-                  borderRadius: "8px",
-                  padding: "16px"
-                }}>
-                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0 0 8px 0" }}>
-                    {t("mockExamCurrentUTC")}: {currentUtcTime}
-                  </p>
-                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0" }}>
-                    {nextUtcDate} {t("mockExamRetryAtMidnight")}
-                  </p>
-                </div>
+                // 오늘 이미 본 경우 - PDF가 있으면 보여주기
+                mockExamPdfCreatedAt ? (
+                  (() => {
+                    const pdfExpiresAt = mockExamPdfCreatedAt + 24 * 60 * 60 * 1000;
+                    const now = Date.now();
+                    const isPdfExpired = now > pdfExpiresAt;
+                    const hoursRemaining = Math.floor((pdfExpiresAt - now) / (60 * 60 * 1000));
+
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <button
+                          onClick={() => {
+                            if (!mockExamResults || !mockExamProblems) return;
+
+                            const element = document.createElement("div");
+
+                            // 문제별 분석 HTML 생성
+                            const problemsHTML = mockExamProblems.map((problem, idx) => {
+                              const userAnswer = mockExamAnswers[idx];
+                              const isCorrect = userAnswer === problem.answer;
+                              return `
+                                <div style="page-break-inside: avoid; margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                                  <h3 style="margin: 0 0 10px 0; color: #333;">Q${idx + 1}. ${problem.question}</h3>
+
+                                  <!-- 보기 -->
+                                  <div style="margin: 10px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.6;">
+                                    <strong>보기:</strong><br/>
+                                    <div style="margin-left: 10px;">
+                                      <div style="margin: 3px 0;">A) ${problem.options.A}</div>
+                                      <div style="margin: 3px 0;">B) ${problem.options.B}</div>
+                                      <div style="margin: 3px 0;">C) ${problem.options.C}</div>
+                                      <div style="margin: 3px 0;">D) ${problem.options.D}</div>
+                                    </div>
+                                  </div>
+
+                                  <!-- 정답/오답 표시 -->
+                                  <div style="margin: 10px 0; padding: 8px; background: ${isCorrect ? '#e8f5e9' : '#ffebee'}; border-radius: 4px;">
+                                    <strong style="color: ${isCorrect ? '#2e7d32' : '#c62828'};">
+                                      ${isCorrect ? '✅ 정답입니다!' : '❌ 틀렸습니다.'}
+                                    </strong>
+                                    ${userAnswer ? `<br/>사용자 답: <strong>${userAnswer}</strong>` : ''}
+                                  </div>
+
+                                  <!-- 정답과 설명 -->
+                                  <div style="margin: 8px 0; page-break-inside: avoid;">
+                                    <strong>정답: ${problem.answer}</strong><br/>
+                                    <strong style="font-size: 13px;">설명:</strong>
+                                    <p style="margin: 4px 0; padding: 6px; background: #e3f2fd; border-radius: 4px; font-size: 13px; line-height: 1.5;">${problem.explanation.correct}</p>
+                                  </div>
+                                </div>
+                              `;
+                            }).join('');
+
+                            element.innerHTML = `
+                              <div style="padding: 20px; color: #000; background: #fff; font-family: Arial, sans-serif;">
+                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
+                                <div style="margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
+                                  <h2 style="font-size: 32px; text-align: center; margin: 10px 0;">총점: ${mockExamResults?.totalScore || 0}</h2>
+                                  <p style="text-align: center; font-size: 16px; margin: 10px 0;">상태: ${mockExamResults?.passed ? "🎉 합격!" : "재응시 필요"}</p>
+                                </div>
+
+                                <h2 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">문제별 상세 분석</h2>
+                                ${problemsHTML}
+                              </div>
+                            `;
+
+                            const options = {
+                              margin: 10,
+                              filename: 'SAA-C03_mock_exam_results.pdf',
+                              image: { type: 'jpeg', quality: 0.98 },
+                              html2canvas: { scale: 2 },
+                              jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+                            };
+
+                            html2pdf().set(options).from(element).save();
+                          }}
+                          disabled={isPdfExpired}
+                          style={{
+                            padding: "12px 16px",
+                            background: isPdfExpired ? "rgba(100, 116, 139, 0.5)" : "rgba(59, 130, 246, 0.3)",
+                            border: `1px solid ${isPdfExpired ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.6)"}`,
+                            borderRadius: "6px",
+                            color: isPdfExpired ? "#64748b" : "#60a5fa",
+                            cursor: isPdfExpired ? "not-allowed" : "pointer",
+                            fontSize: "14px",
+                            fontWeight: "500"
+                          }}
+                        >
+                          {isPdfExpired ? t("mockExamPdfExpired") : t("mockExamPdfDownload")}
+                        </button>
+
+                        {!isPdfExpired && (
+                          <div style={{
+                            background: "rgba(59, 130, 246, 0.1)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            borderRadius: "6px",
+                            padding: "8px 12px",
+                            fontSize: "12px",
+                            color: "#60a5fa",
+                            textAlign: "center"
+                          }}>
+                            {t("mockExamPdfInfo")} ({hoursRemaining}시간 남음)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : null
               ) : null
               ) : (
                 // 프리미엄이 아닌 사용자

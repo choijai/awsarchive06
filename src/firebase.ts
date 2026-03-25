@@ -482,11 +482,11 @@ export async function recordQuizResult(
     const isCorrect = selectedAnswer === problem.answer;
     const resultsRef = collection(db, "users", userId, "quizResults");
 
-    // 3일 뒤 만료 타임스탬프 계산
+    // 24시간 뒤 만료 타임스탬프 계산
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3일 뒤
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1일 뒤 (24시간)
 
-    // quizResults에 임시 저장 (3일 후 삭제)
+    // quizResults에 임시 저장 (24시간 후 삭제)
     await addDoc(resultsRef, {
       sessionId, // 같은 세션의 문제들을 그룹화
       fullProblem: problem, // 전체 문제 객체 저장
@@ -497,7 +497,7 @@ export async function recordQuizResult(
       difficulty,
       createdAt: new Date().toISOString(),
       timestamp: new Date().getTime(),
-      expiresAt: expiresAt.getTime() // 3일 뒤 삭제 타임스탬프
+      expiresAt: expiresAt.getTime() // 24시간 뒤 삭제 타임스탬프
     });
 
     // aggregatedStats에 누적 통계 업데이트 (영구 유지)

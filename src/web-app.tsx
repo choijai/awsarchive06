@@ -1595,20 +1595,8 @@ function App() {
                   marginBottom: "16px"
                 }}>
                   <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "12px" }}>
-                    {t("loginPrompt")}
+                    📚 로그인한 학습 기록이 저장됩니다
                   </p>
-                  <button onClick={() => setShowLoginModal(true)} style={{
-                    padding: "8px 16px",
-                    background: "rgba(59, 130, 246, 0.2)",
-                    border: "1px solid rgba(59, 130, 246, 0.5)",
-                    borderRadius: "6px",
-                    color: "#60a5fa",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: 600
-                  }}>
-                    {t("loginButton")}
-                  </button>
                 </div>
               )}
               {concept && selectedNode ? (

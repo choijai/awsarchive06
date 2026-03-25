@@ -2162,10 +2162,10 @@ function App() {
                   padding: "16px"
                 }}>
                   <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0 0 8px 0" }}>
-                    현재 UTC: {currentUtcTime}
+                    {t("mockExamCurrentUTC")}: {currentUtcTime}
                   </p>
                   <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0" }}>
-                    {nextUtcDate} 자정(UTC 00:00)에 다시 응시할 수 있습니다
+                    {nextUtcDate} {t("mockExamRetryAtMidnight")}
                   </p>
                 </div>
               ) : null
@@ -3359,10 +3359,10 @@ function App() {
                       maxWidth: "400px"
                     }}>
                       <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 12px 0", lineHeight: "1.6" }}>
-                        현재 UTC: {currentUtcTime}
+                        {t("mockExamCurrentUTC")}: {currentUtcTime}
                       </p>
                       <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0", lineHeight: "1.6" }}>
-                        {nextUtcDate} 자정(UTC 00:00)에 다시 응시할 수 있습니다
+                        {nextUtcDate} {t("mockExamRetryAtMidnight")}
                       </p>
                     </div>
                   </div>

@@ -35,6 +35,8 @@ export const en: Strings = {
   mockExamPdfExpired: "PDF download period has expired (24 hours have passed)",
   mockExamAlreadyStartedToday: "⏰ You've already started the mock exam today.",
   mockExamNextAttempt: "You can try again at midnight (UTC 00:00) tomorrow.",
+  mockExamCurrentUTC: "Current UTC",
+  mockExamRetryAtMidnight: "You can try again at midnight (UTC 00:00)",
 
   // Filter
   filterAll: "All",

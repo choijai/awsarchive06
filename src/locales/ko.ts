@@ -33,6 +33,8 @@ export const ko = {
   mockExamPdfExpired: "PDF 다운로드 기간이 만료되었습니다 (24시간 지남)",
   mockExamAlreadyStartedToday: "⏰ 이미 오늘 모의시험을 시작했습니다.",
   mockExamNextAttempt: "내일 자정(UTC 00:00)에 다시 응시할 수 있습니다.",
+  mockExamCurrentUTC: "현재 UTC",
+  mockExamRetryAtMidnight: "자정(UTC 00:00)에 다시 응시할 수 있습니다",
 
   // Filter
   filterAll: "전체",

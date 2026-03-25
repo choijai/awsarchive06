@@ -146,8 +146,14 @@ async function isAdminUser(email: string | null): Promise<boolean> {
 
   // 모든 포트 시도 실패 시 로컬 fallback 사용
   // (server.js가 실행 중이 아닐 때의 정상 동작)
-  const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
-  const paidTestEmails = ['imjaichoi@naver.com']; // 임시 테스트용 paid 이메일
+  // ⚠️ 환경변수에서 읽음 (하드코딩 금지)
+  const env = (import.meta as any).env;
+  const adminEmailsStr = env.VITE_ADMIN_EMAILS || '';
+  const paidTestEmailsStr = env.VITE_TEST_PAID_EMAILS || '';
+
+  const adminEmails = adminEmailsStr.split(',').map((e: string) => e.trim()).filter(Boolean);
+  const paidTestEmails = paidTestEmailsStr.split(',').map((e: string) => e.trim()).filter(Boolean);
+
   const isAdmin = adminEmails.includes(email);
   const isPaidTestUser = paidTestEmails.includes(email);
 
@@ -443,6 +449,11 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 function App() {
   const { locale, setLocale, t } = useLocale();
   const { pos, setPos, posRef, dragRef } = useForce();
+
+  // ⚠️ 보안: 환경변수에서 관리자/테스트 이메일 읽기 (하드코딩 금지)
+  const env = (import.meta as any).env;
+  const ADMIN_EMAILS = (env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
+  const TEST_PAID_EMAILS = (env.VITE_TEST_PAID_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
   const [tab, setTab] = useState<"quiz" | "concept" | "status" | "mockExam" | "posts" | "admin" | "users">("quiz");
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
@@ -662,9 +673,8 @@ function App() {
         try {
           let isPaid = await getUserPaidStatus(user.uid);
 
-          // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
-          const paidTestEmails = ['imjaichoi@naver.com'];
-          if (paidTestEmails.includes(user.email)) {
+          // ✅ 테스트 사용자: 환경변수에서 읽은 이메일은 자동으로 paid 처리
+          if (TEST_PAID_EMAILS.includes(user.email)) {
             isPaid = true;
             await updateUserPaidStatus(user.uid, true); // Firebase에도 저장
             console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
@@ -773,12 +783,11 @@ function App() {
   // 로그인 후 streak 업데이트 + 시험 시작일 불러오기
   useEffect(() => {
     if (userEmail) {
-      // Admin 자동 프리미엄 설정
-      const paidTestEmails = ['imjaichoi@naver.com'];
-      if (isAdmin || paidTestEmails.includes(userEmail)) {
+      // Admin/테스트 사용자 자동 프리미엄 설정 (환경변수에서 읽음)
+      if (isAdmin || TEST_PAID_EMAILS.includes(userEmail)) {
         setUserStatusLocal("paid");
         localStorage.setItem("userStatus", "paid");
-        if (paidTestEmails.includes(userEmail)) {
+        if (TEST_PAID_EMAILS.includes(userEmail)) {
           console.log("✅ 테스트 이메일 자동 paid 처리:", userEmail);
         }
       }
@@ -3585,9 +3594,8 @@ function App() {
                       <button
                         onClick={async () => {
                           // ✅ 오늘 시험을 이미 시작했는지 확인 (테스트 사용자 & 운영자 제외)
-                          const paidTestEmails = ['imjaichoi@naver.com'];
-                          const adminEmails = ['imjaichoipro@gmail.com'];
-                          const isUnlimitedUser = paidTestEmails.includes(userEmail || '') || adminEmails.includes(userEmail || '') || isAdmin;
+                          // 환경변수에서 읽은 이메일 목록 사용
+                          const isUnlimitedUser = TEST_PAID_EMAILS.includes(userEmail || '') || ADMIN_EMAILS.includes(userEmail || '') || isAdmin;
 
                           const today = new Date().toISOString().split('T')[0];
                           const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");
@@ -3661,9 +3669,8 @@ function App() {
 
                             // ✅ 오늘 시험 시작했음을 표시 (하루 한 번 제한용, 테스트/운영자 제외)
                             const today = new Date().toISOString().split('T')[0];
-                            const paidTestEmails = ['imjaichoi@naver.com'];
-                            const adminEmails = ['imjaichoipro@gmail.com'];
-                            const isUnlimitedUser = paidTestEmails.includes(userEmail || '') || adminEmails.includes(userEmail || '') || isAdmin;
+                            // 환경변수에서 읽은 이메일 목록 사용
+                            const isUnlimitedUser = TEST_PAID_EMAILS.includes(userEmail || '') || ADMIN_EMAILS.includes(userEmail || '') || isAdmin;
 
                             if (!isUnlimitedUser) {
                               localStorage.setItem("mockExamStartedToday", today);
@@ -4235,8 +4242,8 @@ function App() {
                     let isPaid = await getUserPaidStatus(user.uid);
 
                     // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
-                    const paidTestEmails = ['imjaichoi@naver.com'];
-                    if (paidTestEmails.includes(user.email)) {
+                    // 환경변수에서 읽은 테스트 이메일 목록 사용
+                    if (TEST_PAID_EMAILS.includes(user.email)) {
                       isPaid = true;
                       await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
                       console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
@@ -4350,8 +4357,8 @@ function App() {
                     let isPaid = await getUserPaidStatus(user.uid);
 
                     // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
-                    const paidTestEmails = ['imjaichoi@naver.com'];
-                    if (paidTestEmails.includes(email)) {
+                    // 환경변수에서 읽은 테스트 이메일 목록 사용
+                    if (TEST_PAID_EMAILS.includes(email)) {
                       isPaid = true;
                       await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
                       console.log("✅ 테스트 이메일 자동 paid 처리:", email);

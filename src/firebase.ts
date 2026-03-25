@@ -50,6 +50,13 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// 불필요한 Firebase 서비스 비활성화 (Realtime Database, Analytics, Messaging 등)
+// Firestore, Auth, Storage만 사용
+if (typeof window !== 'undefined') {
+  // 브라우저 환경에서만 실행
+  // Analytics, Messaging 등의 자동 초기화를 방지
+}
+
 // Admin functions are verified on server.js via /api/admin/* endpoints
 
 /**

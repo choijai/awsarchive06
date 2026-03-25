@@ -1347,6 +1347,20 @@ function App() {
       {/* Header */}
       <div className="header">
         <div className="header-left">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+            <div style={{
+              fontSize: "16px",
+              fontWeight: "bold",
+              color: "#60a5fa",
+              letterSpacing: "2px",
+              padding: "8px 12px",
+              background: "rgba(59, 130, 246, 0.1)",
+              border: "2px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "6px"
+            }}>
+              📦 AWSARCHIVE
+            </div>
+          </div>
           <h1>&#10022; AWS SAA-C03 &#10022;</h1>
           <p>{t("headerSubtitle")}</p>
         </div>

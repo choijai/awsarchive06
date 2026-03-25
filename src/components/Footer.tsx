@@ -34,6 +34,17 @@ const Footer: React.FC = () => {
         backgroundColor: 'rgba(15,23,42,0.5)',
         textAlign: 'center'
       }}>
+        {/* AWSARCHIVE Logo */}
+        <div style={{
+          marginBottom: '16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          color: '#60a5fa',
+          letterSpacing: '1px'
+        }}>
+          📦 AWSARCHIVE
+        </div>
+
         <div style={{
           display: 'flex',
           justifyContent: 'center',

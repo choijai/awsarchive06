@@ -164,6 +164,7 @@ export const en: Strings = {
   noData: "No data yet",
   generatedSessionsTitle: "Generated PDFs",
   sessionAutoDeleteNotice: "⏱️ Generated PDFs are automatically deleted after 1 day",
+  sessionPdfDescription: "💡 PDF contains quiz answers for each session",
 
   // Posts
   postsWrite: "Write Post",

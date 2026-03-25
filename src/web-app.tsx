@@ -2570,9 +2570,21 @@ function App() {
                       border: "1px solid rgba(245,158,11,0.3)",
                       padding: "8px 12px",
                       borderRadius: "6px",
-                      marginBottom: "12px"
+                      marginBottom: "8px"
                     }}>
                       {t("sessionAutoDeleteNotice")}
+                    </div>
+                    {/* PDF 설명 */}
+                    <div style={{
+                      fontSize: "12px",
+                      color: "#94a3b8",
+                      background: "rgba(100,116,139,0.15)",
+                      border: "1px solid rgba(100,116,139,0.3)",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      marginBottom: "12px"
+                    }}>
+                      {t("sessionPdfDescription")}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {problemSessions.map((session, idx) => (

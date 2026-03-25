@@ -164,6 +164,7 @@ export const ja: Strings = {
   noData: "まだデータがありません",
   generatedSessionsTitle: "生成されたPDF",
   sessionAutoDeleteNotice: "⏱️ 生成されたPDFは1日後に自動削除されます",
+  sessionPdfDescription: "💡 PDFはセッション別に解いたクイズ内容です",
 
   // Posts
   postsWrite: "投稿する",

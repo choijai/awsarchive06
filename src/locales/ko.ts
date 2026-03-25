@@ -162,6 +162,7 @@ export const ko = {
   noData: "아직 데이터가 없습니다",
   generatedSessionsTitle: "생성된 PDF",
   sessionAutoDeleteNotice: "⏱️ 생성된 PDF는 1일 뒤에 자동 삭제됩니다",
+  sessionPdfDescription: "💡 PDF는 세션별로 푼 퀴즈 내용입니다",
 
   // Posts
   postsWrite: "글쓰기",

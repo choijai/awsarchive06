@@ -3469,7 +3469,8 @@ function App() {
                           const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");
 
                           if (mockExamStartedDate === today) {
-                            alert(t("mockExamAlreadyStartedToday"));
+                            const message = `${t("mockExamAlreadyStartedToday")}\n\n${t("mockExamNextAttempt")}`;
+                            alert(message);
                             return;
                           }
 

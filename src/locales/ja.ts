@@ -33,7 +33,8 @@ export const ja: Strings = {
   mockExamPdfDownload: "📥 PDFをダウンロード",
   mockExamPdfInfo: "PDFは24時間ダウンロード可能です",
   mockExamPdfExpired: "PDFダウンロード期間が満了しました (24時間経過)",
-  mockExamAlreadyStartedToday: "⏰ 今日はすでにモック試験を開始しています。明日もう一度お試しください。",
+  mockExamAlreadyStartedToday: "⏰ 今日はすでにモック試験を開始しています。",
+  mockExamNextAttempt: "明日の真夜中(UTC 00:00)に再度受験できます。",
 
   // Filter
   filterAll: "すべて",

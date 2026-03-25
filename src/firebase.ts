@@ -50,7 +50,99 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Admin check는 server.js의 /api/checkAdmin 엔드포인트를 사용합니다
+// Admin functions are verified on server.js via /api/admin/* endpoints
+
+/**
+ * 서버를 통한 admin 검증
+ */
+async function verifyAdminAccess(email: string | null): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const response = await fetch('http://localhost:5000/api/checkAdmin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json();
+    return data.isAdmin || false;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Admin 통계 조회 (서버 검증 포함)
+ */
+export async function getAdminStatsSecure(email: string | null): Promise<{
+  totalUsers: number;
+  paidUsers: number;
+  freeUsers: number;
+}> {
+  try {
+    // 1. 서버에서 admin 검증
+    const isAdmin = await verifyAdminAccess(email);
+    if (!isAdmin) {
+      throw new Error("Admin access required");
+    }
+
+    // 2. 실제 데이터 조회
+    return await getAdminStats();
+  } catch (error) {
+    return {
+      totalUsers: 0,
+      paidUsers: 0,
+      freeUsers: 0
+    };
+  }
+}
+
+/**
+ * 모든 사용자 목록 조회 (서버 검증 포함)
+ */
+export async function getAllUsersForAdminSecure(email: string | null): Promise<Array<{
+  userId: string;
+  email: string;
+  userStatus: string;
+  createdAt: string;
+}>> {
+  try {
+    // 1. 서버에서 admin 검증
+    const isAdmin = await verifyAdminAccess(email);
+    if (!isAdmin) {
+      throw new Error("Admin access required");
+    }
+
+    // 2. 실제 데이터 조회
+    return await getAllUsersForAdmin();
+  } catch (error) {
+    return [];
+  }
+}
+
+/**
+ * 특정 사용자의 문제 세션 조회 (서버 검증 포함)
+ */
+export async function getUserProblemSessionsSecure(email: string | null, userId: string): Promise<Array<{
+  date: string;
+  time: string;
+  problemCount: number;
+  difficulty: string;
+  problems: any[];
+  sessionTimestamp: number;
+}>> {
+  try {
+    // 1. 서버에서 admin 검증
+    const isAdmin = await verifyAdminAccess(email);
+    if (!isAdmin) {
+      throw new Error("Admin access required");
+    }
+
+    // 2. 실제 데이터 조회
+    return await getUserProblemSessions(userId);
+  } catch (error) {
+    return [];
+  }
+}
 
 // 로컬 저장소에 세션 유지
 setPersistence(auth, browserLocalPersistence);

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus } from "./firebase";
+import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus, getAdminStatsSecure, getAllUsersForAdminSecure, getUserProblemSessionsSecure } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -651,7 +651,7 @@ function App() {
   // Check if user is admin
   useEffect(() => {
     if (userEmail) {
-      isAdminUser(userEmail).then(result => {
+      isAdmin.then(result => {
         setIsAdmin(result);
       });
     } else {
@@ -679,7 +679,7 @@ function App() {
   useEffect(() => {
     if (userEmail) {
       // Admin 자동 프리미엄 설정
-      if (isAdminUser(userEmail)) {
+      if (isAdmin) {
         setUserStatusLocal("paid");
         localStorage.setItem("userStatus", "paid");
       }
@@ -709,12 +709,12 @@ function App() {
     }
   }, [userEmail]);
 
-  // Admin 탭 통계 로드
+  // Admin 탭 통계 로드 (서버 검증 포함)
   useEffect(() => {
-    if (tab === "admin" && ADMIN_UID && userEmail) {
+    if (tab === "admin" && isAdmin && userEmail) {
       (async () => {
         try {
-          const stats = await getAdminStats();
+          const stats = await getAdminStatsSecure(userEmail);
           setPaidUsers(stats.paidUsers);
           setFreeUsers(stats.freeUsers);
         } catch (error) {
@@ -722,14 +722,14 @@ function App() {
         }
       })();
     }
-  }, [tab]);
+  }, [tab, isAdmin, userEmail]);
 
-  // Users 탭 사용자 목록 로드
+  // Users 탭 사용자 목록 로드 (서버 검증 포함)
   useEffect(() => {
-    if (tab === "users" && ADMIN_UID && userEmail) {
+    if (tab === "users" && isAdmin && userEmail) {
       (async () => {
         try {
-          const users = await getAllUsersForAdmin();
+          const users = await getAllUsersForAdminSecure(userEmail);
           setAllUsers(users);
           setSelectedUser(null);
           setSelectedUserSessions([]);
@@ -738,7 +738,7 @@ function App() {
         }
       })();
     }
-  }, [tab]);
+  }, [tab, isAdmin, userEmail]);
 
   // 그래프 데이터 업데이트
   useEffect(() => {
@@ -838,7 +838,7 @@ function App() {
     if (slots.length === 0) return;
 
     // 일일 제한 확인 (운영자는 제한 없음)
-    if (!isAdminUser(userEmail)) {
+    if (!isAdmin) {
       const limit = getDailyLimit();
       if (dailyCount >= limit) {
         setError(getQuotaMessage(userStatus, limit, dailyCount));
@@ -945,7 +945,7 @@ function App() {
       }
 
       // 👨‍💼 Admin은 무제한 응시 가능
-      const isAdmin = isAdminUser(userEmail);
+      const isAdmin = isAdmin;
 
       if (lastMockExamDate === today && !isAdmin) {
         // 오늘 이미 본 경우 (admin 제외)
@@ -997,7 +997,7 @@ function App() {
           // 👨‍💼 Admin은 일일 제한 없음 (lastMockExamDate 저장 안 함)
           // 일반 사용자는 오늘 날짜 저장 (일일 제한)
           const today = new Date().toISOString().split("T")[0];
-          const isAdmin = isAdminUser(userEmail);
+          const isAdmin = isAdmin;
           if (!isAdmin) {
             localStorage.setItem("lastMockExamDate", today);
             setMockExamAlreadyTaken(true);
@@ -1382,14 +1382,14 @@ function App() {
                 </div>
 
                 <button className="generate-btn"
-                  disabled={slots.length === 0 || loading || (!isAdminUser(userEmail) && dailyCount >= getDailyLimit())}
+                  disabled={slots.length === 0 || loading || (!isAdmin && dailyCount >= getDailyLimit())}
                   onClick={handleGenerateProblem}
-                  title={!isAdminUser(userEmail) && dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
+                  title={!isAdmin && dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
                   {loading && <span className="loading-icon">●●●</span>}
                   {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
-                    {isAdminUser(userEmail) ? "관리자" : `${dailyCount}/${getDailyLimit()}`}
+                    {isAdmin ? "관리자" : `${dailyCount}/${getDailyLimit()}`}
                   </span>
                 </button>
 
@@ -1682,7 +1682,7 @@ function App() {
 
           {tab === "mockExam" && (
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px", height: "100%", overflowY: "auto" }}>
-              {userStatus === "paid" || isAdminUser(userEmail) ? (
+              {userStatus === "paid" || isAdmin ? (
                 mockExamRunning ? (
                 // 모의시험 진행 중
                 <div style={{
@@ -2069,7 +2069,7 @@ function App() {
                   </div>
 
                   {/* 운영자 시험 생성 버튼 */}
-                  {isAdminUser(userEmail) && (
+                  {isAdmin && (
                     <button
                       onClick={async () => {
                         try {
@@ -2337,7 +2337,7 @@ function App() {
           )} {/* End of Status tab */}
 
           {/* Admin Panel - 관리자만 접근 가능 */}
-          {tab === "admin" && ADMIN_UID && userEmail && (
+          {tab === "admin" && isAdmin && userEmail && (
             <div style={{
               display: "flex",
               flexDirection: "column",
@@ -2478,7 +2478,8 @@ function App() {
                         onClick={async () => {
                           setSelectedUser(user.userId);
                           try {
-                            const sessions = await getUserProblemSessions(user.userId);
+                            // 서버 검증 포함된 함수로 호출
+                            const sessions = await getUserProblemSessionsSecure(userEmail, user.userId);
                             setSelectedUserSessions(sessions);
                           } catch (error) {
                             // 에러 처리만 수행 (로깅 제거)
@@ -3252,7 +3253,7 @@ function App() {
                       </button>
                     )}
 
-                    {(userStatus === "paid" || isAdminUser(userEmail)) && (
+                    {(userStatus === "paid" || isAdmin) && (
                       <button
                         onClick={async () => {
                           setLoading(true);

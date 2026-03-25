@@ -121,6 +121,8 @@ app.post('/api/notifyError', async (req, res) => {
   }
 });
 
+// ===== Admin 검증 =====
+
 // Admin check (보안: 서버에서만 처리)
 app.post('/api/checkAdmin', (req, res) => {
   try {
@@ -132,6 +134,80 @@ app.post('/api/checkAdmin', (req, res) => {
 
     res.json({
       isAdmin: isAdmin,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
+// Admin 미들웨어: 모든 /api/admin/* 요청 검증
+app.use('/api/admin/', (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const adminEmail = process.env.VITE_ADMIN_EMAIL;
+
+    if (!email || !adminEmail || email !== adminEmail) {
+      return res.status(403).json({
+        error: { message: 'Unauthorized: Admin access required' },
+        isAdmin: false
+      });
+    }
+
+    // Admin 확인 완료, 다음 핸들러로
+    next();
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
+// Admin 통계 조회 (관리자 전용)
+app.post('/api/admin/stats', (req, res) => {
+  try {
+    const { email } = req.body;
+    // 미들웨어에서 이미 검증됨
+
+    // 테스트용 응답 (실제로는 Firebase getAdminStats() 호출)
+    res.json({
+      totalUsers: 0,
+      paidUsers: 0,
+      freeUsers: 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
+// Admin - 모든 사용자 목록 조회 (관리자 전용)
+app.post('/api/admin/users', (req, res) => {
+  try {
+    const { email } = req.body;
+    // 미들웨어에서 이미 검증됨
+
+    // 테스트용 응답 (실제로는 Firebase getAllUsersForAdmin() 호출)
+    res.json({
+      users: [],
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
+// Admin - 특정 사용자의 문제 세션 조회 (관리자 전용)
+app.post('/api/admin/user/sessions', (req, res) => {
+  try {
+    const { email, userId } = req.body;
+    // 미들웨어에서 이미 검증됨
+
+    if (!userId) {
+      return res.status(400).json({ error: { message: 'userId is required' } });
+    }
+
+    // 테스트용 응답 (실제로는 Firebase getUserProblemSessions() 호출)
+    res.json({
+      sessions: [],
       timestamp: new Date().toISOString()
     });
   } catch (error) {

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems } from "./firebase";
+import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -564,6 +564,23 @@ function App() {
     updateMetaTags();
   }, [locale, t]);
 
+  // Restore auth state on mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((user) => {
+      if (user?.email) {
+        setUserEmail(user.email);
+        // Restore userStatus from localStorage
+        const status = (localStorage.getItem("userStatus") as UserStatus) || "loggedIn";
+        setUserStatusLocal(status);
+      } else {
+        setUserEmail(null);
+        setUserStatusLocal("guest");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Track visitors and load purchase count on mount
   useEffect(() => {
     (async () => {
@@ -581,12 +598,6 @@ function App() {
 
     // 일일 카운트 초기화
     setDailyCount(getTodayProblemCount());
-
-    // Firebase Auth에서 현재 사용자 확인
-    const user = getCurrentUser();
-    if (user?.email) {
-      setUserEmail(user.email);
-    }
 
     // D-day 초기화
     setDday(getExamDday());

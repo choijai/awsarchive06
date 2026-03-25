@@ -3886,7 +3886,7 @@ function App() {
 
                 const email = sanitizeInput((document.getElementById("loginEmail") as HTMLInputElement).value);
                 const password = (document.getElementById("loginPassword") as HTMLInputElement).value;
-                const displayName = isSignUp ? sanitizeInput((document.getElementById("loginName") as HTMLInputElement).value) : "";
+                const displayName = "";
 
                 // 입력값 검증
                 if (!validateEmail(email)) {
@@ -3898,12 +3898,6 @@ function App() {
                 const passwordValidation = validatePassword(password);
                 if (!passwordValidation.valid) {
                   setLoginError(passwordValidation.error || "비밀번호 오류");
-                  setLoginLoading(false);
-                  return;
-                }
-
-                if (isSignUp && !displayName) {
-                  setLoginError("이름을 입력하세요");
                   setLoginLoading(false);
                   return;
                 }
@@ -3998,19 +3992,6 @@ function App() {
                     color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
                     marginBottom: "12px"
                   }} />
-
-                {isSignUp && (
-                  <input type="text"
-                    id="loginName"
-                    placeholder="이름 (예: 김철수)"
-                    required
-                    style={{
-                      width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
-                      color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
-                      marginBottom: "12px"
-                    }} />
-                )}
 
                 <button type="submit"
                   disabled={loginLoading}

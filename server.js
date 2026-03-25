@@ -282,39 +282,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', port: PORT });
 });
 
-// Try to find an available port (5000-5009)
-async function startServer() {
-  const maxAttempts = 10;
-  let port = PORT;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      await new Promise((resolve, reject) => {
-        const server = app.listen(port, () => {
-          console.log(`✅ Proxy server running on http://localhost:${port}`);
-          console.log(`   API: http://localhost:${port}/api/checkAdmin`);
-          resolve();
-        }).on('error', (err) => {
-          if (err.code === 'EADDRINUSE') {
-            reject(new Error(`Port ${port} in use`));
-          } else {
-            reject(err);
-          }
-        });
-      });
-
-      // Successfully started
-      return;
-    } catch (err) {
-      if (attempt < maxAttempts - 1) {
-        port++;
-        console.log(`Port ${port - 1} is in use, trying ${port}...`);
-      } else {
-        console.error(`❌ Could not find available port after ${maxAttempts} attempts`);
-        process.exit(1);
-      }
-    }
+// Start server on port 5000
+const server = app.listen(PORT, () => {
+  console.log(`✅ Proxy server running on http://localhost:${PORT}`);
+  console.log(`   API: http://localhost:${PORT}/api/checkAdmin`);
+  console.log(`   Contact API: http://localhost:${PORT}/api/contact`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+    console.error('   Try: taskkill /F /IM node.exe');
+    process.exit(1);
+  } else {
+    console.error(`❌ Server error: ${err.message}`);
+    process.exit(1);
   }
-}
-
-startServer();
+});

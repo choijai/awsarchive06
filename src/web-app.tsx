@@ -3216,7 +3216,7 @@ function App() {
                       </button>
                     )}
 
-                    {userStatus !== "guest" && (
+                    {userStatus === "paid" && (
                       <button
                         onClick={async () => {
                           setLoading(true);

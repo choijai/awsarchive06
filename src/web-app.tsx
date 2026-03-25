@@ -465,6 +465,7 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [dday, setDday] = useState("-");
   const [showExamDateModal, setShowExamDateModal] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -576,6 +577,7 @@ function App() {
         setUserEmail(null);
         setUserStatusLocal("guest");
       }
+      setIsAuthChecked(true);
     });
 
     return () => unsubscribe();
@@ -1246,7 +1248,7 @@ function App() {
                   {t("logoutBtn")}
                 </button>
               </>
-            ) : (
+            ) : isAuthChecked ? (
               <button onClick={() => setShowLoginModal(true)} style={{
                 fontSize: "11px", padding: "8px 12px", background: "#3b82f6", color: "#fff",
                 border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
@@ -1254,7 +1256,7 @@ function App() {
               }}>
                 {t("btnLogin")}
               </button>
-            )}
+            ) : null}
           </div>
 
           {/* D-day 배지 + 날짜 아이콘 통합 */}

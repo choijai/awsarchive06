@@ -66,6 +66,21 @@ function setUserStatus(status: UserStatus) {
   localStorage.setItem("userStatus", status);
 }
 
+/**
+ * Firebase를 통해 사용자의 실제 결제 상태 검증
+ * 이 함수는 localStorage 조작을 방지하기 위해 각 API 호출 전에 호출됨
+ */
+async function verifyUserPaidStatusFromFirebase(userId: string): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    return await getUserPaidStatus(userId);
+  } catch (error) {
+    // Firebase 오류 시 localStorage에 캐시된 값 사용 (폴백)
+    const cached = localStorage.getItem("userStatus");
+    return cached === "paid";
+  }
+}
+
 function getTodayProblemCount(): number {
   if (typeof window === "undefined") return 0;
   const today = new Date().toISOString().split("T")[0];
@@ -960,6 +975,21 @@ function App() {
 
     // 일일 제한 확인 (운영자는 제한 없음)
     if (!isAdmin) {
+      // ✅ Firebase를 통해 실제 결제 상태 검증 (보안 강화)
+      const user = getCurrentUser();
+      if (user) {
+        const actualPaidStatus = await verifyUserPaidStatusFromFirebase(user.uid);
+
+        // localStorage와 실제 상태가 다르면 업데이트
+        if (actualPaidStatus && userStatus !== "paid") {
+          setUserStatus("paid");
+          setUserStatus("paid");
+        } else if (!actualPaidStatus && userStatus === "paid") {
+          // 결제 상태가 거짓이면 로그인 상태로 다운그레이드
+          setUserStatus("loggedIn");
+        }
+      }
+
       const limit = getDailyLimit();
       if (dailyCount >= limit) {
         setError(getQuotaMessage(userStatus, limit, dailyCount));

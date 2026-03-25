@@ -3194,6 +3194,20 @@ function App() {
                       </button>
                       <button
                         onClick={() => {
+                          // 답변하지 않은 문제 개수 확인
+                          const unanswered = mockExamAnswers.filter(answer => answer === null).length;
+
+                          // 답변하지 않은 문제가 있으면 확인
+                          if (unanswered > 0) {
+                            const message = unanswered === mockExamProblems.length
+                              ? `아무것도 풀지 않았습니다. 정말 채점하시겠습니까?\n점수: 0점 / 불합격 🚫`
+                              : `${unanswered}개의 문제를 풀지 않았습니다.\n정말 채점하시겠습니까?`;
+
+                            if (!window.confirm(message)) {
+                              return; // 취소 클릭
+                            }
+                          }
+
                           // 채점 로직
                           let correct = 0;
                           mockExamProblems.forEach((problem, idx) => {

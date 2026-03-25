@@ -121,6 +121,50 @@ app.post('/api/notifyError', async (req, res) => {
   }
 });
 
+// Contact Form Handler
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message, timestamp } = req.body;
+
+    // 입력값 검증
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: { message: 'Missing required fields' } });
+    }
+
+    // 문의 로그 저장
+    const contactLog = {
+      name: name.trim(),
+      email: email.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+      timestamp: timestamp || new Date().toISOString(),
+      receivedAt: new Date().toISOString()
+    };
+
+    console.log('📧 새 문의:', {
+      name: contactLog.name,
+      email: contactLog.email,
+      subject: contactLog.subject,
+      timestamp: contactLog.timestamp
+    });
+
+    // 실제 환경에서는 여기서:
+    // 1. 이메일 서비스로 admin에게 알림 발송
+    // 2. Firestore에 저장
+    // 3. 문의 ID 생성 후 사용자에게 반환
+
+    // 현재는 로그만 기록하고 성공 응답
+    res.json({
+      status: 'logged',
+      message: 'Contact message received. We will reply soon.',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Contact form error:', error);
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
 // ===== Admin 검증 =====
 
 // Admin check (보안: 서버에서만 처리)

@@ -4,6 +4,7 @@ import TermsModal from './Modals/TermsModal';
 import PrivacyPolicyModal from './Modals/PrivacyPolicyModal';
 import CookiePolicyModal from './Modals/CookiePolicyModal';
 import SecurityPolicyModal from './Modals/SecurityPolicyModal';
+import ContactModal from './Modals/ContactModal';
 
 const Footer: React.FC = () => {
   const { locale } = useLocale();
@@ -11,12 +12,13 @@ const Footer: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showCookie, setShowCookie] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   const getLabel = () => {
     const labels = {
-      ko: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', copyright: '© 2026 AWS SAA-C03 Study Platform' },
-      en: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', copyright: '© 2026 AWS SAA-C03 Study Platform' },
-      ja: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', copyright: '© 2026 AWS SAA-C03 Study Platform' }
+      ko: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', contact: 'Contact', copyright: '© 2026 AWS SAA-C03 Study Platform' },
+      en: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', contact: 'Contact', copyright: '© 2026 AWS SAA-C03 Study Platform' },
+      ja: { terms: 'Terms of Service', privacy: 'Privacy Policy', cookie: 'Cookie Policy', security: 'Security Policy', contact: 'Contact', copyright: '© 2026 AWS SAA-C03 Study Platform' }
     };
     return labels[locale as keyof typeof labels] || labels.en;
   };
@@ -117,6 +119,26 @@ const Footer: React.FC = () => {
           >
             {label.security}
           </button>
+
+          <span style={{ color: '#475569' }}>|</span>
+
+          <button
+            onClick={() => setShowContact(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#64748b',
+              cursor: 'pointer',
+              fontSize: '12px',
+              textDecoration: 'underline',
+              padding: '0',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+          >
+            {label.contact}
+          </button>
         </div>
 
         <p style={{
@@ -134,6 +156,7 @@ const Footer: React.FC = () => {
       {showPrivacy && <PrivacyPolicyModal onClose={() => setShowPrivacy(false)} />}
       {showCookie && <CookiePolicyModal onClose={() => setShowCookie(false)} />}
       {showSecurity && <SecurityPolicyModal onClose={() => setShowSecurity(false)} />}
+      {showContact && <ContactModal onClose={() => setShowContact(false)} />}
     </>
   );
 };

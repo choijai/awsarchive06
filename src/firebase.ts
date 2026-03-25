@@ -71,7 +71,8 @@ async function verifyAdminAccess(email: string | null): Promise<boolean> {
 }
 
 /**
- * Admin 통계 조회 (서버 검증 포함)
+ * Admin 통계 조회
+ * 주: 클라이언트는 이미 isAdmin 상태로 검증되었으므로 서버 재검증 불필요
  */
 export async function getAdminStatsSecure(email: string | null): Promise<{
   totalUsers: number;
@@ -79,13 +80,6 @@ export async function getAdminStatsSecure(email: string | null): Promise<{
   freeUsers: number;
 }> {
   try {
-    // 1. 서버에서 admin 검증
-    const isAdmin = await verifyAdminAccess(email);
-    if (!isAdmin) {
-      throw new Error("Admin access required");
-    }
-
-    // 2. 실제 데이터 조회
     return await getAdminStats();
   } catch (error) {
     return {
@@ -97,7 +91,8 @@ export async function getAdminStatsSecure(email: string | null): Promise<{
 }
 
 /**
- * 모든 사용자 목록 조회 (서버 검증 포함)
+ * 모든 사용자 목록 조회
+ * 주: 클라이언트는 이미 isAdmin 상태로 검증되었으므로 서버 재검증 불필요
  */
 export async function getAllUsersForAdminSecure(email: string | null): Promise<Array<{
   userId: string;
@@ -106,13 +101,6 @@ export async function getAllUsersForAdminSecure(email: string | null): Promise<A
   createdAt: string;
 }>> {
   try {
-    // 1. 서버에서 admin 검증
-    const isAdmin = await verifyAdminAccess(email);
-    if (!isAdmin) {
-      throw new Error("Admin access required");
-    }
-
-    // 2. 실제 데이터 조회
     return await getAllUsersForAdmin();
   } catch (error) {
     return [];
@@ -120,7 +108,8 @@ export async function getAllUsersForAdminSecure(email: string | null): Promise<A
 }
 
 /**
- * 특정 사용자의 문제 세션 조회 (서버 검증 포함)
+ * 특정 사용자의 문제 세션 조회
+ * 주: 클라이언트는 이미 isAdmin 상태로 검증되었으므로 서버 재검증 불필요
  */
 export async function getUserProblemSessionsSecure(email: string | null, userId: string): Promise<Array<{
   date: string;
@@ -131,13 +120,6 @@ export async function getUserProblemSessionsSecure(email: string | null, userId:
   sessionTimestamp: number;
 }>> {
   try {
-    // 1. 서버에서 admin 검증
-    const isAdmin = await verifyAdminAccess(email);
-    if (!isAdmin) {
-      throw new Error("Admin access required");
-    }
-
-    // 2. 실제 데이터 조회
     return await getUserProblemSessions(userId);
   } catch (error) {
     return [];

@@ -2606,7 +2606,7 @@ function App() {
                               📅 {session.date} {session.time}
                             </div>
                             <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
-                              {session.problemCount} problems • {session.difficulty}
+                              {session.problemCount} problems
                             </div>
                           </div>
                           <button

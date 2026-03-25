@@ -2356,10 +2356,10 @@ function App() {
                     maxWidth: "450px"
                   }}>
                     <h2 style={{ fontSize: "24px", margin: "0 0 12px 0", color: "#fb923c" }}>
-                      💎 프리미엄 기능
+                      {t("mockExamPremiumTitle")}
                     </h2>
                     <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 20px 0", lineHeight: "1.6" }}>
-                      SAA-C03 모의시험은 프리미엄 구독자만 이용할 수 있습니다.
+                      {t("mockExamPremiumDesc")}
                     </p>
 
                     <div style={{
@@ -2371,7 +2371,7 @@ function App() {
                       textAlign: "left"
                     }}>
                       <p style={{ fontSize: "12px", color: "#10b981", fontWeight: "bold", margin: "0 0 8px 0" }}>
-                        ✅ 프리미엄 이용권 ($14.99/월)
+                        {t("mockExamPremiumSubscription")}
                       </p>
                       <ul style={{
                         fontSize: "12px",
@@ -2402,7 +2402,7 @@ function App() {
                         marginBottom: "12px"
                       }}
                     >
-                      💳 프리미엄 업그레이드
+                      {t("mockExamPremiumUpgradeBtn")}
                     </button>
 
                     {userStatus === "guest" && (
@@ -2419,7 +2419,7 @@ function App() {
                           fontSize: "12px"
                         }}
                       >
-                        또는 로그인하기
+                        {t("mockExamPremiumLoginBtn")}
                       </button>
                     )}
 
@@ -2428,7 +2428,7 @@ function App() {
                       color: "#64748b",
                       margin: "12px 0 0 0"
                     }}>
-                      💡 로그인 후 프리미엄으로 업그레이드하면 모의시험을 매일 응시할 수 있습니다!
+                      {t("mockExamPremiumNote")}
                     </p>
                   </div>
 

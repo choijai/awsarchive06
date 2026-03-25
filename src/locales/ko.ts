@@ -114,6 +114,7 @@ export const ko = {
 
   // 프리미엄 관련
   premiumTitle: "💎 프리미엄 업그레이드",
+  premiumPrice: "$14.99 / 월",
   premiumFeature1: "✅ 하루 20개 문제 생성",
   premiumFeature2: "✅ 매일 모의시험 (50문제, 130분)",
   premiumFeature3: "✅ 모든 난이도",
@@ -127,6 +128,12 @@ export const ko = {
   premiumCancelAnytime: "✅ 언제든 취소 가능",
 
   // 프리미엄 기능 카드 (모의시험 섹션)
+  mockExamPremiumTitle: "💎 프리미엄 기능",
+  mockExamPremiumDesc: "SAA-C03 모의시험은 프리미엄 구독자만 이용할 수 있습니다.",
+  mockExamPremiumSubscription: "✅ 프리미엄 이용권 ($14.99/월)",
+  mockExamPremiumUpgradeBtn: "💳 프리미엄 업그레이드",
+  mockExamPremiumLoginBtn: "또는 로그인하기",
+  mockExamPremiumNote: "💡 로그인 후 프리미엄으로 업그레이드하면 모의시험을 매일 응시할 수 있습니다!",
   mockExamPremiumDaily: "📋 매일 모의시험 1회 (50문제, 130분)",
   mockExamPremiumAnalysis: "📊 상세한 성과 분석",
   premiumFeatureList1: "🚀 하루 20개 문제 생성",

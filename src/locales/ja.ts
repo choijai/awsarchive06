@@ -116,6 +116,7 @@ export const ja: Strings = {
 
   // Premium related
   premiumTitle: "💎 プレミアムにアップグレード",
+  premiumPrice: "$14.99 / 月",
   premiumFeature1: "✅ 1日20問",
   premiumFeature2: "✅ 毎日模擬試験 (50問、130分)",
   premiumFeature3: "✅ すべての難易度",
@@ -129,6 +130,12 @@ export const ja: Strings = {
   premiumCancelAnytime: "✅ いつでもキャンセル可能",
 
   // Premium features card (Mock Exam section)
+  mockExamPremiumTitle: "💎 プレミアム機能",
+  mockExamPremiumDesc: "SAA-C03模擬試験はプレミアム購読者のみ利用できます。",
+  mockExamPremiumSubscription: "✅ プレミアム購読 ($14.99/月)",
+  mockExamPremiumUpgradeBtn: "💳 プレミアムにアップグレード",
+  mockExamPremiumLoginBtn: "またはログイン",
+  mockExamPremiumNote: "💡 ログイン後、プレミアムにアップグレードすると毎日模擬試験を受験できます!",
   mockExamPremiumDaily: "📋 毎日1回模擬試験 (50問、130分)",
   mockExamPremiumAnalysis: "📊 詳細な成績分析",
   premiumFeatureList1: "🚀 1日20問の生成",

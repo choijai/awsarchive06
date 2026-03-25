@@ -116,6 +116,7 @@ export const en: Strings = {
 
   // Premium related
   premiumTitle: "💎 Upgrade to Premium",
+  premiumPrice: "$14.99 / month",
   premiumFeature1: "✅ 20 problems per day",
   premiumFeature2: "✅ Daily mock exam (50 questions, 130 min)",
   premiumFeature3: "✅ All difficulty levels",
@@ -129,6 +130,12 @@ export const en: Strings = {
   premiumCancelAnytime: "✅ Cancel anytime",
 
   // Premium features card (Mock Exam section)
+  mockExamPremiumTitle: "💎 Premium Features",
+  mockExamPremiumDesc: "SAA-C03 mock exam is only available for premium subscribers.",
+  mockExamPremiumSubscription: "✅ Premium Subscription ($14.99/month)",
+  mockExamPremiumUpgradeBtn: "💳 Upgrade to Premium",
+  mockExamPremiumLoginBtn: "Or login",
+  mockExamPremiumNote: "💡 Log in and upgrade to premium to take the mock exam daily!",
   mockExamPremiumDaily: "📋 Daily mock exam once per day (50 questions, 130 min)",
   mockExamPremiumAnalysis: "📊 Detailed performance analysis",
   premiumFeatureList1: "🚀 20 problems per day",

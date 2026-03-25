@@ -964,8 +964,6 @@ function App() {
       }
 
       // 👨‍💼 Admin은 무제한 응시 가능
-      const isAdmin = isAdmin;
-
       if (lastMockExamDate === today && !isAdmin) {
         // 오늘 이미 본 경우 (admin 제외)
         setMockExamAlreadyTaken(true);

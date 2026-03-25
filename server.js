@@ -229,7 +229,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', port: PORT });
 });
 
-app.listen(PORT, () => {
-  // console.log(`✅ Proxy server running on http://localhost:${PORT}`);
-  // console.log(`   API: http://localhost:${PORT}/api/claude`);
+const server = app.listen(PORT, () => {
+  console.log(`✅ Proxy server running on http://localhost:${PORT}`);
+  console.log(`   API: http://localhost:${PORT}/api/checkAdmin`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+    process.exit(1);
+  }
 });

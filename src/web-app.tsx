@@ -1353,6 +1353,9 @@ function App() {
                     <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "10px" }}>
                       {t("premiumFeature1")} - <span style={{ color: "#8b5cf6" }}>{t("premiumPrice")}</span>
                     </div>
+                    <div style={{ color: "#cbd5e1", fontSize: "12px", marginBottom: "12px" }}>
+                      📋 매일 모의시험 1회 (50문제, 130분)
+                    </div>
                     <button onClick={() => setShowPaymentModal(true)} style={{
                       width: "100%", padding: "10px", background: "#8b5cf6", color: "#fff",
                       border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold"
@@ -2668,9 +2671,7 @@ function App() {
                           paddingLeft: "20px",
                           lineHeight: "1.8"
                         }}>
-                          <li>📋 매일 모의시험 1회 (50문제, 130분)</li>
                           <li>🚀 하루 20개 문제 생성</li>
-                          <li>📝 하루 1회 50문제 모의고사 실행</li>
                           <li>📊 상세한 성과 분석</li>
                           <li>🎯 모든 난이도 (보통, 어려움, 챌린지)</li>
                         </ul>

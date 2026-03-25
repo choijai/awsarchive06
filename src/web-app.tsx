@@ -648,10 +648,10 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if user is admin
+  // Check if user is admin (server verification)
   useEffect(() => {
     if (userEmail) {
-      isAdmin.then(result => {
+      isAdminUser(userEmail).then(result => {
         setIsAdmin(result);
       });
     } else {

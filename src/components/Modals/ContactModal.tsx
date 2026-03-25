@@ -75,8 +75,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose }) => {
     setError('');
 
     try {
-      // server로 문의 전송
-      const response = await fetch('http://localhost:5000/api/contact', {
+      // server로 문의 전송 (상대 경로 사용 - 자동으로 현재 호스트/포트 사용)
+      const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

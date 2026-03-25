@@ -124,26 +124,24 @@ async function isAdminUser(email: string | null): Promise<boolean> {
   }
 
   // 서버 API 시도 (포트 5000-5009 시도)
-  for (let port = 5000; port < 5010; port++) {
-    try {
-      const response = await fetch(`http://localhost:${port}/api/checkAdmin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-        signal: AbortSignal.timeout(2000) // 2초 타임아웃
-      });
-      const data = await response.json();
-      const isAdmin = data.isAdmin || false;
+  try {
+    // 상대 경로 사용 - 자동으로 현재 호스트와 포트 사용
+    const response = await fetch('/api/checkAdmin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(2000) // 2초 타임아웃
+    });
+    const data = await response.json();
+    const isAdmin = data.isAdmin || false;
 
-      // 결과를 localStorage에 캐시 (24시간)
-      localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
-      localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
+    // 결과를 localStorage에 캐시 (24시간)
+    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+    localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
 
-      return isAdmin;
-    } catch (error) {
-      // 다음 포트 시도
-      continue;
-    }
+    return isAdmin;
+  } catch (error) {
+    // 서버 호출 실패 - 다음 단계로
   }
 
   // 모든 포트 시도 실패 시 로컬 fallback 사용

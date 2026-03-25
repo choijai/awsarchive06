@@ -138,10 +138,8 @@ async function isAdminUser(email: string | null): Promise<boolean> {
 
     return isAdmin;
   } catch (error) {
-    // Server 실패 시 임시 방편: 환경변수의 admin 이메일과 비교 (개발 용도)
-    console.log('⚠️ Server API 실패, 로컬 확인 사용');
-
-    // .env의 admin 이메일이 있는지 확인
+    // Server API 실패 시 로컬 fallback 사용
+    // (server.js가 실행 중이 아닐 때의 정상 동작)
     const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
     const isAdmin = adminEmails.includes(email);
 

@@ -2841,8 +2841,13 @@ function App() {
                           }
                         }}
                       >
-                        <div style={{ fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
+                        <div style={{ fontSize: "12px", fontWeight: 600, marginBottom: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
                           {maskEmail(user.email)}
+                          {ADMIN_EMAILS.includes(user.email) && (
+                            <span style={{ fontSize: "10px", background: "rgba(249,115,22,0.3)", color: "#fb923c", padding: "2px 6px", borderRadius: "4px" }}>
+                              👨‍💼 운영자
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: "10px", color: "#94a3b8" }}>
                           {user.userStatus === "paid" ? "💎 유료" : user.userStatus === "loggedIn" ? "✨ 로그인" : "🔐 게스트"}

@@ -3588,7 +3588,9 @@ function App() {
                             console.log("시험 시작하기 - UTC 기준 오늘 문제 확인 중...");
 
                             // 1단계: Firestore에서 오늘의 UTC 기준 문제 조회 (언어별)
+                            console.log("🌐 선택한 언어:", locale, "| 사용자:", userEmail);
                             const existingProblems = await getTodayMockExamProblems(locale);
+                            console.log("📥 Firebase에서 불러온 문제:", existingProblems?.length || 0, "개");
                             let allProblems = existingProblems;
                             let difficulties: string[] = [];
 

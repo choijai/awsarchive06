@@ -4094,6 +4094,7 @@ function App() {
                     const paidTestEmails = ['imjaichoi@naver.com'];
                     if (paidTestEmails.includes(user.email)) {
                       isPaid = true;
+                      await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
                       console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
                     }
 
@@ -4208,6 +4209,7 @@ function App() {
                     const paidTestEmails = ['imjaichoi@naver.com'];
                     if (paidTestEmails.includes(email)) {
                       isPaid = true;
+                      await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
                       console.log("✅ 테스트 이메일 자동 paid 처리:", email);
                     }
 

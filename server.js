@@ -1,9 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const app = express();
 const PORT = 5000;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -152,12 +154,38 @@ app.post('/api/contact', async (req, res) => {
       timestamp: contactData.timestamp
     });
 
-    // 📧 실제 환경에서 이메일 전송 (현재는 주석처리)
-    // if (contactEmail) {
-    //   // nodemailer 또는 SendGrid 등을 사용하여 이메일 전송
-    //   // await sendEmailToAdmin(contactEmail, contactData);
-    //   console.log(`✉️ 이메일 발송됨: ${contactEmail}`);
-    // }
+    // 📧 Resend API를 사용하여 이메일 전송
+    if (contactEmail && process.env.RESEND_API_KEY) {
+      try {
+        const htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">새로운 문의가 도착했습니다</h2>
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>발신자:</strong> ${contactData.name}</p>
+              <p><strong>이메일:</strong> ${contactData.email}</p>
+              <p><strong>제목:</strong> ${contactData.subject}</p>
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;" />
+              <p><strong>메시지:</strong></p>
+              <p style="white-space: pre-wrap;">${contactData.message}</p>
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;" />
+              <p style="color: #666; font-size: 12px;">수신 시간: ${contactData.receivedAt}</p>
+            </div>
+          </div>
+        `;
+
+        await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: contactEmail,
+          subject: `새 문의: ${contactData.subject}`,
+          html: htmlContent,
+        });
+
+        console.log(`✉️ Resend 이메일 발송 완료: ${contactEmail}`);
+      } catch (emailError) {
+        console.error('⚠️ Resend 이메일 발송 실패:', emailError.message);
+        // 이메일 발송 실패해도 클라이언트에는 성공 응답 전송
+      }
+    }
 
     // 🗄️ Firebase에 문의 저장 (선택사항)
     // await saveContactToFirebase(contactData);

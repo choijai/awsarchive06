@@ -995,25 +995,26 @@ export async function deletePost(
 
 /**
  * 오늘의 모의시험 문제 조회 (없으면 null)
- * 모든 사용자가 같은 날의 같은 문제를 공유
+ * 언어별로 따로 저장되어 있으므로 같은 언어의 사용자끼리 공유
  */
-export async function getTodayMockExamProblems(): Promise<Problem[] | null> {
+export async function getTodayMockExamProblems(locale: string = "ko"): Promise<Problem[] | null> {
   try {
     // UTC 기준 오늘 날짜 (ISO 형식에서 날짜 부분만 추출)
     // toISOString()은 항상 UTC 시간을 반환하므로 안전함
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
-    console.log(`🌍 UTC 기준 오늘 문제 조회: ${today}`);
+    const docKey = `${today}_${locale}`; // 언어별로 구분
+    console.log(`🌍 UTC 기준 오늘 문제 조회: ${docKey}`);
 
-    const mockExamRef = doc(db, "mockExamProblems", today);
+    const mockExamRef = doc(db, "mockExamProblems", docKey);
     const mockExamDoc = await getDoc(mockExamRef);
 
     if (!mockExamDoc.exists()) {
-      console.log(`📭 오늘(${today}) 생성된 문제가 없음`);
+      console.log(`📭 오늘(${docKey}) 생성된 문제가 없음`);
       return null; // 아직 생성되지 않음
     }
 
     const data = mockExamDoc.data();
-    console.log(`✅ 오늘(${today}) 문제 로드 완료: ${data.problems?.length || 0}개`);
+    console.log(`✅ 오늘(${docKey}) 문제 로드 완료: ${data.problems?.length || 0}개`);
     return data.problems || null;
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제를 불러올 수 없습니다");
@@ -1022,21 +1023,22 @@ export async function getTodayMockExamProblems(): Promise<Problem[] | null> {
 
 /**
  * 오늘의 모의시험 문제 저장 (첫 번째 사용자만 호출)
- * 생성된 50개 문제를 Firestore에 저장
+ * 생성된 50개 문제를 Firestore에 저장 (언어별로 따로 저장)
  */
-export async function saveTodayMockExamProblems(problems: Problem[]): Promise<void> {
+export async function saveTodayMockExamProblems(problems: Problem[], locale: string = "ko"): Promise<void> {
   try {
     // UTC 기준 오늘 날짜에 문제 저장
-    // 모든 사용자가 같은 UTC 날짜의 문제를 공유하게 됨
+    // 같은 언어를 선택한 사용자들이 같은 UTC 날짜의 문제를 공유하게 됨
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
-    console.log(`💾 UTC 기준 오늘(${today}) 문제 저장 시도: ${problems.length}개`);
+    const docKey = `${today}_${locale}`; // 언어별로 구분
+    console.log(`💾 UTC 기준 오늘(${docKey}) 문제 저장 시도: ${problems.length}개`);
 
-    const mockExamRef = doc(db, "mockExamProblems", today);
+    const mockExamRef = doc(db, "mockExamProblems", docKey);
 
     // 이미 저장된 문제가 있으면 덮어쓰지 않음 (첫 사용자만 생성)
     const existingDoc = await getDoc(mockExamRef);
     if (existingDoc.exists()) {
-      console.log(`⏭️ 오늘(${today})의 문제가 이미 존재함 (다른 사용자가 먼저 생성)`);
+      console.log(`⏭️ 오늘(${docKey})의 문제가 이미 존재함 (같은 언어의 다른 사용자가 먼저 생성)`);
       return; // 이미 저장되어 있음
     }
 
@@ -1044,9 +1046,10 @@ export async function saveTodayMockExamProblems(problems: Problem[]): Promise<vo
     await setDoc(mockExamRef, {
       problems: problems,
       createdAt: Timestamp.now(),
-      date: today
+      date: today,
+      locale: locale
     });
-    console.log(`✅ 오늘(${today}) 문제 저장 완료 (UTC 공유)`);
+    console.log(`✅ 오늘(${docKey}) 문제 저장 완료 (언어별 공유)`);
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제 저장에 실패했습니다");
   }

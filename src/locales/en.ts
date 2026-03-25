@@ -33,6 +33,7 @@ export const en: Strings = {
   mockExamPdfDownload: "📥 Download PDF",
   mockExamPdfInfo: "PDF is available for download for 24 hours",
   mockExamPdfExpired: "PDF download period has expired (24 hours have passed)",
+  mockExamAlreadyStartedToday: "⏰ You've already started the mock exam today. Please try again tomorrow.",
 
   // Filter
   filterAll: "All",
@@ -158,7 +159,7 @@ export const en: Strings = {
   loginButton: "Get Started with Google",
   noData: "No data yet",
   generatedSessionsTitle: "Generated PDFs",
-  sessionAutoDeleteNotice: "⏱️ Generated PDFs are automatically deleted after 3 days",
+  sessionAutoDeleteNotice: "⏱️ Generated PDFs are automatically deleted after 1 day",
 
   // Posts
   postsWrite: "Write Post",

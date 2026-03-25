@@ -31,6 +31,7 @@ export const ko = {
   mockExamPdfDownload: "📥 PDF 다운로드",
   mockExamPdfInfo: "PDF는 24시간 동안 다운로드 가능합니다",
   mockExamPdfExpired: "PDF 다운로드 기간이 만료되었습니다 (24시간 지남)",
+  mockExamAlreadyStartedToday: "⏰ 이미 오늘 모의시험을 시작했습니다. 내일 다시 시도해주세요.",
 
   // Filter
   filterAll: "전체",
@@ -156,7 +157,7 @@ export const ko = {
   loginButton: "Google로 시작하기",
   noData: "아직 데이터가 없습니다",
   generatedSessionsTitle: "생성된 PDF",
-  sessionAutoDeleteNotice: "⏱️ 생성된 PDF는 3일 뒤에 자동 삭제됩니다",
+  sessionAutoDeleteNotice: "⏱️ 생성된 PDF는 1일 뒤에 자동 삭제됩니다",
 
   // Posts
   postsWrite: "글쓰기",

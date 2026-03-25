@@ -548,10 +548,19 @@ function App() {
   const [postFormData, setPostFormData] = useState({ title: "", content: "", authorName: "", password: "", isPublic: true });
   const [postFormLoading, setPostFormLoading] = useState(false);
 
-  // 앱 초기화: 현재 있는 모든 PDF 삭제 (한 번만 실행)
+  // 앱 초기화: 현재 있는 모든 PDF 삭제 & 날짜 변경 시 플래그 초기화 (한 번만 실행)
   useEffect(() => {
     localStorage.removeItem("mockExamPdfCreatedAt");
     console.log("✅ 앱 시작 시 모든 저장된 PDF 삭제 완료");
+
+    // ✅ 자정이 지나면 모의시험 하루 제한 플래그 초기화
+    const today = new Date().toISOString().split('T')[0];
+    const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");
+
+    if (mockExamStartedDate && mockExamStartedDate !== today) {
+      localStorage.removeItem("mockExamStartedToday");
+      console.log("✅ 새로운 날짜 - 모의시험 제한 플래그 초기화 완료");
+    }
   }, []);
 
   // 동적 메타데이터 업데이트 (다국어 SEO)
@@ -3440,6 +3449,15 @@ function App() {
                     {(userStatus === "paid" || isAdmin) && (
                       <button
                         onClick={async () => {
+                          // ✅ 오늘 시험을 이미 시작했는지 확인
+                          const today = new Date().toISOString().split('T')[0];
+                          const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");
+
+                          if (mockExamStartedDate === today) {
+                            alert(t("mockExamAlreadyStartedToday"));
+                            return;
+                          }
+
                           setLoading(true);
                           setMockExamIsLoading(true);
                           try {
@@ -3497,6 +3515,10 @@ function App() {
                             localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
                             localStorage.setItem("mockExamProblemsCount", "1");
                             localStorage.setItem("mockExamAllProblems", JSON.stringify(allProblems));
+
+                            // ✅ 오늘 시험 시작했음을 표시 (하루 한 번 제한용)
+                            const today = new Date().toISOString().split('T')[0];
+                            localStorage.setItem("mockExamStartedToday", today);
 
                             console.log("첫 문제 로드 완료, 백그라운드 로딩 시작");
                           } catch (err) {

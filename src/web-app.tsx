@@ -3123,71 +3123,69 @@ function App() {
                       </button>
                     )}
 
-                    <button
-                      onClick={async () => {
-                        if (userStatus === "guest") {
-                          setShowLoginModal(true);
-                          return;
-                        }
-                        setLoading(true);
-                        try {
-                          // 1단계: 오늘의 모의시험 문제 조회
-                          let problems = await getTodayMockExamProblems();
+                    {userStatus !== "guest" && (
+                      <button
+                        onClick={async () => {
+                          setLoading(true);
+                          try {
+                            // 1단계: 오늘의 모의시험 문제 조회
+                            let problems = await getTodayMockExamProblems();
 
-                          // 2단계: 없으면 새로 생성 (점진적 로딩)
-                          if (!problems) {
-                            problems = [];
-                            // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
-                            const difficulties = [
-                              ...Array(20).fill("medium"),
-                              ...Array(20).fill("hard"),
-                              ...Array(10).fill("challenge")
-                            ];
-                            // 순서 섞기 (shuffle)
-                            for (let i = difficulties.length - 1; i > 0; i--) {
-                              const j = Math.floor(Math.random() * (i + 1));
-                              [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
+                            // 2단계: 없으면 새로 생성 (점진적 로딩)
+                            if (!problems) {
+                              problems = [];
+                              // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
+                              const difficulties = [
+                                ...Array(20).fill("medium"),
+                                ...Array(20).fill("hard"),
+                                ...Array(10).fill("challenge")
+                              ];
+                              // 순서 섞기 (shuffle)
+                              for (let i = difficulties.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
+                              }
+
+                              // 🚀 TEST: 2개만 로드 (빠른 테스트)
+                              // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
+                              for (let i = 0; i < 2; i++) {
+                                const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
+                                const problem = await generateSAAProblem([], difficulty, locale);
+                                problems.push(problem);
+                              }
+                              // 백그라운드에서 나머지 로드 (저장소에 보관)
+                              localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
+                              localStorage.setItem("mockExamProblemsLoaded", "2"); // TEST: "2" → PROD: "3"
                             }
 
-                            // 🚀 TEST: 2개만 로드 (빠른 테스트)
-                            // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
-                            for (let i = 0; i < 2; i++) {
-                              const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
-                              const problem = await generateSAAProblem([], difficulty, locale);
-                              problems.push(problem);
-                            }
-                            // 백그라운드에서 나머지 로드 (저장소에 보관)
-                            localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
-                            localStorage.setItem("mockExamProblemsLoaded", "2"); // TEST: "2" → PROD: "3"
+                            setMockExamProblems(problems);
+                            setMockExamAnswers(new Array(50).fill(null));
+                            setMockExamStartTime(Date.now());
+                            setMockExamTimeRemaining(130 * 60);
+                            setMockExamCurrentIndex(0);
+                            setMockExamRunning(true);
+                          } catch (err) {
+                            setError("모의시험 생성 실패");
+                          } finally {
+                            setLoading(false);
                           }
-
-                          setMockExamProblems(problems);
-                          setMockExamAnswers(new Array(50).fill(null));
-                          setMockExamStartTime(Date.now());
-                          setMockExamTimeRemaining(130 * 60);
-                          setMockExamCurrentIndex(0);
-                          setMockExamRunning(true);
-                        } catch (err) {
-                          setError("모의시험 생성 실패");
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      disabled={loading}
-                      style={{
-                        padding: "16px 32px",
-                        background: "rgba(59, 130, 246, 0.3)",
-                        border: "2px solid rgba(59, 130, 246, 0.6)",
-                        borderRadius: "8px",
-                        color: "#60a5fa",
-                        cursor: loading ? "not-allowed" : "pointer",
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                        opacity: loading ? 0.6 : 1
-                      }}
-                    >
-                      {loading ? t("btnGenerating") : t("mockExamStart")}
-                    </button>
+                        }}
+                        disabled={loading}
+                        style={{
+                          padding: "16px 32px",
+                          background: "rgba(59, 130, 246, 0.3)",
+                          border: "2px solid rgba(59, 130, 246, 0.6)",
+                          borderRadius: "8px",
+                          color: "#60a5fa",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "16px",
+                          fontWeight: "bold",
+                          opacity: loading ? 0.6 : 1
+                        }}
+                      >
+                        {loading ? t("btnGenerating") : t("mockExamStart")}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

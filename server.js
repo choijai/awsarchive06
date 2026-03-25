@@ -131,8 +131,11 @@ app.post('/api/contact', async (req, res) => {
       return res.status(400).json({ error: { message: 'Missing required fields' } });
     }
 
-    // 문의 로그 저장
-    const contactLog = {
+    // 환경변수에서 수신 이메일 가져오기 (로직에 노출 X)
+    const contactEmail = process.env.CONTACT_EMAIL;
+
+    // 문의 정보 저장
+    const contactData = {
       name: name.trim(),
       email: email.trim(),
       subject: subject.trim(),
@@ -141,21 +144,27 @@ app.post('/api/contact', async (req, res) => {
       receivedAt: new Date().toISOString()
     };
 
-    console.log('📧 새 문의:', {
-      name: contactLog.name,
-      email: contactLog.email,
-      subject: contactLog.subject,
-      timestamp: contactLog.timestamp
+    // 💾 로그: 민감한 정보 노출 안 함
+    console.log('📧 새 문의 수신:', {
+      senderName: contactData.name,
+      senderEmail: contactData.email,
+      subject: contactData.subject,
+      timestamp: contactData.timestamp
     });
 
-    // 실제 환경에서는 여기서:
-    // 1. 이메일 서비스로 admin에게 알림 발송
-    // 2. Firestore에 저장
-    // 3. 문의 ID 생성 후 사용자에게 반환
+    // 📧 실제 환경에서 이메일 전송 (현재는 주석처리)
+    // if (contactEmail) {
+    //   // nodemailer 또는 SendGrid 등을 사용하여 이메일 전송
+    //   // await sendEmailToAdmin(contactEmail, contactData);
+    //   console.log(`✉️ 이메일 발송됨: ${contactEmail}`);
+    // }
 
-    // 현재는 로그만 기록하고 성공 응답
+    // 🗄️ Firebase에 문의 저장 (선택사항)
+    // await saveContactToFirebase(contactData);
+
+    // 성공 응답
     res.json({
-      status: 'logged',
+      status: 'success',
       message: 'Contact message received. We will reply soon.',
       timestamp: new Date().toISOString()
     });

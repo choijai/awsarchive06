@@ -1003,8 +1003,22 @@ export async function getTodayMockExamProblems(locale: string = "ko"): Promise<P
     // toISOString()은 항상 UTC 시간을 반환하므로 안전함
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
     const docKey = `${today}_${locale}`; // 언어별로 구분
-    console.log(`🌍 UTC 기준 오늘 문제 조회: ${docKey}`);
+    const cacheKey = `mockExamProblems_${docKey}`;
 
+    // 1️⃣ localStorage에서 먼저 확인
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const problems = JSON.parse(cached);
+        console.log(`💾 localStorage 캐시 히트: ${docKey}, ${problems.length}개`);
+        return problems;
+      } catch (e) {
+        console.warn("localStorage 파싱 실패, Firebase 조회 진행");
+      }
+    }
+
+    // 2️⃣ Firebase에서 조회
+    console.log(`🌍 Firebase에서 조회: ${docKey}`);
     const mockExamRef = doc(db, "mockExamProblems", docKey);
     const mockExamDoc = await getDoc(mockExamRef);
 
@@ -1014,8 +1028,20 @@ export async function getTodayMockExamProblems(locale: string = "ko"): Promise<P
     }
 
     const data = mockExamDoc.data();
-    console.log(`✅ 오늘(${docKey}) 문제 로드 완료: ${data.problems?.length || 0}개`);
-    return data.problems || null;
+    const problems = data.problems || null;
+
+    // 3️⃣ localStorage에 저장
+    if (problems && problems.length > 0) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(problems));
+        console.log(`✅ localStorage 캐시 저장: ${docKey}, ${problems.length}개`);
+      } catch (e) {
+        console.warn("localStorage 저장 실패 (용량 초과?)", e);
+      }
+    }
+
+    console.log(`✅ Firebase 로드 완료: ${docKey}, ${problems?.length || 0}개`);
+    return problems;
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제를 불러올 수 없습니다");
   }
@@ -1079,7 +1105,7 @@ export async function updateMockExamProblemsProgressively(
     // 기존 문제 + 새 문제 합치기
     allProblems = [...allProblems, ...newProblems].slice(0, 50); // 최대 50개
 
-    // 저장
+    // 1️⃣ Firebase에 저장
     await setDoc(
       mockExamRef,
       {
@@ -1092,9 +1118,17 @@ export async function updateMockExamProblemsProgressively(
       { merge: true }
     );
 
-    console.log(
-      `✅ 점진적 저장 완료: ${docKey}, 총 ${allProblems.length}개 문제`
-    );
+    // 2️⃣ localStorage에도 저장 (캐싱)
+    const cacheKey = `mockExamProblems_${docKey}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(allProblems));
+      console.log(
+        `✅ 점진적 저장 완료: ${docKey}, Firebase + localStorage 모두 저장, 총 ${allProblems.length}개 문제`
+      );
+    } catch (e) {
+      console.warn("localStorage 저장 실패 (용량 초과?):", e);
+      console.log(`⚠️ Firebase만 저장됨: ${docKey}, 총 ${allProblems.length}개 문제`);
+    }
   } catch (error: any) {
     console.error("점진적 저장 실패:", error.message);
   }

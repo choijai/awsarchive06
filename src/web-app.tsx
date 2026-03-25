@@ -147,7 +147,9 @@ async function isAdminUser(email: string | null): Promise<boolean> {
   // 모든 포트 시도 실패 시 로컬 fallback 사용
   // (server.js가 실행 중이 아닐 때의 정상 동작)
   const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
+  const paidTestEmails = ['imjaichoi@naver.com']; // 임시 테스트용 paid 이메일
   const isAdmin = adminEmails.includes(email);
+  const isPaidTestUser = paidTestEmails.includes(email);
 
   // 결과를 localStorage에 캐시
   localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
@@ -753,9 +755,13 @@ function App() {
   useEffect(() => {
     if (userEmail) {
       // Admin 자동 프리미엄 설정
-      if (isAdmin) {
+      const paidTestEmails = ['imjaichoi@naver.com'];
+      if (isAdmin || paidTestEmails.includes(userEmail)) {
         setUserStatusLocal("paid");
         localStorage.setItem("userStatus", "paid");
+        if (paidTestEmails.includes(userEmail)) {
+          console.log("✅ 테스트 이메일 자동 paid 처리:", userEmail);
+        }
       }
 
       (async () => {
@@ -4082,7 +4088,15 @@ function App() {
 
                     // 사용자 정보 저장 및 결제 상태 로드
                     await saveUserInfoToFirebase(user.uid, user.email);
-                    const isPaid = await getUserPaidStatus(user.uid);
+                    let isPaid = await getUserPaidStatus(user.uid);
+
+                    // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
+                    const paidTestEmails = ['imjaichoi@naver.com'];
+                    if (paidTestEmails.includes(user.email)) {
+                      isPaid = true;
+                      console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
+                    }
+
                     const status: UserStatus = isPaid ? "paid" : "loggedIn";
                     setUserStatusLocal(status);
                     localStorage.setItem("userStatus", status);
@@ -4188,7 +4202,15 @@ function App() {
                   const user = getCurrentUser();
                   if (user) {
                     await saveUserInfoToFirebase(user.uid, email);
-                    const isPaid = await getUserPaidStatus(user.uid);
+                    let isPaid = await getUserPaidStatus(user.uid);
+
+                    // ✅ 임시 테스트: 특정 이메일은 자동으로 paid 처리
+                    const paidTestEmails = ['imjaichoi@naver.com'];
+                    if (paidTestEmails.includes(email)) {
+                      isPaid = true;
+                      console.log("✅ 테스트 이메일 자동 paid 처리:", email);
+                    }
+
                     const status: UserStatus = isPaid ? "paid" : "loggedIn";
                     setUserStatusLocal(status);
                     localStorage.setItem("userStatus", status);

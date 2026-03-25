@@ -1353,7 +1353,7 @@ function App() {
                     <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "10px" }}>
                       {t("premiumFeature1")} - <span style={{ color: "#8b5cf6" }}>{t("premiumPrice")}</span>
                     </div>
-                    <div style={{ color: "#cbd5e1", fontSize: "13px", marginBottom: "12px" }}>
+                    <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "12px" }}>
                       📋 매일 모의시험 1회 (50문제, 130분)
                     </div>
                     <button onClick={() => setShowPaymentModal(true)} style={{

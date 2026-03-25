@@ -1585,20 +1585,6 @@ function App() {
 
           {tab === "concept" && (
             <div className="concept-panel">
-              {!userEmail && (
-                <div style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  textAlign: "center",
-                  marginBottom: "16px"
-                }}>
-                  <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "12px" }}>
-                    📚 로그인한 학습 기록이 저장됩니다
-                  </p>
-                </div>
-              )}
               {concept && selectedNode ? (
                 <>
                   <div className="concept-header">

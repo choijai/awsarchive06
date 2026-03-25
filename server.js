@@ -132,11 +132,20 @@ app.post('/api/checkAdmin', (req, res) => {
     // 서버에서만 admin 이메일 비교
     const isAdmin = email && adminEmail && email === adminEmail;
 
+    // 디버그 로그
+    console.log('🔍 Admin check:', {
+      receivedEmail: email,
+      adminEmail: adminEmail,
+      isAdmin: isAdmin,
+      match: email === adminEmail
+    });
+
     res.json({
       isAdmin: isAdmin,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('❌ Admin check error:', error);
     res.status(500).json({ error: { message: error.message } });
   }
 });

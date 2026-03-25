@@ -1334,7 +1334,7 @@ function App() {
                 </button>
 
                 {/* 프리미엄 배너 (로그인하지 않았거나 일반 사용자일 때) */}
-                {userStatus !== "paid" && !error && (
+                {userStatus !== "paid" && (
                   <div style={{
                     marginTop: "16px", padding: "14px", background: "linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(59,130,246,0.2) 100%)",
                     border: "1px solid rgba(139,92,246,0.3)", borderRadius: "8px", textAlign: "center"

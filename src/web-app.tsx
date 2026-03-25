@@ -2734,8 +2734,19 @@ function App() {
                           setMockExamCurrentIndex(0);
                           setMockExamAnswers({});
                           setMockExamStartTime(new Date());
-                          const problems = await getTodayMockExamProblems(userEmail || "");
-                          setMockExamProblems(problems);
+
+                          // 테스트: API 2번 호출, 문제 2개 생성
+                          try {
+                            const problems: Problem[] = [];
+                            for (let i = 0; i < 2; i++) {
+                              const problem = await generateSAAProblem([], "medium", locale);
+                              problems.push(problem);
+                            }
+                            setMockExamProblems(problems);
+                          } catch (error) {
+                            console.error("문제 생성 실패:", error);
+                            setMockExamRunning(false);
+                          }
                         }}
                         style={{
                           width: "100%",

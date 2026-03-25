@@ -3562,6 +3562,7 @@ function App() {
                           opacity: loading ? 0.6 : 1
                         }}
                       >
+                        {loading && <span className="loading-icon">⏳</span>}
                         {loading ? t("btnGenerating") : t("mockExamAdminForceCreate")}
                       </button>
                     )}
@@ -3675,6 +3676,7 @@ function App() {
                           opacity: loading ? 0.6 : 1
                         }}
                       >
+                        {loading && <span className="loading-icon">⏳</span>}
                         {loading ? t("btnGenerating") : t("mockExamStart")}
                       </button>
                     )}

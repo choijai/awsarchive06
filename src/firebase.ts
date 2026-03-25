@@ -889,11 +889,11 @@ export async function getPosts(
       ...doc.data()
     } as any));
 
-    // 필터링: 비공개 글은 관리자 또는 작성자만 볼 수 있음
+    // 필터링: 비공개 글은 작성자만 볼 수 있음
     allPosts = allPosts.filter(p => {
       if (p.isPublic) return true;
-      // 비공개 글: ADMIN_UID 또는 현재 사용자만 볼 수 있음
-      return currentUserId === ADMIN_UID || currentUserId === p.authorId;
+      // 비공개 글: 현재 사용자만 볼 수 있음
+      return currentUserId === p.authorId;
     });
 
     // 필터링: 제목 검색
@@ -955,8 +955,8 @@ export async function getPostById(postId: string, currentUserId: string = ""): P
 
     const data = postDoc.data();
 
-    // 비공개 글 권한 검사: 관리자 또는 작성자만 조회 가능
-    if (!data.isPublic && currentUserId !== ADMIN_UID && currentUserId !== data.authorId) {
+    // 비공개 글 권한 검사: 작성자만 조회 가능
+    if (!data.isPublic && currentUserId !== data.authorId) {
       throw new Error("접근 권한이 없습니다");
     }
 
@@ -998,8 +998,8 @@ export async function deletePost(
 
     const data = postDoc.data();
 
-    // 작성자 또는 관리자만 삭제 가능
-    if (data.authorId !== authorId && authorId !== ADMIN_UID) {
+    // 작성자만 삭제 가능
+    if (data.authorId !== authorId) {
       throw new Error("본인이 작성한 글만 삭제할 수 있습니다");
     }
 

@@ -2559,7 +2559,7 @@ function App() {
           )}
 
           {/* Users Panel - 관리자만 접근 가능 */}
-          {tab === "users" && ADMIN_UID && userEmail && (
+          {tab === "users" && isAdmin && userEmail && (
             <div style={{
               display: "flex",
               flexDirection: "column",

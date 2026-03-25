@@ -20,6 +20,8 @@ export const ko = {
   mockExamTimeRemaining: "남은 시간",
   mockExamScore: "예상 점수",
   mockExamResult: "모의시험 결과",
+  mockExamResultCards: "📊 결과 카드",
+  mockExamAnalysis: "📋 문제별 풀이 분석",
   mockExamTotalScore: "총점",
   mockExamCorrect: "정답",
   mockExamWrong: "오답",

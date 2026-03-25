@@ -439,6 +439,8 @@ function App() {
   const [mockExamAlreadyTaken, setMockExamAlreadyTaken] = useState(false); // 오늘 이미 본 여부
   const [mockExamNextAvailableTime, setMockExamNextAvailableTime] = useState<string>(""); // 다시 볼 수 있는 시간
   const [mockExamPdfCreatedAt, setMockExamPdfCreatedAt] = useState<number | null>(null); // PDF 생성 시간
+  const [currentUtcTime, setCurrentUtcTime] = useState<string>(""); // 현재 UTC 시간 (실시간)
+  const [nextUtcDate, setNextUtcDate] = useState<string>(""); // 내일 UTC 날짜
 
   // 퀴즈 통계
   const [quizStats, setQuizStats] = useState<{
@@ -454,7 +456,7 @@ function App() {
   } | null>(null);
 
   // 사용자 상태 및 일일 제한
-  const [userStatus, setUserStatusLocal] = useState<UserStatus>("guest");
+  const [userStatus, setUserStatusLocal] = useState<UserStatus>(() => getUserStatus());
   const [dailyCount, setDailyCount] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -574,8 +576,7 @@ function App() {
       }
     })();
 
-    // 사용자 상태 초기화
-    setUserStatusLocal(getUserStatus());
+    // 일일 카운트 초기화
     setDailyCount(getTodayProblemCount());
 
     // Firebase Auth에서 현재 사용자 확인
@@ -600,6 +601,22 @@ function App() {
       }
     }, 60000); // 1분마다 확인
 
+    return () => clearInterval(interval);
+  }, []);
+
+  // UTC 시간 실시간 업데이트 (분 단위)
+  useEffect(() => {
+    const updateUtcTime = () => {
+      const now = new Date();
+      const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+      const currentUtcStr = now.toLocaleString('en-US', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const nextUtcStr = tomorrow.toLocaleString('en-US', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' });
+      setCurrentUtcTime(currentUtcStr);
+      setNextUtcDate(nextUtcStr);
+    };
+
+    updateUtcTime();
+    const interval = setInterval(updateUtcTime, 60000); // 분 단위 업데이트
     return () => clearInterval(interval);
   }, []);
 
@@ -711,6 +728,11 @@ function App() {
     setSelectedAnswer(null);
     setError(null);
   };
+
+  // 탭 변경 시 에러 상태 초기화
+  useEffect(() => {
+    setError(null);
+  }, [tab]);
 
   // 그래프 패널 리사이징
   useEffect(() => {
@@ -1617,6 +1639,229 @@ function App() {
               ) : (
                 <div className="empty-state">{t("emptyConceptHint")}</div>
               )}
+            </div>
+          )}
+
+          {tab === "mockExam" && (userStatus === "paid" || isAdminUser(userEmail)) && (
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px", height: "100%", overflowY: "auto" }}>
+              {mockExamRunning ? (
+                // 모의시험 진행 중
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px"
+                }}>
+                  <div style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(59, 130, 246, 0.3)"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "8px" }}>진행 상황</div>
+                    <div style={{ fontSize: "24px", color: "#60a5fa", fontWeight: "bold", marginBottom: "8px" }}>
+                      {mockExamCurrentIndex + 1} / {mockExamProblems.length}
+                    </div>
+                    <div style={{
+                      width: "100%",
+                      height: "6px",
+                      background: "rgba(100, 116, 139, 0.3)",
+                      borderRadius: "3px",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        width: `${((mockExamCurrentIndex + 1) / mockExamProblems.length) * 100}%`,
+                        height: "100%",
+                        background: "rgba(59, 130, 246, 0.6)",
+                        transition: "width 0.3s"
+                      }} />
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: "rgba(249, 115, 22, 0.1)",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(249, 115, 22, 0.3)",
+                    textAlign: "center"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "8px" }}>남은 시간</div>
+                    <div style={{
+                      fontSize: "28px",
+                      color: mockExamTimeRemaining < 300 ? "#ef4444" : "#f59e0b",
+                      fontWeight: "bold"
+                    }}>
+                      {Math.floor(mockExamTimeRemaining / 60)}:{String(mockExamTimeRemaining % 60).padStart(2, '0')}
+                    </div>
+                  </div>
+                </div>
+              ) : mockExamResults ? (
+                // 결과 화면
+                <>
+                  <div style={{
+                    textAlign: "center",
+                    padding: "20px",
+                    background: mockExamResults.passed ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                    border: `1px solid ${mockExamResults.passed ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                    borderRadius: "8px"
+                  }}>
+                    <h2 style={{
+                      fontSize: "36px",
+                      color: mockExamResults.passed ? "#10b981" : "#ef4444",
+                      margin: "0 0 8px 0"
+                    }}>
+                      {mockExamResults.totalScore}
+                    </h2>
+                    <p style={{
+                      color: "#cbd5e1",
+                      margin: "0",
+                      fontSize: "14px"
+                    }}>
+                      {mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}
+                    </p>
+                  </div>
+
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px"
+                  }}>
+                    <div style={{
+                      background: "rgba(59, 130, 246, 0.1)",
+                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "20px", color: "#10b981", fontWeight: "bold" }}>
+                        {mockExamResults.correct}/{mockExamProblems.length}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "20px", color: "#ef4444", fontWeight: "bold" }}>
+                        {mockExamResults.wrong}/{mockExamProblems.length}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: "rgba(100, 116, 139, 0.2)",
+                    border: "1px solid rgba(100, 116, 139, 0.3)",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px"
+                  }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
+                        {mockExamResults.correctRate}%
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
+                        {Math.floor(mockExamResults.timeSpent / 60)}분
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PDF 다운로드 */}
+                  {(() => {
+                    const pdfExpiresAt = mockExamPdfCreatedAt ? mockExamPdfCreatedAt + 24 * 60 * 60 * 1000 : null;
+                    const now = Date.now();
+                    const isPdfExpired = pdfExpiresAt && now > pdfExpiresAt;
+                    const hoursRemaining = pdfExpiresAt ? Math.floor((pdfExpiresAt - now) / (60 * 60 * 1000)) : 0;
+
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <button
+                          onClick={() => {
+                            if (!mockExamResults || !mockExamProblems) return;
+
+                            const element = document.createElement("div");
+                            element.innerHTML = `
+                              <div style="padding: 20px; color: #000; background: #fff;">
+                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
+                                <div style="margin-bottom: 20px;">
+                                  <h2 style="font-size: 32px; text-align: center;">총점: ${mockExamResults.totalScore}</h2>
+                                  <p style="text-align: center; font-size: 16px;">상태: ${mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}</p>
+                                </div>
+                                <div style="margin-bottom: 20px;">
+                                  <p><strong>정답: ${mockExamResults.correct}/${mockExamProblems.length}</strong></p>
+                                  <p><strong>오답: ${mockExamResults.wrong}/${mockExamProblems.length}</strong></p>
+                                  <p><strong>정답률: ${mockExamResults.correctRate}%</strong></p>
+                                  <p><strong>소요 시간: ${Math.floor(mockExamResults.timeSpent / 60)}분 ${mockExamResults.timeSpent % 60}초</strong></p>
+                                </div>
+                              </div>
+                            `;
+
+                            const options = {
+                              margin: 10,
+                              filename: 'SAA-C03_mock_exam_results.pdf',
+                              image: { type: 'jpeg', quality: 0.98 },
+                              html2canvas: { scale: 2 },
+                              jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+                            };
+
+                            html2pdf().set(options).from(element).save();
+                            const now = Date.now();
+                            setMockExamPdfCreatedAt(now);
+                            localStorage.setItem("mockExamPdfCreatedAt", now.toString());
+                          }}
+                          disabled={isPdfExpired}
+                          style={{
+                            padding: "12px 16px",
+                            background: isPdfExpired ? "rgba(100, 116, 139, 0.5)" : "rgba(59, 130, 246, 0.3)",
+                            border: `1px solid ${isPdfExpired ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.6)"}`,
+                            borderRadius: "6px",
+                            color: isPdfExpired ? "#64748b" : "#60a5fa",
+                            cursor: isPdfExpired ? "not-allowed" : "pointer",
+                            fontSize: "14px",
+                            fontWeight: "500"
+                          }}
+                        >
+                          {isPdfExpired ? t("mockExamPdfExpired") : t("mockExamPdfDownload")}
+                        </button>
+
+                        {mockExamPdfCreatedAt && !isPdfExpired && (
+                          <div style={{
+                            background: "rgba(59, 130, 246, 0.1)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            borderRadius: "6px",
+                            padding: "8px 12px",
+                            fontSize: "12px",
+                            color: "#60a5fa",
+                            textAlign: "center"
+                          }}>
+                            {t("mockExamPdfInfo")} ({hoursRemaining}시간 남음)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : mockExamAlreadyTaken ? (
+                // 오늘 이미 본 경우
+                <div style={{
+                  textAlign: "center",
+                  background: "rgba(249, 115, 22, 0.1)",
+                  border: "1px solid rgba(249, 115, 22, 0.3)",
+                  borderRadius: "8px",
+                  padding: "16px"
+                }}>
+                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0 0 8px 0" }}>
+                    현재 UTC: {currentUtcTime}
+                  </p>
+                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "0" }}>
+                    {nextUtcDate} 자정(UTC 00:00)에 다시 응시할 수 있습니다
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -2624,322 +2869,94 @@ function App() {
                     </div>
                   </div>
                 ) : mockExamResults ? (
-                  // 모의시험 결과
-                  <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px"
-                  }}>
+                  // 모의시험 결과 - 문제별 분석
+                  <>
                     <div style={{
-                      textAlign: "center",
                       padding: "20px",
-                      background: mockExamResults.passed ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                      border: `1px solid ${mockExamResults.passed ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
-                      borderRadius: "8px"
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                      overflowY: "auto",
+                      height: "100%"
                     }}>
-                      <h2 style={{
-                        fontSize: "32px",
-                        color: mockExamResults.passed ? "#10b981" : "#ef4444",
-                        margin: "0 0 8px 0"
-                      }}>
-                        {mockExamResults.totalScore}
-                      </h2>
-                      <p style={{
-                        color: "#cbd5e1",
-                        margin: "0",
-                        fontSize: "14px"
-                      }}>
-                        {mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}
-                      </p>
-                    </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {mockExamProblems.map((problem, idx) => {
+                          const userAnswer = mockExamAnswers[idx];
+                          const isCorrect = userAnswer === problem.answer;
 
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "12px"
-                    }}>
-                      <div style={{
-                        background: "rgba(59, 130, 246, 0.1)",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        textAlign: "center"
-                      }}>
-                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px" }}>정답</div>
-                        <div style={{ fontSize: "20px", color: "#10b981", fontWeight: "bold" }}>
-                          {mockExamResults.correct}/{mockExamProblems.length}
-                        </div>
-                      </div>
-                      <div style={{
-                        background: "rgba(239, 68, 68, 0.1)",
-                        border: "1px solid rgba(239, 68, 68, 0.3)",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        textAlign: "center"
-                      }}>
-                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px" }}>오답</div>
-                        <div style={{ fontSize: "20px", color: "#ef4444", fontWeight: "bold" }}>
-                          {mockExamResults.wrong}/{mockExamProblems.length}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      background: "rgba(100, 116, 139, 0.2)",
-                      border: "1px solid rgba(100, 116, 139, 0.3)",
-                      borderRadius: "8px",
-                      padding: "16px",
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "12px"
-                    }}>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>정답률</div>
-                        <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
-                          {mockExamResults.correctRate}%
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>소요 시간</div>
-                        <div style={{ fontSize: "18px", color: "#60a5fa", fontWeight: "bold" }}>
-                          {Math.floor(mockExamResults.timeSpent / 60)}분 {mockExamResults.timeSpent % 60}초
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      background: "rgba(100, 116, 139, 0.2)",
-                      border: "1px solid rgba(100, 116, 139, 0.3)",
-                      borderRadius: "8px",
-                      padding: "12px 16px",
-                      textAlign: "center"
-                    }}>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0" }}>
-                        ✅ 오늘의 모의시험 완료!
-                      </p>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 0 0" }}>
-                        내일 자정부터 다시 응시할 수 있습니다
-                      </p>
-                    </div>
-
-                    {/* 문제별 상세 정보 */}
-                    <div style={{
-                      marginTop: "20px",
-                      borderTop: "1px solid rgba(100, 116, 139, 0.3)",
-                      paddingTop: "20px"
-                    }}>
-                      <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>📋 문제별 풀이 분석</h3>
-                      {mockExamProblems.map((problem, idx) => {
-                        const userAnswer = mockExamAnswers[idx];
-                        const isCorrect = userAnswer === problem.answer;
-
-                        return (
-                          <div key={idx} style={{
-                            background: isCorrect ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)",
-                            border: `1px solid ${isCorrect ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
-                            borderRadius: "8px",
-                            padding: "16px",
-                            marginBottom: "16px"
-                          }}>
-                            {/* 문제 번호 및 정오 */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                              <h4 style={{ margin: 0, color: "#e2e8f0" }}>Q{idx + 1}. {problem.question.substring(0, 50)}...</h4>
-                              <span style={{
-                                padding: "4px 12px",
-                                borderRadius: "4px",
-                                fontSize: "12px",
-                                fontWeight: "bold",
-                                background: isCorrect ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
-                                color: isCorrect ? "#10b981" : "#ef4444"
-                              }}>
-                                {isCorrect ? "✅ 정답" : "❌ 오답"}
-                              </span>
-                            </div>
-
-                            {/* 핵심 정보 */}
-                            <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid rgba(100, 116, 139, 0.2)" }}>
-                              <div style={{ marginBottom: "8px" }}>
-                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>🎯 핵심 목표: </span>
-                                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>{problem.goal}</span>
-                              </div>
-                              <div style={{ marginBottom: "8px" }}>
-                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>🔑 핵심 키워드: </span>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
-                                  {problem.keywords.map((keyword, i) => (
-                                    <span key={i} style={{
-                                      background: "rgba(59, 130, 246, 0.2)",
-                                      border: "1px solid rgba(59, 130, 246, 0.3)",
-                                      color: "#60a5fa",
-                                      padding: "2px 8px",
-                                      borderRadius: "4px",
-                                      fontSize: "11px"
-                                    }}>
-                                      {keyword}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 사용자 답변 vs 정답 */}
-                            <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid rgba(100, 116, 139, 0.2)" }}>
-                              <div style={{ marginBottom: "8px" }}>
-                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>당신의 답: </span>
-                                <span style={{
-                                  color: isCorrect ? "#10b981" : "#ef4444",
-                                  fontWeight: "bold",
-                                  fontSize: "14px"
-                                }}>
-                                  {userAnswer || "선택하지 않음"}
-                                </span>
-                              </div>
-                              <div>
-                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>정답: </span>
-                                <span style={{
-                                  color: "#10b981",
-                                  fontWeight: "bold",
-                                  fontSize: "14px"
-                                }}>
-                                  {problem.answer}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* 이지모드 */}
-                            <div style={{ marginBottom: "12px", padding: "12px", background: "rgba(147, 112, 219, 0.1)", borderRadius: "6px" }}>
-                              <h5 style={{ margin: "0 0 8px 0", color: "#d8b4fe", fontSize: "13px" }}>💡 쉽게 이해하기 (초등학생 5학년 수준)</h5>
-                              <p style={{ margin: "0 0 8px 0", color: "#cbd5e1", fontSize: "13px" }}>
-                                {problem.easyMode.explanation}
-                              </p>
-                              <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
-                                <div style={{ marginBottom: "4px" }}>
-                                  <strong>A)</strong> {problem.easyMode.A}
-                                </div>
-                                <div style={{ marginBottom: "4px" }}>
-                                  <strong>B)</strong> {problem.easyMode.B}
-                                </div>
-                                <div style={{ marginBottom: "4px" }}>
-                                  <strong>C)</strong> {problem.easyMode.C}
-                                </div>
-                                <div>
-                                  <strong>D)</strong> {problem.easyMode.D}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 상세 설명 */}
-                            <div style={{ padding: "12px", background: "rgba(59, 130, 246, 0.05)", borderRadius: "6px" }}>
-                              <h5 style={{ margin: "0 0 8px 0", color: "#60a5fa", fontSize: "13px" }}>📖 상세 설명</h5>
-                              <div style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: "1.6" }}>
-                                <div style={{ marginBottom: "8px" }}>
-                                  <strong style={{ color: "#10b981" }}>✅ 정답인 이유:</strong>
-                                  <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.correct}</p>
-                                </div>
-                                {userAnswer === "A" && (
-                                  <div style={{ marginBottom: "8px" }}>
-                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
-                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_A}</p>
-                                  </div>
-                                )}
-                                {userAnswer === "B" && (
-                                  <div style={{ marginBottom: "8px" }}>
-                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
-                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_B || "설명이 없습니다"}</p>
-                                  </div>
-                                )}
-                                {userAnswer === "C" && (
-                                  <div style={{ marginBottom: "8px" }}>
-                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
-                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_C}</p>
-                                  </div>
-                                )}
-                                {userAnswer === "D" && (
-                                  <div style={{ marginBottom: "8px" }}>
-                                    <strong style={{ color: "#ef4444" }}>❌ 함정:</strong>
-                                    <p style={{ margin: "4px 0 0 0" }}>{problem.explanation.trap_D}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {(() => {
-                      const pdfExpiresAt = mockExamPdfCreatedAt ? mockExamPdfCreatedAt + 24 * 60 * 60 * 1000 : null;
-                      const now = Date.now();
-                      const isPdfExpired = pdfExpiresAt && now > pdfExpiresAt;
-                      const hoursRemaining = pdfExpiresAt ? Math.floor((pdfExpiresAt - now) / (60 * 60 * 1000)) : 0;
-
-                      return (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                          <button
-                            onClick={() => {
-                              if (!mockExamResults || !mockExamProblems) return;
-
-                              const element = document.createElement("div");
-                              element.innerHTML = `
-                                <div style="padding: 20px; color: #000; background: #fff;">
-                                  <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
-                                  <div style="margin-bottom: 20px;">
-                                    <h2 style="font-size: 32px; text-align: center;">총점: ${mockExamResults.totalScore}</h2>
-                                    <p style="text-align: center; font-size: 16px;">상태: ${mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}</p>
-                                  </div>
-                                  <div style="margin-bottom: 20px;">
-                                    <p><strong>정답: ${mockExamResults.correct}/${mockExamProblems.length}</strong></p>
-                                    <p><strong>오답: ${mockExamResults.wrong}/${mockExamProblems.length}</strong></p>
-                                    <p><strong>정답률: ${mockExamResults.correctRate}%</strong></p>
-                                    <p><strong>소요 시간: ${Math.floor(mockExamResults.timeSpent / 60)}분 ${mockExamResults.timeSpent % 60}초</strong></p>
-                                  </div>
-                                </div>
-                              `;
-
-                              const options = {
-                                margin: 10,
-                                filename: 'SAA-C03_mock_exam_results.pdf',
-                                image: { type: 'jpeg', quality: 0.98 },
-                                html2canvas: { scale: 2 },
-                                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-                              };
-
-                              html2pdf().set(options).from(element).save();
-                              const now = Date.now();
-                              setMockExamPdfCreatedAt(now);
-                              localStorage.setItem("mockExamPdfCreatedAt", now.toString());
-                            }}
-                            disabled={isPdfExpired}
-                            style={{
-                              padding: "12px 16px",
-                              background: isPdfExpired ? "rgba(100, 116, 139, 0.5)" : "rgba(59, 130, 246, 0.3)",
-                              border: `1px solid ${isPdfExpired ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.6)"}`,
-                              borderRadius: "6px",
-                              color: isPdfExpired ? "#64748b" : "#60a5fa",
-                              cursor: isPdfExpired ? "not-allowed" : "pointer",
-                              fontSize: "14px",
-                              fontWeight: "500"
-                            }}
-                          >
-                            {isPdfExpired ? t("mockExamPdfExpired") : t("mockExamPdfDownload")}
-                          </button>
-
-                          {mockExamPdfCreatedAt && !isPdfExpired && (
-                            <div style={{
-                              background: "rgba(59, 130, 246, 0.1)",
-                              border: "1px solid rgba(59, 130, 246, 0.3)",
-                              borderRadius: "6px",
-                              padding: "8px 12px",
-                              fontSize: "12px",
-                              color: "#60a5fa",
-                              textAlign: "center"
+                          return (
+                            <div key={idx} style={{
+                              background: "rgba(30, 41, 59, 0.8)",
+                              border: "1px solid rgba(100, 116, 139, 0.3)",
+                              borderRadius: "8px",
+                              padding: "16px"
                             }}>
-                              {t("mockExamPdfInfo")} ({hoursRemaining}시간 남음)
+                              {/* 문제 제목 */}
+                              <h4 style={{ color: "#e2e8f0", marginTop: 0, marginBottom: "12px", fontSize: "13px" }}>
+                                Q{idx + 1}. {problem.question}
+                              </h4>
+
+                              {/* 정답/오답 표시 */}
+                              <div style={{ fontSize: "12px", color: isCorrect ? "#10b981" : "#ef4444", marginBottom: "12px", fontWeight: "bold" }}>
+                                {isCorrect ? "✅ 정답입니다!" : "❌ 틀렸습니다."}
+                              </div>
+
+                              {/* 핵심 목표 */}
+                              {(problem as any).goal && (
+                                <div style={{ fontSize: "12px", color: "#a78bfa", marginBottom: "12px", padding: "8px", background: "rgba(167,139,250,0.1)", borderRadius: "4px" }}>
+                                  <strong>🎯 핵심 목표:</strong> {(problem as any).goal}
+                                </div>
+                              )}
+
+                              {/* 정답과 설명 */}
+                              <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "12px" }}>
+                                <strong>정답: {problem.answer}</strong>
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "12px" }}>
+                                <strong>설명</strong>
+                                <p style={{ marginTop: "6px" }}>{problem.explanation.correct}</p>
+                                {userAnswer !== problem.answer && problem.explanation[`trap_${userAnswer}` as keyof typeof problem.explanation] && (
+                                  <p style={{ marginTop: "6px", color: "#ef4444" }}>
+                                    <strong>⚠️ 함정:</strong> {problem.explanation[`trap_${userAnswer}` as keyof typeof problem.explanation]}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* 핵심 키워드 */}
+                              {(problem as any).keywords && (problem as any).keywords.length > 0 && (
+                                <div style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "12px", padding: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px" }}>
+                                  <strong>📌 핵심 키워드:</strong>
+                                  <div style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                                    {(problem as any).keywords.map((kw: string, i: number) => (
+                                      <span key={i} style={{ background: "rgba(59,130,246,0.3)", padding: "2px 8px", borderRadius: "12px", color: "#60a5fa" }}>
+                                        <strong>{kw}</strong>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* 이지모드 */}
+                              {(problem as any).easyMode && (
+                                <div style={{ fontSize: "12px", color: "#cbd5e1", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "6px" }}>
+                                  <strong style={{ color: "#fbbf24" }}>👨‍🏫 쉽게설명:</strong>
+                                  <p style={{ marginTop: "6px", lineHeight: "1.6" }}>{(problem as any).easyMode.explanation}</p>
+                                  <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(245,158,11,0.2)" }}>
+                                    <strong style={{ color: "#fbbf24" }}>각 보기 설명:</strong>
+                                    {(["A", "B", "C", "D"] as const).map(opt => (
+                                      <div key={opt} style={{ marginTop: "6px", color: opt === problem.answer ? "#4ade80" : "#cbd5e1" }}>
+                                        <strong>{opt}.</strong> {(problem as any).easyMode[opt]}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
                 ) : mockExamAlreadyTaken ? (
                   // 오늘 이미 본 경우
                   <div style={{
@@ -2958,28 +2975,11 @@ function App() {
                       padding: "24px",
                       maxWidth: "400px"
                     }}>
-                      <h2 style={{ fontSize: "24px", margin: "0 0 12px 0", color: "#fb923c" }}>
-                        📋 이미 응시함
-                      </h2>
-                      <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 16px 0", lineHeight: "1.6" }}>
-                        오늘은 이미 모의시험을 응시했습니다.
+                      <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0 0 12px 0", lineHeight: "1.6" }}>
+                        현재 UTC: {currentUtcTime}
                       </p>
-                      <div style={{
-                        background: "rgba(59, 130, 246, 0.2)",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        marginBottom: "16px"
-                      }}>
-                        <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px 0" }}>
-                          ⏰ 다시 응시 가능:
-                        </p>
-                        <p style={{ fontSize: "16px", color: "#60a5fa", fontWeight: "bold", margin: "0" }}>
-                          내일 자정 (약 {mockExamNextAvailableTime})
-                        </p>
-                      </div>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0" }}>
-                        💡 팁: 매일 같은 시간에 모의시험을 풀면 시험 감각을 유지할 수 있습니다!
+                      <p style={{ fontSize: "14px", color: "#cbd5e1", margin: "0", lineHeight: "1.6" }}>
+                        {nextUtcDate} 자정(UTC 00:00)에 다시 응시할 수 있습니다
                       </p>
                     </div>
                   </div>
@@ -3091,16 +3091,16 @@ function App() {
                               [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
                             }
 
-                            // 🚀 TEST: 1개만 로드 (빠른 테스트)
+                            // 🚀 TEST: 2개만 로드 (빠른 테스트)
                             // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
-                            for (let i = 0; i < 1; i++) {
+                            for (let i = 0; i < 2; i++) {
                               const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
                               const problem = await generateSAAProblem([], difficulty, locale);
                               problems.push(problem);
                             }
                             // 백그라운드에서 나머지 로드 (저장소에 보관)
                             localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
-                            localStorage.setItem("mockExamProblemsLoaded", "1"); // TEST: "1" → PROD: "3"
+                            localStorage.setItem("mockExamProblemsLoaded", "2"); // TEST: "2" → PROD: "3"
                           }
 
                           setMockExamProblems(problems);

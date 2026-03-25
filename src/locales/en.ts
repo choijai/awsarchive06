@@ -22,6 +22,8 @@ export const en: Strings = {
   mockExamTimeRemaining: "Time Remaining",
   mockExamScore: "Estimated Score",
   mockExamResult: "Mock Exam Results",
+  mockExamResultCards: "📊 Result Cards",
+  mockExamAnalysis: "📋 Problem Analysis",
   mockExamTotalScore: "Total Score",
   mockExamCorrect: "Correct",
   mockExamWrong: "Incorrect",

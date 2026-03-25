@@ -22,6 +22,8 @@ export const ja: Strings = {
   mockExamTimeRemaining: "残り時間",
   mockExamScore: "予想スコア",
   mockExamResult: "模擬試験の結果",
+  mockExamResultCards: "📊 結果カード",
+  mockExamAnalysis: "📋 問題別解析",
   mockExamTotalScore: "総得点",
   mockExamCorrect: "正解",
   mockExamWrong: "不正解",

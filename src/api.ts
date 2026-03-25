@@ -461,3 +461,26 @@ Output (JSON only):`;
     throw error;
   }
 }
+
+/**
+ * 모의고사 50문제를 한번의 API 호출로 생성 (병렬 처리)
+ */
+export async function generateMockExamBatch(
+  difficulties: Array<"medium" | "hard" | "challenge">,
+  locale: "ko" | "ja" | "en" = "ko"
+): Promise<Problem[]> {
+  // 병렬 처리: 모든 문제를 동시에 요청
+  const problemPromises = difficulties.map((difficulty) =>
+    generateSAAProblem([], difficulty, locale)
+  );
+
+  try {
+    const problems = await Promise.all(problemPromises);
+    return problems;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Mock exam batch generation failed: ${error.message}`);
+    }
+    throw error;
+  }
+}

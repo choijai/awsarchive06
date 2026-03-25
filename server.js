@@ -121,6 +121,24 @@ app.post('/api/notifyError', async (req, res) => {
   }
 });
 
+// Admin check (보안: 서버에서만 처리)
+app.post('/api/checkAdmin', (req, res) => {
+  try {
+    const { email } = req.body;
+    const adminEmail = process.env.VITE_ADMIN_EMAIL;
+
+    // 서버에서만 admin 이메일 비교
+    const isAdmin = email && adminEmail && email === adminEmail;
+
+    res.json({
+      isAdmin: isAdmin,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', port: PORT });

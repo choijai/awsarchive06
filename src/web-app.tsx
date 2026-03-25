@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus } from "./firebase";
+import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -112,10 +112,21 @@ function clearSessionTimeout() {
 }
 
 /**
- * 운영자 계정 확인 (환경변수 VITE_ADMIN_EMAIL)
+ * 운영자 계정 확인 (서버 API를 통해 검증)
  */
-function isAdminUser(email: string | null): boolean {
-  return email === ADMIN_EMAIL && ADMIN_EMAIL !== "";
+async function isAdminUser(email: string | null): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const response = await fetch('http://localhost:5000/api/checkAdmin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json();
+    return data.isAdmin || false;
+  } catch (error) {
+    return false;
+  }
 }
 
 /**
@@ -466,6 +477,7 @@ function App() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [dday, setDday] = useState("-");
   const [showExamDateModal, setShowExamDateModal] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -635,6 +647,17 @@ function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Check if user is admin
+  useEffect(() => {
+    if (userEmail) {
+      isAdminUser(userEmail).then(result => {
+        setIsAdmin(result);
+      });
+    } else {
+      setIsAdmin(false);
+    }
+  }, [userEmail]);
 
   // UTC 시간 실시간 업데이트 (분 단위)
   useEffect(() => {
@@ -1296,7 +1319,7 @@ function App() {
         {/* Posts tab - Hidden for now */}
         {/* <button className={`tab ${tab === "posts" ? "active" : ""}`} onClick={() => setTab("posts")}>📰 {t("tabPosts")}</button> */}
         {/* 관리자에게만 Admin 탭 표시 */}
-        {isAdminUser(userEmail) && (
+        {isAdmin && (
           <>
             <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
             <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>👥 {t("tabUsers")}</button>

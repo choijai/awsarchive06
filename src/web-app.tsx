@@ -548,6 +548,12 @@ function App() {
   const [postFormData, setPostFormData] = useState({ title: "", content: "", authorName: "", password: "", isPublic: true });
   const [postFormLoading, setPostFormLoading] = useState(false);
 
+  // 앱 초기화: 현재 있는 모든 PDF 삭제 (한 번만 실행)
+  useEffect(() => {
+    localStorage.removeItem("mockExamPdfCreatedAt");
+    console.log("✅ 앱 시작 시 모든 저장된 PDF 삭제 완료");
+  }, []);
+
   // 동적 메타데이터 업데이트 (다국어 SEO)
   useEffect(() => {
     const updateMetaTags = () => {
@@ -998,9 +1004,19 @@ function App() {
       const lastMockExamDate = localStorage.getItem("lastMockExamDate");
       const pdfCreatedAtStr = localStorage.getItem("mockExamPdfCreatedAt");
 
+      // PDF 24시간 자동 삭제 로직
       if (pdfCreatedAtStr) {
         const pdfCreatedAt = parseInt(pdfCreatedAtStr, 10);
-        setMockExamPdfCreatedAt(pdfCreatedAt);
+        const now = Date.now();
+        const elapsedHours = (now - pdfCreatedAt) / (1000 * 60 * 60);
+
+        // 24시간이 지났으면 자동 삭제
+        if (elapsedHours >= 24) {
+          localStorage.removeItem("mockExamPdfCreatedAt");
+          setMockExamPdfCreatedAt(null);
+        } else {
+          setMockExamPdfCreatedAt(pdfCreatedAt);
+        }
       }
 
       // 👨‍💼 Admin은 무제한 응시 가능
@@ -1123,7 +1139,7 @@ function App() {
 
         // 모든 문제 로드 완료 후 (새로 생성된 경우만 저장)
         if (newProblems.length === 50 && allProblems.length < 50) {
-          await saveTodayMockExamProblems(newProblems);
+          await saveTodayMockExamProblems(newProblems, locale);
           localStorage.removeItem("mockExamDifficulties");
           localStorage.removeItem("mockExamProblemsCount");
           localStorage.removeItem("mockExamAllProblems");
@@ -1136,7 +1152,7 @@ function App() {
         setMockExamIsLoading(false);
       }
     })();
-  }, [mockExamRunning]);
+  }, [mockExamRunning, locale]);
 
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {
@@ -1535,7 +1551,7 @@ function App() {
                   onClick={handleGenerateProblem}
                   title={!isAdmin && dailyCount >= getDailyLimit() ? getQuotaMessage(userStatus, getDailyLimit(), dailyCount) : ""}>
                   {loading && <span className="loading-icon">●●●</span>}
-                  {loading ? t("btnGenerating") : t("btnGenerate")} ({slots.length}{locale === "ja" ? "個" : ""})
+                  {loading ? t("btnGenerating") : t("btnGenerate")}
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
                     {isAdmin ? "관리자" : `${dailyCount}/${getDailyLimit()}`}
@@ -3067,40 +3083,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* 로딩 스피너 - 첫 문제 로드 시 표시 */}
-                    {mockExamIsLoading && mockExamProblems.length < 50 && (
-                      <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "40px 20px",
-                        background: "rgba(30, 41, 59, 0.5)",
-                        borderRadius: "8px",
-                        border: "1px dashed rgba(59, 130, 246, 0.3)"
-                      }}>
-                        <div style={{
-                          fontSize: "48px",
-                          marginBottom: "16px",
-                          animation: "spin 1s linear infinite"
-                        }}>
-                          ⚙️
-                        </div>
-                        <div style={{ fontSize: "14px", color: "#94a3b8", marginBottom: "8px" }}>
-                          문제를 준비하는 중입니다...
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>
-                          {mockExamProblems.length} / 50 문제 로드됨
-                        </div>
-                        <style>{`
-                          @keyframes spin {
-                            from { transform: rotate(0deg); }
-                            to { transform: rotate(360deg); }
-                          }
-                        `}</style>
-                      </div>
-                    )}
-
                     {/* 문제 표시 영역 (status 탭과 동일한 스타일) */}
                     {mockExamProblems[mockExamCurrentIndex] && (
                       <div style={{
@@ -3409,7 +3391,7 @@ function App() {
                               return;
                             }
 
-                            let problems = await getTodayMockExamProblems();
+                            let problems = await getTodayMockExamProblems(locale);
                             if (!problems) {
                               problems = [];
                               // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
@@ -3429,7 +3411,7 @@ function App() {
                                 const problem = await generateSAAProblem([], difficulty, locale);
                                 problems.push(problem);
                               }
-                              await saveTodayMockExamProblems(problems);
+                              await saveTodayMockExamProblems(problems, locale);
                             }
                             setMockExamProblems(problems);
                           } catch (err) {
@@ -3463,8 +3445,8 @@ function App() {
                           try {
                             console.log("시험 시작하기 - UTC 기준 오늘 문제 확인 중...");
 
-                            // 1단계: Firestore에서 오늘의 UTC 기준 문제 조회
-                            const existingProblems = await getTodayMockExamProblems();
+                            // 1단계: Firestore에서 오늘의 UTC 기준 문제 조회 (언어별)
+                            const existingProblems = await getTodayMockExamProblems(locale);
                             let allProblems = existingProblems;
                             let difficulties: string[] = [];
 

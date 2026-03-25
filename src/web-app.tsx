@@ -3999,6 +3999,19 @@ function App() {
                     marginBottom: "12px"
                   }} />
 
+                {isSignUp && (
+                  <input type="text"
+                    id="loginName"
+                    placeholder="이름 (예: 김철수)"
+                    required
+                    style={{
+                      width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px",
+                      color: "#cbd5e1", fontSize: "14px", boxSizing: "border-box",
+                      marginBottom: "12px"
+                    }} />
+                )}
+
                 <button type="submit"
                   disabled={loginLoading}
                   style={{

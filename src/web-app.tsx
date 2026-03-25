@@ -3216,7 +3216,7 @@ function App() {
                       </button>
                     )}
 
-                    {userStatus === "paid" && (
+                    {(userStatus === "paid" || isAdminUser(userEmail)) && (
                       <button
                         onClick={async () => {
                           setLoading(true);

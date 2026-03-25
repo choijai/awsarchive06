@@ -3188,11 +3188,24 @@ function App() {
                       </p>
                     </div>
 
-                    {isAdminUser(userEmail) && (
+                    {isAdmin && (
                       <button
                         onClick={async () => {
                           setLoading(true);
                           try {
+                            // 서버에서 admin 재검증
+                            const adminCheck = await fetch('http://localhost:5000/api/checkAdmin', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: userEmail })
+                            });
+                            const adminData = await adminCheck.json();
+
+                            if (!adminData.isAdmin) {
+                              setError("관리자만 접근 가능합니다");
+                              return;
+                            }
+
                             let problems = await getTodayMockExamProblems();
                             if (!problems) {
                               problems = [];

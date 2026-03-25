@@ -2803,14 +2803,14 @@ function App() {
                       </button>
                       <button
                         onClick={() => setMockExamCurrentIndex(Math.min(mockExamProblems.length - 1, mockExamCurrentIndex + 1))}
-                        disabled={mockExamCurrentIndex === mockExamProblems.length - 1}
+                        disabled={mockExamCurrentIndex >= mockExamProblems.length - 1}
                         style={{
                           padding: "8px 16px",
-                          background: mockExamCurrentIndex === mockExamProblems.length - 1 ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.2)",
+                          background: mockExamCurrentIndex >= mockExamProblems.length - 1 ? "rgba(100, 116, 139, 0.3)" : "rgba(59, 130, 246, 0.2)",
                           border: "1px solid rgba(59, 130, 246, 0.3)",
                           borderRadius: "6px",
-                          color: mockExamCurrentIndex === mockExamProblems.length - 1 ? "#64748b" : "#60a5fa",
-                          cursor: mockExamCurrentIndex === mockExamProblems.length - 1 ? "not-allowed" : "pointer",
+                          color: mockExamCurrentIndex >= mockExamProblems.length - 1 ? "#64748b" : "#60a5fa",
+                          cursor: mockExamCurrentIndex >= mockExamProblems.length - 1 ? "not-allowed" : "pointer",
                           fontSize: "12px"
                         }}
                       >

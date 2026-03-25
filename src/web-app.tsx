@@ -1122,6 +1122,8 @@ function App() {
           };
           setMockExamResults(results);
           setMockExamRunning(false);
+          // ✅ 시험 종료: 고정된 언어 정보 제거
+          localStorage.removeItem("mockExamStartedLocale");
 
           // 👨‍💼 Admin은 일일 제한 없음 (lastMockExamDate 저장 안 함)
           // 일반 사용자는 오늘 날짜 저장 (일일 제한)
@@ -1150,6 +1152,8 @@ function App() {
       try {
         const storedDifficulties = localStorage.getItem("mockExamDifficulties");
         const storedAllProblems = localStorage.getItem("mockExamAllProblems");
+        // ✅ 시험 시작 시 고정된 언어 사용 (시험 중 언어 변경 방지)
+        const mockExamLocale = localStorage.getItem("mockExamStartedLocale") || "ko";
 
         if (!storedDifficulties || !storedAllProblems) return;
 
@@ -1181,7 +1185,7 @@ function App() {
               } else {
                 // 추가 생성 (필요시)
                 const difficulty = difficulties[startIdx + i] as "medium" | "hard" | "challenge";
-                const problem = await generateSAAProblem([], difficulty, locale);
+                const problem = await generateSAAProblem([], difficulty, mockExamLocale);
                 newProblems.push(problem);
               }
             }
@@ -1191,8 +1195,8 @@ function App() {
             setMockExamAnswers(new Array(50).fill(null));
             localStorage.setItem("mockExamProblemsCount", newProblems.length.toString());
 
-            // ✅ 점진적 Firebase 저장 (배치마다)
-            await updateMockExamProblemsProgressively(newProblems, locale);
+            // ✅ 점진적 Firebase 저장 (배치마다, 고정된 언어 사용)
+            await updateMockExamProblemsProgressively(newProblems, mockExamLocale);
           }
         }
 
@@ -1210,7 +1214,7 @@ function App() {
         setMockExamIsLoading(false);
       }
     })();
-  }, [mockExamRunning, locale]);
+  }, [mockExamRunning]); // ✅ locale 제거: 시험 중 언어 변경 방지 (고정된 mockExamStartedLocale 사용)
 
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {
@@ -2432,6 +2436,8 @@ function App() {
                           console.error("문제 생성 실패:", error);
                           alert("문제 생성 실패: " + (error instanceof Error ? error.message : String(error)));
                           setMockExamRunning(false);
+                          // ✅ 에러 발생 시 시험 정보 정리
+                          localStorage.removeItem("mockExamStartedLocale");
                         }
                       }}
                       style={{
@@ -3371,6 +3377,8 @@ function App() {
                           };
                           setMockExamResults(results);
                           setMockExamRunning(false);
+                          // ✅ 시험 종료: 고정된 언어 정보 제거
+                          localStorage.removeItem("mockExamStartedLocale");
 
                           // 오늘 날짜 저장 (일일 제한)
                           const today = new Date().toISOString().split("T")[0];
@@ -3679,6 +3687,8 @@ function App() {
                             localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
                             localStorage.setItem("mockExamProblemsCount", "1");
                             localStorage.setItem("mockExamAllProblems", JSON.stringify(allProblems));
+                            // ✅ 시험 시작 시 언어 고정 (시험 중 언어 변경 방지)
+                            localStorage.setItem("mockExamStartedLocale", locale);
 
                             // ✅ 오늘 시험 시작했음을 표시 (하루 한 번 제한용, 테스트/운영자 제외)
                             const today = new Date().toISOString().split('T')[0];

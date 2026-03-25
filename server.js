@@ -56,6 +56,60 @@ async function handleClaudeProxy(req, res) {
 app.post('/api/claude', handleClaudeProxy);
 app.post('/api/claudeProxy', handleClaudeProxy);
 
+// ✅ Gemini API 프록시 핸들러 (보안: API 키는 서버에만 있음)
+async function handleGeminiProxy(req, res) {
+  try {
+    const { prompt, maxTokens = 2000 } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.error('❌ GEMINI_API_KEY not found in environment');
+      return res.status(400).json({ error: { message: 'GEMINI_API_KEY not found' } });
+    }
+
+    console.log('📤 Sending request to Gemini API');
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: 1,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('❌ Gemini API Error:', error);
+      return res.status(response.status).json({ error });
+    }
+
+    const data = await response.json();
+    console.log('✅ Gemini API Success');
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Gemini Proxy error:', error);
+    res.status(500).json({ error: { message: error.message } });
+  }
+}
+
+// Gemini API 엔드포인트
+app.post('/api/gemini', handleGeminiProxy);
+
 // Payment Intent Handler (Stripe)
 app.post('/api/createPaymentIntent', async (req, res) => {
   try {

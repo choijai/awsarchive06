@@ -35,48 +35,27 @@ function selectServicesFromAnalysis(difficulty: string): string[] {
   return services.length > 0 ? services : ["EC2"];
 }
 
-// Gemini API 호출 함수 (재시도 로직 포함)
+// ✅ Gemini API 호출 함수 (서버 프록시 사용 - 보안)
 async function callGeminiAPI(
   prompt: string,
   maxTokens: number,
   locale: "ko" | "ja" | "en" = "ko",
   retries: number = 3
 ): Promise<string> {
-  const env = (import.meta as any).env;
-  const geminiKey = (globalThis as any).__VITE_GEMINI_API_KEY__ || env.VITE_GEMINI_API_KEY;
-
-  if (!geminiKey) {
-    throw new Error(
-      locale === "en" ? "Gemini API key is not configured." :
-      locale === "ja" ? "Gemini APIキーが設定されていません。" :
-      "Gemini API 키가 설정되지 않았습니다."
-    );
-  }
-
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent", {
+      // ✅ 서버 프록시로 호출 (API 키는 서버에만 있음)
+      const backendUrl = (import.meta as any).env.VITE_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/gemini`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": geminiKey,
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: maxTokens,
-            temperature: 1,
-          },
+          prompt,
+          maxTokens,
         }),
       });
 

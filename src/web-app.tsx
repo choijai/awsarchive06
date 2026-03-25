@@ -3142,11 +3142,21 @@ function App() {
                         onClick={async () => {
                           setLoading(true);
                           try {
+                            console.log("시험 시작하기 - 문제 로드 시작...");
+
+                            // 캐시 삭제 - 항상 새로 생성
+                            localStorage.removeItem("mockExamProblems");
+                            localStorage.removeItem("mockExamProblemsLoaded");
+                            localStorage.removeItem("mockExamDifficulties");
+                            console.log("캐시 삭제 완료");
+
                             // 1단계: 오늘의 모의시험 문제 조회
                             let problems = await getTodayMockExamProblems();
+                            console.log("캐시에서 불러온 문제:", problems ? problems.length + "개" : "없음");
 
                             // 2단계: 없으면 새로 생성 (점진적 로딩)
                             if (!problems) {
+                              console.log("새로운 문제 생성 중...");
                               problems = [];
                               // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
                               const difficulties = [
@@ -3163,8 +3173,10 @@ function App() {
                               // 🚀 TEST: 2개만 로드 (빠른 테스트)
                               // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
                               for (let i = 0; i < 2; i++) {
+                                console.log(`문제 ${i + 1} 생성 중...`);
                                 const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
                                 const problem = await generateSAAProblem([], difficulty, locale);
+                                console.log(`문제 ${i + 1} 생성 완료`);
                                 problems.push(problem);
                               }
                               // 백그라운드에서 나머지 로드 (저장소에 보관)
@@ -3172,13 +3184,16 @@ function App() {
                               localStorage.setItem("mockExamProblemsLoaded", "2"); // TEST: "2" → PROD: "3"
                             }
 
+                            console.log("총 문제 수:", problems.length);
                             setMockExamProblems(problems);
                             setMockExamAnswers(new Array(50).fill(null));
                             setMockExamStartTime(Date.now());
                             setMockExamTimeRemaining(130 * 60);
                             setMockExamCurrentIndex(0);
                             setMockExamRunning(true);
+                            console.log("시험 시작됨");
                           } catch (err) {
+                            console.error("시험 생성 에러:", err);
                             setError("모의시험 생성 실패");
                           } finally {
                             setLoading(false);

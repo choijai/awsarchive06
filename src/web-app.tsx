@@ -488,6 +488,7 @@ function App() {
     timeSpent: number;
   } | null>(null);
   const [mockExamTimeRemaining, setMockExamTimeRemaining] = useState(130 * 60); // 130분 (초)
+  const [mockExamIsLoading, setMockExamIsLoading] = useState(false); // 문제 로딩 중 표시
   const [mockExamAlreadyTaken, setMockExamAlreadyTaken] = useState(false); // 오늘 이미 본 여부
   const [mockExamNextAvailableTime, setMockExamNextAvailableTime] = useState<string>(""); // 다시 볼 수 있는 시간
   const [mockExamPdfCreatedAt, setMockExamPdfCreatedAt] = useState<number | null>(null); // PDF 생성 시간
@@ -1070,28 +1071,24 @@ function App() {
     return () => clearInterval(timer);
   }, [mockExamRunning, mockExamProblems, mockExamAnswers, mockExamStartTime]);
 
-  // 📊 모의시험 백그라운드 점진적 로딩 (3 → 10 → 20 → 50)
-  // TEST: 이 useEffect를 임시 비활성화했습니다 (API 호출 중지)
-  // PRODUCTION: 아래 주석을 제거하고, 위의 주석된 부분을 활성화하세요
-  /*
+  // 📊 모의시험 백그라운드 점진적 로딩 (1 → 4 → 9 → 19 → 50)
   useEffect(() => {
     if (!mockExamRunning || mockExamProblems.length >= 50) return;
 
     (async () => {
       try {
         const storedDifficulties = localStorage.getItem("mockExamDifficulties");
-        const loadedCount = parseInt(localStorage.getItem("mockExamProblemsLoaded") || "3", 10);
-
         if (!storedDifficulties) return;
 
         const difficulties = JSON.parse(storedDifficulties);
         let newProblems = [...mockExamProblems];
 
-        // 점진적 로딩 패턴: 3 → 7 → 10 → 20 → 30 → 50
+        // 점진적 로딩 패턴: 1 → 4 → 9 → 19 → 50
         const loadBatches = [
-          { count: 7, target: 10, delay: 1000 },   // 3초 후 7개 추가 (총 10개)
-          { count: 10, target: 20, delay: 3000 },  // 6초 후 10개 추가 (총 20개)
-          { count: 30, target: 50, delay: 5000 }   // 9초 후 30개 추가 (총 50개)
+          { count: 3, target: 4, delay: 1000 },     // 1초 후 3개 추가 (총 4개)
+          { count: 5, target: 9, delay: 1000 },     // 2초 후 5개 추가 (총 9개)
+          { count: 10, target: 19, delay: 1000 },   // 3초 후 10개 추가 (총 19개)
+          { count: 31, target: 50, delay: 1000 }    // 4초 후 31개 추가 (총 50개)
         ];
 
         for (const batch of loadBatches) {
@@ -1111,23 +1108,26 @@ function App() {
 
             // 상태 업데이트
             setMockExamProblems(newProblems);
-            setMockExamAnswers(new Array(newProblems.length).fill(null));
-            localStorage.setItem("mockExamProblemsLoaded", newProblems.length.toString());
+            setMockExamAnswers(new Array(50).fill(null));
+            localStorage.setItem("mockExamProblemsCount", newProblems.length.toString());
           }
         }
 
-        // 모든 문제 로드 완료 후 Firestore에 저장
+        // 모든 문제 로드 완료 후
         if (newProblems.length === 50) {
           await saveTodayMockExamProblems(newProblems);
           localStorage.removeItem("mockExamDifficulties");
-          localStorage.removeItem("mockExamProblemsLoaded");
+          localStorage.removeItem("mockExamProblemsCount");
         }
+
+        // 로딩 완료
+        setMockExamIsLoading(false);
       } catch (error) {
-        // 백그라운드 로딩 에러는 무시 (이미 3개는 로드됨)
+        // 백그라운드 로딩 에러는 무시
+        setMockExamIsLoading(false);
       }
     })();
   }, [mockExamRunning]);
-  */
 
   // 게시글 탭에서 게시글 목록 로드
   useEffect(() => {
@@ -3043,6 +3043,11 @@ function App() {
                     }}>
                       <div style={{ fontSize: "14px", color: "#e2e8f0" }}>
                         문제 {mockExamCurrentIndex + 1} / {mockExamProblems.length}
+                        {mockExamIsLoading && (
+                          <span style={{ marginLeft: "8px", color: "#60a5fa", fontSize: "12px" }}>
+                            🔄 문제 로딩 중...
+                          </span>
+                        )}
                       </div>
                       <div style={{
                         fontSize: "14px",
@@ -3052,6 +3057,40 @@ function App() {
                         ⏱️ {Math.floor(mockExamTimeRemaining / 60)}분 {mockExamTimeRemaining % 60}초
                       </div>
                     </div>
+
+                    {/* 로딩 스피너 - 첫 문제 로드 시 표시 */}
+                    {mockExamIsLoading && mockExamProblems.length < 50 && (
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "40px 20px",
+                        background: "rgba(30, 41, 59, 0.5)",
+                        borderRadius: "8px",
+                        border: "1px dashed rgba(59, 130, 246, 0.3)"
+                      }}>
+                        <div style={{
+                          fontSize: "48px",
+                          marginBottom: "16px",
+                          animation: "spin 1s linear infinite"
+                        }}>
+                          ⚙️
+                        </div>
+                        <div style={{ fontSize: "14px", color: "#94a3b8", marginBottom: "8px" }}>
+                          문제를 준비하는 중입니다...
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b" }}>
+                          {mockExamProblems.length} / 50 문제 로드됨
+                        </div>
+                        <style>{`
+                          @keyframes spin {
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
+                          }
+                        `}</style>
+                      </div>
+                    )}
 
                     {/* 문제 표시 영역 (status 탭과 동일한 스타일) */}
                     {mockExamProblems[mockExamCurrentIndex] && (
@@ -3397,12 +3436,9 @@ function App() {
                       <button
                         onClick={async () => {
                           setLoading(true);
+                          setMockExamIsLoading(true);
                           try {
-                            console.log("시험 시작하기 - 문제 로드 시작...");
-
-                            // TEST: 항상 새로 생성 (Firestore와 localStorage 캐시 무시)
-                            console.log("🚀 TEST 모드: 캐시 무시하고 새로 생성");
-                            let problems = [];
+                            console.log("시험 시작하기 - 첫 문제 로드 중...");
 
                             // 난이도 분배: 보통 20개, 어려움 20개, 챌린지 10개
                             const difficulties = [
@@ -3416,24 +3452,24 @@ function App() {
                               [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
                             }
 
-                            // 🚀 TEST: 2개만 로드 (빠른 테스트)
-                            // PRODUCTION: 아래 코드를 3으로 변경하고, localStorage 설정도 "3"으로 변경
-                            for (let i = 0; i < 2; i++) {
-                              console.log(`문제 ${i + 1} 생성 중...`);
-                              const difficulty = difficulties[i] as "medium" | "hard" | "challenge";
-                              const problem = await generateSAAProblem([], difficulty, locale);
-                              console.log(`문제 ${i + 1} 생성 완료:`, problem.question.substring(0, 50) + "...");
-                              problems.push(problem);
-                            }
+                            // 첫 1문제만 로드
+                            let problems = [];
+                            const difficulty = difficulties[0] as "medium" | "hard" | "challenge";
+                            const problem = await generateSAAProblem([], difficulty, locale);
+                            problems.push(problem);
 
-                            console.log("총 문제 수:", problems.length);
                             setMockExamProblems(problems);
                             setMockExamAnswers(new Array(50).fill(null));
                             setMockExamStartTime(Date.now());
                             setMockExamTimeRemaining(130 * 60);
                             setMockExamCurrentIndex(0);
                             setMockExamRunning(true);
-                            console.log("시험 시작됨");
+
+                            // 난이도 배열을 localStorage에 저장 (백그라운드 로딩용)
+                            localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
+                            localStorage.setItem("mockExamProblemsCount", "1");
+
+                            console.log("첫 문제 로드 완료, 백그라운드 로딩 시작");
                           } catch (err) {
                             console.error("시험 생성 에러:", err);
                             setError("모의시험 생성 실패");

@@ -478,6 +478,7 @@ function App() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [dday, setDday] = useState("-");
   const [showExamDateModal, setShowExamDateModal] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -658,6 +659,24 @@ function App() {
       setIsAdmin(false);
     }
   }, [userEmail]);
+
+  // Close account menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const accountMenu = document.querySelector('[data-account-menu]');
+      if (accountMenu && !accountMenu.contains(e.target as Node)) {
+        setShowAccountMenu(false);
+      }
+    };
+
+    if (showAccountMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showAccountMenu]);
 
   // UTC 시간 실시간 업데이트 (분 단위)
   useEffect(() => {
@@ -1259,33 +1278,115 @@ function App() {
           </div>
 
           {/* 사용자 상태 및 일일 카운트 / 로그인 */}
-          <div style={{
+          <div
+            data-account-menu
+            style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
             fontSize: "10px", color: "#94a3b8", marginLeft: "16px", padding: "0 12px",
-            borderLeft: "1px solid rgba(255,255,255,0.1)"
+            borderLeft: "1px solid rgba(255,255,255,0.1)",
+            position: "relative"
           }}>
             {userEmail ? (
               <>
-                <div style={{ fontSize: "12px", color: "#cbd5e1", textAlign: "center", fontWeight: "bold" }}>
+                <button
+                  onClick={() => setShowAccountMenu(!showAccountMenu)}
+                  style={{
+                    fontSize: "12px", color: "#cbd5e1", textAlign: "center", fontWeight: "bold",
+                    background: "none", border: "none", cursor: "pointer", padding: "4px 8px",
+                    borderRadius: "4px", transition: "all 0.2s",
+                    backgroundColor: showAccountMenu ? "rgba(59,130,246,0.2)" : "transparent"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!showAccountMenu) {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(59,130,246,0.1)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showAccountMenu) {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                    }
+                  }}
+                >
                   👤 {userEmail.split("@")[0]}
-                </div>
-                <button onClick={async () => {
-                  clearSessionTimeout();
-                  setUserEmail(null);
-                  setUserStatusLocal("guest");
-                  localStorage.removeItem("userStatus");
-                  try {
-                    await signOut();
-                  } catch (error) {
-                    console.error("Sign out error:", error);
-                  }
-                }} style={{
-                  fontSize: "10px", padding: "4px 8px", background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8",
-                  borderRadius: "4px", cursor: "pointer", marginTop: "4px"
-                }}>
-                  {t("logoutBtn")}
                 </button>
+
+                {/* 드롭다운 메뉴 */}
+                {showAccountMenu && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    marginTop: "8px",
+                    background: "#0f172a",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "8px",
+                    minWidth: "160px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                    zIndex: 100
+                  }}>
+                    <button
+                      onClick={async () => {
+                        clearSessionTimeout();
+                        setUserEmail(null);
+                        setUserStatusLocal("guest");
+                        setIsAdmin(false);
+                        localStorage.removeItem("userStatus");
+                        setShowAccountMenu(false);
+                        try {
+                          await signOut();
+                        } catch (error) {
+                          console.error("Sign out error:", error);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "transparent",
+                        border: "none",
+                        color: "#cbd5e1",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        borderBottom: "1px solid rgba(255,255,255,0.1)"
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(239,68,68,0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                      }}
+                    >
+                      🚪 {t("logoutBtn")}
+                    </button>
+
+                    {userStatus === "paid" && (
+                      <button
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          setShowPaymentModal(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          background: "transparent",
+                          border: "none",
+                          color: "#cbd5e1",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                          textAlign: "left"
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(168,85,247,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                        }}
+                      >
+                        ❌ 구독 취소
+                      </button>
+                    )}
+                  </div>
+                )}
               </>
             ) : isAuthChecked ? (
               <button onClick={() => setShowLoginModal(true)} style={{

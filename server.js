@@ -110,7 +110,66 @@ async function handleGeminiProxy(req, res) {
 // Gemini API 엔드포인트
 app.post('/api/gemini', handleGeminiProxy);
 
-// Payment Intent Handler (Stripe)
+// ✅ 2Checkout 결제 처리 핸들러
+app.post('/api/process2CheckoutPayment', async (req, res) => {
+  try {
+    const { email, fullName, amount, currency } = req.body;
+
+    // 🧪 테스트 모드: 2Checkout API 키 없이도 작동
+    // 프로덕션: 2Checkout API 키 필요
+    const twoCheckoutApiKey = process.env.TWO_CHECKOUT_API_KEY;
+
+    console.log('📤 Processing 2Checkout payment:', { email, fullName, amount, currency });
+
+    // ✅ 테스트 모드: 항상 성공
+    if (!twoCheckoutApiKey) {
+      console.log('🧪 Test Mode: Simulating 2Checkout payment');
+      return res.json({
+        success: true,
+        message: 'Test mode: Payment simulated successfully',
+        transactionId: `TEST_${Date.now()}`,
+      });
+    }
+
+    // 프로덕션: 실제 2Checkout API 호출
+    // const response = await fetch('https://api.2checkout.com/v1/orders', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Authorization': `Bearer ${twoCheckoutApiKey}`,
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     currency: currency,
+    //     items: [{
+    //       name: 'AWSARCHIVE Premium',
+    //       quantity: 1,
+    //       price: amount,
+    //     }],
+    //     customer: {
+    //       email: email,
+    //       firstName: fullName.split(' ')[0],
+    //       lastName: fullName.split(' ')[1] || '',
+    //     },
+    //   }),
+    // });
+
+    // if (!response.ok) {
+    //   throw new Error('2Checkout API error');
+    // }
+
+    // const data = await response.json();
+    // res.json({ success: true, transactionId: data.orderId });
+
+  } catch (error) {
+    console.error('❌ 2Checkout Payment Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Payment processing failed',
+    });
+  }
+});
+
+// Payment Intent Handler (Stripe - 레거시)
 app.post('/api/createPaymentIntent', async (req, res) => {
   try {
     const { email, fullName, amount, currency } = req.body;

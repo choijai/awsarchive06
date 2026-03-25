@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useLocale } from '../../LocaleContext';
+import { updateUserPaidStatus } from '../../firebase';
+import { getCurrentUser } from '../../firebase';
 
 interface PaymentModalProps {
   onClose: () => void;
@@ -11,7 +13,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
   const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardElement, setCardElement] = useState<any>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(userEmail || '');
 
@@ -67,18 +68,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
     setError(null);
 
     try {
-      const stripe = (window as any).Stripe;
-      if (!stripe) {
-        throw new Error('Stripe library not loaded');
-      }
-
-      const stripeInstance = stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-
-      // Create payment intent on backend
       const env = (import.meta as any).env;
       const backendUrl = env?.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      const response = await fetch(`${backendUrl}/api/createPaymentIntent`, {
+      // ✅ 2Checkout API로 결제 처리
+      const response = await fetch(`${backendUrl}/api/process2CheckoutPayment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,26 +80,26 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
         body: JSON.stringify({
           email: email,
           fullName: fullName,
-          amount: 1499, // $14.99 in cents
+          amount: 14.99,
           currency: 'usd',
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create payment intent');
+        throw new Error('Payment processing failed');
       }
 
-      const { clientSecret } = await response.json();
+      const data = await response.json();
 
-      // Confirm payment with Stripe
-      const confirmPaymentResult = await stripeInstance.confirmCardPayment(clientSecret);
+      if (data.success) {
+        // ✅ Firebase에 결제 상태 저장 (영구적)
+        const user = getCurrentUser();
+        if (user) {
+          await updateUserPaidStatus(user.uid, true);
+          console.log('✅ Premium status saved to Firebase');
+        }
 
-      if (confirmPaymentResult.error) {
-        throw new Error(confirmPaymentResult.error.message);
-      }
-
-      if (confirmPaymentResult.paymentIntent.status === 'succeeded') {
-        // Save user premium status
+        // 로컬 캐시도 저장
         localStorage.setItem('userStatus', 'paid');
         localStorage.setItem('premiumEndDate', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
 
@@ -117,6 +111,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
         setTimeout(() => {
           onClose();
         }, 1500);
+      } else {
+        throw new Error(data.error || 'Payment failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

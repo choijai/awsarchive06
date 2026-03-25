@@ -1810,13 +1810,13 @@ function App() {
                                   <h3 style="margin: 0 0 10px 0; color: #333;">Q${idx + 1}. ${problem.question}</h3>
 
                                   <!-- 보기 -->
-                                  <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                                  <div style="margin: 10px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.6;">
                                     <strong>보기:</strong><br/>
-                                    <div style="margin-left: 10px; line-height: 1.8;">
-                                      A) ${problem.options.A}<br/>
-                                      B) ${problem.options.B}<br/>
-                                      C) ${problem.options.C}<br/>
-                                      D) ${problem.options.D}
+                                    <div style="margin-left: 10px;">
+                                      <div style="margin: 3px 0;">A) ${problem.options.A}</div>
+                                      <div style="margin: 3px 0;">B) ${problem.options.B}</div>
+                                      <div style="margin: 3px 0;">C) ${problem.options.C}</div>
+                                      <div style="margin: 3px 0;">D) ${problem.options.D}</div>
                                     </div>
                                   </div>
 
@@ -1830,45 +1830,45 @@ function App() {
 
                                   <!-- 핵심 목표 -->
                                   ${problem.goal ? `
-                                    <div style="margin: 10px 0; padding: 8px; background: #f3e5f5; border-radius: 4px;">
+                                    <div style="margin: 8px 0; padding: 6px; background: #f3e5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
                                       <strong>🎯 핵심 목표:</strong><br/>
                                       ${problem.goal}
                                     </div>
                                   ` : ''}
 
                                   <!-- 정답과 설명 -->
-                                  <div style="margin: 10px 0;">
+                                  <div style="margin: 8px 0; page-break-inside: avoid;">
                                     <strong>정답: ${problem.answer}</strong><br/>
-                                    <strong>설명:</strong>
-                                    <p style="margin: 5px 0; padding: 8px; background: #e3f2fd; border-radius: 4px;">${problem.explanation.correct}</p>
+                                    <strong style="font-size: 13px;">설명:</strong>
+                                    <p style="margin: 4px 0; padding: 6px; background: #e3f2fd; border-radius: 4px; font-size: 13px; line-height: 1.5;">${problem.explanation.correct}</p>
                                   </div>
 
                                   <!-- 함정 설명 -->
                                   ${userAnswer && userAnswer !== problem.answer && problem.explanation[`trap_${userAnswer}`] ? `
-                                    <div style="margin: 10px 0; padding: 8px; background: #fff3e0; border-radius: 4px;">
+                                    <div style="margin: 8px 0; padding: 6px; background: #fff3e0; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
                                       <strong>⚠️ 함정:</strong> ${problem.explanation[`trap_${userAnswer}`]}
                                     </div>
                                   ` : ''}
 
                                   <!-- 핵심 키워드 -->
                                   ${problem.keywords && problem.keywords.length > 0 ? `
-                                    <div style="margin: 10px 0;">
+                                    <div style="margin: 8px 0; page-break-inside: avoid; font-size: 13px;">
                                       <strong>📌 핵심 키워드:</strong><br/>
-                                      ${problem.keywords.map(kw => `<span style="display: inline-block; margin: 3px 5px 3px 0; padding: 4px 8px; background: #bbdefb; border-radius: 12px; font-size: 12px;"><strong>${kw}</strong></span>`).join('')}
+                                      ${problem.keywords.map(kw => `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 3px 6px; background: #bbdefb; border-radius: 12px; font-size: 12px;"><strong>${kw}</strong></span>`).join('')}
                                     </div>
                                   ` : ''}
 
                                   <!-- 쉽게설명 -->
                                   ${problem.easyMode ? `
-                                    <div style="margin: 10px 0; padding: 10px; background: #fff9c4; border-radius: 4px;">
+                                    <div style="margin: 8px 0; padding: 8px; background: #fff9c4; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
                                       <strong style="color: #f57f17;">👨‍🏫 쉽게설명:</strong><br/>
-                                      <p style="margin: 8px 0;">${problem.easyMode.explanation}</p>
-                                      <strong>각 보기 설명:</strong>
-                                      <div style="margin-left: 10px; line-height: 1.8;">
-                                        <strong style="color: ${problem.answer === 'A' ? '#4caf50' : '#666'};">A.</strong> ${problem.easyMode.A}<br/>
-                                        <strong style="color: ${problem.answer === 'B' ? '#4caf50' : '#666'};">B.</strong> ${problem.easyMode.B}<br/>
-                                        <strong style="color: ${problem.answer === 'C' ? '#4caf50' : '#666'};">C.</strong> ${problem.easyMode.C}<br/>
-                                        <strong style="color: ${problem.answer === 'D' ? '#4caf50' : '#666'};">D.</strong> ${problem.easyMode.D}
+                                      <p style="margin: 4px 0;">${problem.easyMode.explanation}</p>
+                                      <strong style="font-size: 12px;">각 보기 설명:</strong>
+                                      <div style="margin-left: 10px; font-size: 12px;">
+                                        <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'A' ? '#4caf50' : '#666'};">A.</strong> ${problem.easyMode.A}</div>
+                                        <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'B' ? '#4caf50' : '#666'};">B.</strong> ${problem.easyMode.B}</div>
+                                        <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'C' ? '#4caf50' : '#666'};">C.</strong> ${problem.easyMode.C}</div>
+                                        <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'D' ? '#4caf50' : '#666'};">D.</strong> ${problem.easyMode.D}</div>
                                       </div>
                                     </div>
                                   ` : ''}

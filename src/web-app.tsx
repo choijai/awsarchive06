@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems } from "./firebase";
+import { ADMIN_EMAIL, ADMIN_UID, createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
@@ -456,7 +456,9 @@ function App() {
   } | null>(null);
 
   // 사용자 상태 및 일일 제한
-  const initialUserStatus = typeof window !== "undefined" ? localStorage.getItem("userStatus") as UserStatus || "guest" : "guest";
+  const initialUserStatus: UserStatus = typeof window !== "undefined"
+    ? (localStorage.getItem("userStatus") as UserStatus) || "guest"
+    : "guest";
   const [userStatus, setUserStatusLocal] = useState<UserStatus>(initialUserStatus);
   const [dailyCount, setDailyCount] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1215,10 +1217,16 @@ function App() {
                 <div style={{ fontSize: "12px", color: "#cbd5e1", textAlign: "center", fontWeight: "bold" }}>
                   👤 {userEmail.split("@")[0]}
                 </div>
-                <button onClick={() => {
+                <button onClick={async () => {
                   clearSessionTimeout();
                   setUserEmail(null);
                   setUserStatusLocal("guest");
+                  localStorage.removeItem("userStatus");
+                  try {
+                    await signOut();
+                  } catch (error) {
+                    console.error("Sign out error:", error);
+                  }
                 }} style={{
                   fontSize: "10px", padding: "4px 8px", background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8",

@@ -550,10 +550,20 @@ function App() {
   const [postFormData, setPostFormData] = useState({ title: "", content: "", authorName: "", password: "", isPublic: true });
   const [postFormLoading, setPostFormLoading] = useState(false);
 
-  // 앱 초기화: 현재 있는 모든 PDF 삭제 & 날짜 변경 시 플래그 초기화 (한 번만 실행)
+  // 앱 초기화: 만료된 PDF만 삭제 & 날짜 변경 시 플래그 초기화 (한 번만 실행)
   useEffect(() => {
-    localStorage.removeItem("mockExamPdfCreatedAt");
-    console.log("✅ 앱 시작 시 모든 저장된 PDF 삭제 완료");
+    // ✅ 만료된 PDF만 삭제 (24시간 이상 지난 경우)
+    const pdfCreatedAtStr = localStorage.getItem("mockExamPdfCreatedAt");
+    if (pdfCreatedAtStr) {
+      const pdfCreatedAt = parseInt(pdfCreatedAtStr);
+      const now = Date.now();
+      const hoursElapsed = (now - pdfCreatedAt) / (1000 * 60 * 60);
+
+      if (hoursElapsed >= 24) {
+        localStorage.removeItem("mockExamPdfCreatedAt");
+        console.log("✅ 만료된 PDF 삭제 완료");
+      }
+    }
 
     // ✅ 자정이 지나면 모의시험 하루 제한 플래그 초기화
     const today = new Date().toISOString().split('T')[0];

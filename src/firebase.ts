@@ -1140,3 +1140,51 @@ export async function updateMockExamProblemsProgressively(
     console.error("점진적 저장 실패:", error.message);
   }
 }
+
+/**
+ * 오래된 모의시험 문제 삭제 (7일 이상 경과)
+ * 매일 자동 정리하여 Firebase 저장 용량 절감
+ */
+export async function deleteOldMockExamProblems(): Promise<number> {
+  try {
+    const mockExamRef = collection(db, "mockExamProblems");
+    const snapshot = await getDocs(mockExamRef);
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    let deletedCount = 0;
+    const deletePromises: Promise<void>[] = [];
+
+    snapshot.forEach((doc) => {
+      const docId = doc.id;
+
+      // 문서 ID에서 날짜 추출 (format: YYYY-MM-DD 또는 YYYY-MM-DD_locale)
+      const dateMatch = docId.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const docDate = new Date(
+          parseInt(dateMatch[1]),
+          parseInt(dateMatch[2]) - 1,
+          parseInt(dateMatch[3])
+        );
+
+        // 7일 이상 경과한 문서 삭제
+        if (docDate < sevenDaysAgo) {
+          deletePromises.push(deleteDoc(doc.ref));
+          deletedCount++;
+          console.log(`🗑️ 삭제: ${docId} (${docDate.toISOString().split('T')[0]})`);
+        }
+      }
+    });
+
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+      console.log(`✅ 오래된 모의시험 문제 ${deletedCount}개 삭제 완료`);
+    }
+
+    return deletedCount;
+  } catch (error: any) {
+    console.error("오래된 문제 삭제 실패:", error.message);
+    return 0;
+  }
+}

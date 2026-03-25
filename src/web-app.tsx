@@ -2,11 +2,11 @@ import html2pdf from "html2pdf.js/dist/html2pdf.js";
 import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
-import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { createPost, deleteExpiredResults, deletePost, getAdminStats, getAllUsersForAdmin, getCurrentUser, getExamStartDate, getPostById, getPosts, getUserProblemSessions, getUserQuizStats, recordQuizResult, saveExamStartDate, signIn, signInWithGoogle, signOut, signUp, updateStreakInFirebase, uploadPDFToStorage, getTodayMockExamProblems, saveTodayMockExamProblems, onAuthStateChange, saveUserInfoToFirebase, getUserPaidStatus, updateUserPaidStatus, getAdminStatsSecure, getAllUsersForAdminSecure, getUserProblemSessionsSecure, updateMockExamProblemsProgressively } from "./firebase";
-import { useLocale } from "./LocaleContext";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
+import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
+import { createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
+import { useLocale } from "./LocaleContext";
 import "./styles.css";
 
 // ===== 입력값 검증 함수 =====
@@ -165,7 +165,6 @@ async function isAdminUser(email: string | null): Promise<boolean> {
 
 /**
  * 이메일 마스킹 (개인정보 보호)
- * 예: imjaichoipro@gmail.com → im****ipro@gmail.com
  */
 function maskEmail(email: string): string {
   const [name, domain] = email.split('@');
@@ -696,6 +695,20 @@ function App() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // 앱 시작 시 오래된 모의시험 문제 자동 정리
+  useEffect(() => {
+    (async () => {
+      try {
+        const deleted = await deleteOldMockExamProblems();
+        if (deleted > 0) {
+          console.log(`🧹 앱 시작: ${deleted}개 오래된 문제 정리 완료`);
+        }
+      } catch (error) {
+        console.error("오래된 문제 정리 실패:", error);
+      }
+    })();
   }, []);
 
   // Track visitors and load purchase count on mount

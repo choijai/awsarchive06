@@ -3567,11 +3567,16 @@ function App() {
                     {(userStatus === "paid" || isAdmin) && (
                       <button
                         onClick={async () => {
-                          // ✅ 오늘 시험을 이미 시작했는지 확인
+                          // ✅ 오늘 시험을 이미 시작했는지 확인 (테스트 사용자 & 운영자 제외)
+                          const paidTestEmails = ['imjaichoi@naver.com'];
+                          const adminEmails = ['imjaichoipro@gmail.com'];
+                          const isUnlimitedUser = paidTestEmails.includes(userEmail || '') || adminEmails.includes(userEmail || '') || isAdmin;
+
                           const today = new Date().toISOString().split('T')[0];
                           const mockExamStartedDate = localStorage.getItem("mockExamStartedToday");
 
-                          if (mockExamStartedDate === today) {
+                          // 테스트 사용자 & 운영자는 무제한 응시 가능
+                          if (!isUnlimitedUser && mockExamStartedDate === today) {
                             const message = `${t("mockExamAlreadyStartedToday")}\n\n${t("mockExamNextAttempt")}`;
                             alert(message);
                             return;
@@ -3635,9 +3640,15 @@ function App() {
                             localStorage.setItem("mockExamProblemsCount", "1");
                             localStorage.setItem("mockExamAllProblems", JSON.stringify(allProblems));
 
-                            // ✅ 오늘 시험 시작했음을 표시 (하루 한 번 제한용)
+                            // ✅ 오늘 시험 시작했음을 표시 (하루 한 번 제한용, 테스트/운영자 제외)
                             const today = new Date().toISOString().split('T')[0];
-                            localStorage.setItem("mockExamStartedToday", today);
+                            const paidTestEmails = ['imjaichoi@naver.com'];
+                            const adminEmails = ['imjaichoipro@gmail.com'];
+                            const isUnlimitedUser = paidTestEmails.includes(userEmail || '') || adminEmails.includes(userEmail || '') || isAdmin;
+
+                            if (!isUnlimitedUser) {
+                              localStorage.setItem("mockExamStartedToday", today);
+                            }
 
                             console.log("첫 문제 로드 완료, 백그라운드 로딩 시작");
                           } catch (err) {

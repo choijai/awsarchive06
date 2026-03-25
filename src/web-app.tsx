@@ -1657,9 +1657,10 @@ function App() {
             </div>
           )}
 
-          {tab === "mockExam" && (userStatus === "paid" || isAdminUser(userEmail)) && (
+          {tab === "mockExam" && (
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px", height: "100%", overflowY: "auto" }}>
-              {mockExamRunning ? (
+              {userStatus === "paid" || isAdminUser(userEmail) ? (
+                mockExamRunning ? (
                 // 모의시험 진행 중
                 <div style={{
                   display: "flex",
@@ -2617,30 +2618,9 @@ function App() {
                   </div>
                 )}
                   </>
-                )}
-              </div>
-            </>
-          ) : tab === "mockExam" ? (
-            <>
-              <div className="graph-label">{t("mockExamTitle")}</div>
-              <div style={{
-                padding: "20px",
-                overflowY: "auto",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: "20px"
-              }}>
-                {userStatus !== "paid" ? (
-                  // 프리미엄이 아닌 사용자 (무료 또는 비로그인)
-                  <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "20px",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100%"
-                  }}>
+                ) : (
+                  // 프리미엄이 아닌 사용자
+                  <>
                     <div style={{
                       textAlign: "center",
                       background: "linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(59, 130, 246, 0.1))",
@@ -2767,11 +2747,25 @@ function App() {
                           e.currentTarget.style.background = "linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(59, 130, 246, 0.3))";
                         }}
                       >
-                        🎓 시험 생성하기 (운영자)
+                        🎓 시험 생성하기
                       </button>
                     )}
-                  </div>
-                ) : mockExamRunning ? (
+                  </>
+                )}
+              </div>
+            </>
+          ) : tab === "mockExam" ? (
+            <>
+              <div className="graph-label">{t("mockExamTitle")}</div>
+              <div style={{
+                padding: "20px",
+                overflowY: "auto",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px"
+              }}>
+                {mockExamRunning ? (
                   // 모의시험 진행 중
                   <div style={{
                     display: "flex",

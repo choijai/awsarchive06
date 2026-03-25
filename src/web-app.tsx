@@ -1296,7 +1296,7 @@ function App() {
         {/* Posts tab - Hidden for now */}
         {/* <button className={`tab ${tab === "posts" ? "active" : ""}`} onClick={() => setTab("posts")}>📰 {t("tabPosts")}</button> */}
         {/* 관리자에게만 Admin 탭 표시 */}
-        {ADMIN_UID && userEmail && (
+        {isAdminUser(userEmail) && (
           <>
             <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
             <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>👥 {t("tabUsers")}</button>

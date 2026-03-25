@@ -1142,8 +1142,8 @@ export async function updateMockExamProblemsProgressively(
 }
 
 /**
- * 오래된 모의시험 문제 삭제 (7일 이상 경과)
- * 매일 자동 정리하여 Firebase 저장 용량 절감
+ * 오래된 모의시험 문제 삭제 (3일 이상 경과)
+ * 한국어(ko), 영어(en), 일본어(ja) 모두 3일만 유지 후 자동 삭제
  */
 export async function deleteOldMockExamProblems(): Promise<number> {
   try {
@@ -1151,7 +1151,7 @@ export async function deleteOldMockExamProblems(): Promise<number> {
     const snapshot = await getDocs(mockExamRef);
 
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
     let deletedCount = 0;
     const deletePromises: Promise<void>[] = [];
@@ -1159,7 +1159,7 @@ export async function deleteOldMockExamProblems(): Promise<number> {
     snapshot.forEach((doc) => {
       const docId = doc.id;
 
-      // 문서 ID에서 날짜 추출 (format: YYYY-MM-DD 또는 YYYY-MM-DD_locale)
+      // 문서 ID에서 날짜 추출 (format: YYYY-MM-DD 또는 YYYY-MM-DD_locale: ko/en/ja)
       const dateMatch = docId.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (dateMatch) {
         const docDate = new Date(
@@ -1168,8 +1168,8 @@ export async function deleteOldMockExamProblems(): Promise<number> {
           parseInt(dateMatch[3])
         );
 
-        // 7일 이상 경과한 문서 삭제
-        if (docDate < sevenDaysAgo) {
+        // 3일 이상 경과한 문서 삭제 (모든 언어 포함)
+        if (docDate < threeDaysAgo) {
           deletePromises.push(deleteDoc(doc.ref));
           deletedCount++;
           console.log(`🗑️ 삭제: ${docId} (${docDate.toISOString().split('T')[0]})`);
@@ -1179,7 +1179,7 @@ export async function deleteOldMockExamProblems(): Promise<number> {
 
     if (deletePromises.length > 0) {
       await Promise.all(deletePromises);
-      console.log(`✅ 오래된 모의시험 문제 ${deletedCount}개 삭제 완료`);
+      console.log(`✅ 오래된 모의시험 문제 ${deletedCount}개 삭제 완료 (ko/en/ja 모두)`);
     }
 
     return deletedCount;

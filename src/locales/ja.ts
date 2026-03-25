@@ -18,6 +18,7 @@ export const ja: Strings = {
   mockExamDescription: "実試験と同じ形式で練習できます",
   mockExamStart: "試験を開始 (130分)",
   mockExamInfo: "問題: 50問 | 制限時間: 130分 | 合格点: 720点",
+  mockExamLanguageNote: "💡 試験開始後、言語を変更してもテスト言語は最初に選択した言語のままです",
   mockExamEmpty: "まだ模擬試験を開始していません",
   mockExamTimeRemaining: "残り時間",
   mockExamScore: "予想スコア",

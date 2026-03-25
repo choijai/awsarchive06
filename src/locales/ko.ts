@@ -16,6 +16,7 @@ export const ko = {
   mockExamDescription: "실제 시험과 동일한 형식으로 풀어보세요",
   mockExamStart: "시험 시작하기 (130분)",
   mockExamInfo: "문제: 50문제 | 시간제한: 130분 | 합격점: 720점",
+  mockExamLanguageNote: "💡 시험 시작 후 언어를 바꿔도 처음 선택된 언어로 진행됩니다",
   mockExamEmpty: "아직 모의시험을 시작하지 않았습니다",
   mockExamTimeRemaining: "남은 시간",
   mockExamScore: "예상 점수",

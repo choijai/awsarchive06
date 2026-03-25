@@ -18,6 +18,7 @@ export const en: Strings = {
   mockExamDescription: "Practice with the same format as the real exam",
   mockExamStart: "Start Exam (130 minutes)",
   mockExamInfo: "Questions: 50 | Time Limit: 130 min | Passing Score: 720",
+  mockExamLanguageNote: "💡 Once you start the exam, changing the language UI won't affect the exam language",
   mockExamEmpty: "You haven't started a mock exam yet",
   mockExamTimeRemaining: "Time Remaining",
   mockExamScore: "Estimated Score",

@@ -3540,9 +3540,19 @@ function App() {
                         background: "rgba(100, 116, 139, 0.2)",
                         padding: "12px",
                         borderRadius: "6px",
-                        margin: "0"
+                        margin: "0 0 8px 0"
                       }}>
                         {t("mockExamInfo")}
+                      </p>
+                      <p style={{
+                        fontSize: "11px",
+                        color: "#94a3b8",
+                        background: "rgba(100, 116, 139, 0.15)",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        margin: "0"
+                      }}>
+                        {t("mockExamLanguageNote")}
                       </p>
                     </div>
 

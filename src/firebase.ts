@@ -999,15 +999,21 @@ export async function deletePost(
  */
 export async function getTodayMockExamProblems(): Promise<Problem[] | null> {
   try {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    // UTC 기준 오늘 날짜 (ISO 형식에서 날짜 부분만 추출)
+    // toISOString()은 항상 UTC 시간을 반환하므로 안전함
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
+    console.log(`🌍 UTC 기준 오늘 문제 조회: ${today}`);
+
     const mockExamRef = doc(db, "mockExamProblems", today);
     const mockExamDoc = await getDoc(mockExamRef);
 
     if (!mockExamDoc.exists()) {
+      console.log(`📭 오늘(${today}) 생성된 문제가 없음`);
       return null; // 아직 생성되지 않음
     }
 
     const data = mockExamDoc.data();
+    console.log(`✅ 오늘(${today}) 문제 로드 완료: ${data.problems?.length || 0}개`);
     return data.problems || null;
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제를 불러올 수 없습니다");
@@ -1020,12 +1026,17 @@ export async function getTodayMockExamProblems(): Promise<Problem[] | null> {
  */
 export async function saveTodayMockExamProblems(problems: Problem[]): Promise<void> {
   try {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    // UTC 기준 오늘 날짜에 문제 저장
+    // 모든 사용자가 같은 UTC 날짜의 문제를 공유하게 됨
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
+    console.log(`💾 UTC 기준 오늘(${today}) 문제 저장 시도: ${problems.length}개`);
+
     const mockExamRef = doc(db, "mockExamProblems", today);
 
-    // 이미 저장된 문제가 있으면 덮어쓰지 않음
+    // 이미 저장된 문제가 있으면 덮어쓰지 않음 (첫 사용자만 생성)
     const existingDoc = await getDoc(mockExamRef);
     if (existingDoc.exists()) {
+      console.log(`⏭️ 오늘(${today})의 문제가 이미 존재함 (다른 사용자가 먼저 생성)`);
       return; // 이미 저장되어 있음
     }
 
@@ -1035,6 +1046,7 @@ export async function saveTodayMockExamProblems(problems: Problem[]): Promise<vo
       createdAt: Timestamp.now(),
       date: today
     });
+    console.log(`✅ 오늘(${today}) 문제 저장 완료 (UTC 공유)`);
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제 저장에 실패했습니다");
   }

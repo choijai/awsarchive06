@@ -123,31 +123,38 @@ async function isAdminUser(email: string | null): Promise<boolean> {
     return cachedAdmin === 'true';
   }
 
-  try {
-    const response = await fetch('http://localhost:5000/api/checkAdmin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await response.json();
-    const isAdmin = data.isAdmin || false;
+  // 서버 API 시도 (포트 5000-5009 시도)
+  for (let port = 5000; port < 5010; port++) {
+    try {
+      const response = await fetch(`http://localhost:${port}/api/checkAdmin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(2000) // 2초 타임아웃
+      });
+      const data = await response.json();
+      const isAdmin = data.isAdmin || false;
 
-    // 결과를 localStorage에 캐시 (24시간)
-    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
-    localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
+      // 결과를 localStorage에 캐시 (24시간)
+      localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+      localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
 
-    return isAdmin;
-  } catch (error) {
-    // Server API 실패 시 로컬 fallback 사용
-    // (server.js가 실행 중이 아닐 때의 정상 동작)
-    const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
-    const isAdmin = adminEmails.includes(email);
-
-    // 결과를 localStorage에 캐시
-    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
-
-    return isAdmin;
+      return isAdmin;
+    } catch (error) {
+      // 다음 포트 시도
+      continue;
+    }
   }
+
+  // 모든 포트 시도 실패 시 로컬 fallback 사용
+  // (server.js가 실행 중이 아닐 때의 정상 동작)
+  const adminEmails = ['imjaichoipro@gmail.com']; // 운영자 이메일 목록
+  const isAdmin = adminEmails.includes(email);
+
+  // 결과를 localStorage에 캐시
+  localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+
+  return isAdmin;
 }
 
 /**

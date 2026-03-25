@@ -1970,21 +1970,28 @@ function App() {
                   {isAdminUser(userEmail) && (
                     <button
                       onClick={async () => {
-                        setMockExamRunning(true);
-                        setMockExamCurrentIndex(0);
-                        setMockExamAnswers({});
-                        setMockExamStartTime(new Date());
-
-                        // 테스트: API 2번 호출, 문제 2개 생성
                         try {
+                          console.log("시험 생성 시작...");
                           const problems: Problem[] = [];
+
+                          // 테스트: API 2번 호출, 문제 2개 생성
                           for (let i = 0; i < 2; i++) {
+                            console.log(`문제 ${i + 1} 생성 중...`);
                             const problem = await generateSAAProblem([], "medium", locale);
+                            console.log(`문제 ${i + 1} 생성 완료:`, problem);
                             problems.push(problem);
                           }
+
+                          console.log("총 문제 수:", problems.length);
                           setMockExamProblems(problems);
+                          setMockExamCurrentIndex(0);
+                          setMockExamAnswers(new Array(problems.length).fill(null));
+                          setMockExamStartTime(Date.now());
+                          setMockExamRunning(true);
+                          console.log("시험 시작됨");
                         } catch (error) {
                           console.error("문제 생성 실패:", error);
+                          alert("문제 생성 실패: " + (error instanceof Error ? error.message : String(error)));
                           setMockExamRunning(false);
                         }
                       }}

@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocale } from '../LocaleContext';
 
 const Footer: React.FC = () => {
   const { locale } = useLocale();
+
+  // useMemo로 최적화하여 무한 렌더링 방지
+  const displayLocale = useMemo(() => {
+    const stored = localStorage.getItem("aws-quiz-locale");
+    return (stored === "ko" || stored === "ja") ? stored : locale;
+  }, [locale]);
 
   const getLabel = () => {
     const labels = {
@@ -36,11 +42,11 @@ const Footer: React.FC = () => {
 
   const label = getLabel();
 
-  const LinkButton = ({ href, children }: { href: string; children: string }) => (
+  const LinkButton = ({ href, children, external = true }: { href: string; children: string; external?: boolean }) => (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={external ? "_blank" : "_self"}
+      rel={external ? "noopener noreferrer" : undefined}
       style={{
         background: 'none',
         border: 'none',
@@ -109,7 +115,7 @@ const Footer: React.FC = () => {
 
         <span style={{ color: '#475569' }}>|</span>
 
-        <LinkButton href="mailto:awsarchive06@gmail.com">
+        <LinkButton href={`/contact.html?lang=${displayLocale}`} external={false}>
           {label.contact}
         </LinkButton>
       </div>

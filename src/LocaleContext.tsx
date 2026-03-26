@@ -36,11 +36,13 @@ function detectLocale(): Locale {
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
-
-  useEffect(() => {
-    setLocaleState(detectLocale());
-  }, []);
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    // 초기값을 detectLocale()로 설정
+    const detectedLocale = detectLocale();
+    // localStorage 초기화
+    localStorage.setItem("aws-quiz-locale", detectedLocale);
+    return detectedLocale;
+  });
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);

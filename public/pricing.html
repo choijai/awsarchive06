@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing - AWS Archive</title>
+  <meta name="description" content="AWS Archive Pricing">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: white;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #1e293b;
+      margin-bottom: 30px;
+      font-size: 32px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .pricing-card {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+    }
+    .pricing-card.premium {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+    }
+    .plan-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .price {
+      font-size: 36px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    .period {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .features {
+      list-style: none;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .features li {
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .pricing-card.premium .features li {
+      border-bottom-color: rgba(255,255,255,0.2);
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+      border: none;
+      font-size: 14px;
+    }
+    .btn-free {
+      background: #6366f1;
+      color: white;
+    }
+    .btn-premium {
+      background: white;
+      color: #6366f1;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .modal-content h2 {
+      margin-top: 0;
+      color: #1e293b;
+    }
+    .modal-content p {
+      color: #666;
+      line-height: 1.6;
+      margin: 15px 0;
+    }
+    .modal-close {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .modal-close:hover {
+      background: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← Back</a>
+
+    <h1>💰 Pricing</h1>
+
+    <div class="pricing-grid">
+      <!-- Free Plan -->
+      <div class="pricing-card">
+        <div class="plan-name">🔐 Free</div>
+        <div class="price">$0</div>
+        <div class="period">Forever Free</div>
+
+        <ul class="features">
+          <li>✅ 2 free problems per day</li>
+          <li>✅ Fundamental concepts learning</li>
+          <li>✅ AWS service relationship map</li>
+          <li>❌ Mock exam (limited)</li>
+          <li>❌ Contains ads</li>
+        </ul>
+
+        <button class="btn btn-free">Current Plan</button>
+      </div>
+
+      <!-- Premium Plan -->
+      <div class="pricing-card premium">
+        <div class="plan-name">💎 Premium</div>
+        <div class="price">$14.99</div>
+        <div class="period">Monthly Subscription</div>
+
+        <ul class="features">
+          <li>✅ Unlimited 20 problems per day</li>
+          <li>✅ Daily mock exam (50 questions, 130 minutes)</li>
+          <li>✅ All difficulty levels (Medium, Hard, Challenge)</li>
+          <li>✅ Detailed performance analytics</li>
+          <li>✅ Completely ad-free</li>
+        </ul>
+
+        <button class="btn btn-premium" onclick="openComingSoonModal()">Upgrade Now</button>
+      </div>
+    </div>
+
+    <!-- Coming Soon Modal -->
+    <div id="comingSoonModal" class="modal">
+      <div class="modal-content">
+        <h2>Coming Soon</h2>
+        <p>Paddle payment system integration is in progress. We are preparing to provide you with a better payment experience.</p>
+        <button class="modal-close" onclick="closeComingSoonModal()">OK</button>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 40px; color: #1e293b;">Frequently Asked Questions</h2>
+
+    <h3 style="margin-top: 20px; color: #555;">Q. Can I cancel anytime?</h3>
+    <p>Yes, you can cancel your subscription anytime from your account settings. See our <a href="/refund.html">Refund Policy</a> for details.</p>
+
+    <h3 style="margin-top: 20px; color: #555;">Q. Is a refund available?</h3>
+    <p>Full refunds are available within 14 days of subscription. For more details, see our <a href="/refund.html">Refund Policy</a>.</p>
+
+    <h3 style="margin-top: 20px; color: #555;">Q. What payment methods are accepted?</h3>
+    <p>We accept credit cards, debit cards, PayPal, and other payment methods through Paddle.</p>
+
+    <h3 style="margin-top: 20px; color: #555;">Q. Other inquiries?</h3>
+    <p>Contact us: awsarchive06@gmail.com</p>
+  </div>
+
+  <script>
+    function openComingSoonModal() {
+      document.getElementById('comingSoonModal').classList.add('show');
+    }
+
+    function closeComingSoonModal() {
+      document.getElementById('comingSoonModal').classList.remove('show');
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('comingSoonModal');
+      if (event.target === modal) {
+        modal.classList.remove('show');
+      }
+    }
+  </script>
+</body>
+</html>

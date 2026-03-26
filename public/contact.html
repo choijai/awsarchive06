@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - AWS Archive</title>
+  <meta name="description" content="Contact AWS Archive">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 30px;
+      color: #60a5fa;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    h1 {
+      color: #e2e8f0;
+      font-size: 24px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    label {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+    input[type="text"],
+    input[type="email"],
+    textarea {
+      padding: 12px;
+      background: rgba(71, 85, 105, 0.3);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    textarea:focus {
+      outline: none;
+      background: rgba(71, 85, 105, 0.5);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    input[type="text"]:disabled,
+    input[type="email"]:disabled,
+    textarea:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-submit {
+      background: rgba(59, 130, 246, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.5);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-cancel {
+      background: rgba(100, 116, 139, 0.2);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      color: #94a3b8;
+    }
+    .btn-cancel:hover {
+      background: rgba(100, 116, 139, 0.3);
+    }
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+    @media (max-width: 640px) {
+      .container {
+        padding: 24px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← Back</a>
+
+    <h1 id="title">📧 Contact Us</h1>
+
+    <div id="successMessage" class="message success" style="display: none;">
+      ✅ <span id="successText">Your message has been sent successfully! We will reply soon.</span>
+    </div>
+
+    <div id="errorMessage" class="message error" style="display: none;">
+      ❌ <span id="errorText"></span>
+    </div>
+
+    <form id="contactForm" style="display: flex; flex-direction: column; gap: 20px;">
+      <div class="form-group">
+        <label for="name" id="labelName">Name</label>
+        <input
+          type="text"
+          id="name"
+          placeholder="Your name"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email" id="labelEmail">Email</label>
+        <input
+          type="email"
+          id="email"
+          placeholder="your@email.com"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="subject" id="labelSubject">Subject</label>
+        <input
+          type="text"
+          id="subject"
+          placeholder="Subject"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="message" id="labelMessage">Message</label>
+        <textarea
+          id="message"
+          placeholder="Your message here..."
+          required
+        ></textarea>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span id="submitText">Submit</span>
+        </button>
+        <button type="button" class="btn-cancel" onclick="window.history.back()">
+          <span id="cancelText">Close</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const labels = {
+      ko: {
+        title: '📧 문의하기',
+        name: '이름',
+        email: '이메일',
+        subject: '제목',
+        message: '메시지',
+        submit: '제출',
+        cancel: '닫기',
+        sending: '전송 중...',
+        successMsg: '메시지가 성공적으로 전송되었습니다! 빠른 시일 내에 답변해드리겠습니다.',
+        errorMsg: '메시지 전송에 실패했습니다. 다시 시도해주세요.',
+        requiredMsg: '모든 항목을 입력해주세요.'
+      },
+      en: {
+        title: '📧 Contact Us',
+        name: 'Name',
+        email: 'Email',
+        subject: 'Subject',
+        message: 'Message',
+        submit: 'Submit',
+        cancel: 'Close',
+        sending: 'Sending...',
+        successMsg: 'Your message has been sent successfully! We will reply soon.',
+        errorMsg: 'Failed to send message. Please try again.',
+        requiredMsg: 'Please fill in all fields.'
+      },
+      ja: {
+        title: '📧 お問い合わせ',
+        name: '名前',
+        email: 'メール',
+        subject: '件名',
+        message: 'メッセージ',
+        submit: '送信',
+        cancel: '閉じる',
+        sending: '送信中...',
+        successMsg: 'メッセージが正常に送信されました。すぐにご返信いたします。',
+        errorMsg: 'メッセージの送信に失敗しました。もう一度お試しください。',
+        requiredMsg: 'すべての項目を入力してください。'
+      }
+    };
+
+    // URL 파라미터에서 로케일 감지
+    function getLocale() {
+      const params = new URLSearchParams(window.location.search);
+      const lang = params.get('lang');
+      return (lang && labels[lang]) ? lang : 'en';
+    }
+
+    const currentLocale = getLocale();
+    const currentLabels = labels[currentLocale];
+
+    // UI 업데이트
+    document.getElementById('title').textContent = currentLabels.title;
+    document.getElementById('labelName').textContent = currentLabels.name;
+    document.getElementById('labelEmail').textContent = currentLabels.email;
+    document.getElementById('labelSubject').textContent = currentLabels.subject;
+    document.getElementById('labelMessage').textContent = currentLabels.message;
+    document.getElementById('submitText').textContent = currentLabels.submit;
+    document.getElementById('cancelText').textContent = currentLabels.cancel;
+
+    // 폼 제출
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      // 유효성 검사
+      if (!name || !email || !subject || !message) {
+        showError(currentLabels.requiredMsg);
+        return;
+      }
+
+      // 폼 비활성화
+      const submitBtn = document.getElementById('submitBtn');
+      const inputs = document.querySelectorAll('input, textarea');
+      submitBtn.disabled = true;
+      inputs.forEach(input => input.disabled = true);
+      submitBtn.textContent = currentLabels.sending;
+
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            subject,
+            message,
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+
+        // 성공
+        showSuccess();
+        document.getElementById('contactForm').style.display = 'none';
+
+        // 2초 후 돌아가기
+        setTimeout(() => {
+          window.history.back();
+        }, 2000);
+      } catch (err) {
+        showError(currentLabels.errorMsg);
+      } finally {
+        submitBtn.disabled = false;
+        inputs.forEach(input => input.disabled = false);
+        submitBtn.textContent = currentLabels.submit;
+      }
+    });
+
+    function showSuccess() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successText').textContent = currentLabels.successMsg;
+      document.getElementById('successMessage').style.display = 'block';
+    }
+
+    function showError(msg) {
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('errorText').textContent = msg;
+      document.getElementById('errorMessage').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

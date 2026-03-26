@@ -15,6 +15,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
   const [error, setError] = useState<string | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(userEmail || '');
+  const [isComingSoon] = useState(true); // Coming Soon 모드 활성화
 
   const labels = {
     ko: {
@@ -28,6 +29,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
       processing: '처리 중...',
       errorMessage: '결제에 실패했습니다. 다시 시도해주세요.',
       successMessage: '구독 완료되었습니다! 감사합니다.',
+      comingSoonTitle: '🚀 Coming Soon',
+      comingSoonDesc: '프리미엄 기능이 곧 준비됩니다!',
+      comingSoonMsg: 'Paddle 결제 시스템 통합을 진행 중입니다. 더 나은 결제 경험을 제공하기 위해 준비 중입니다.',
+      comingSoonBtn: '닫기',
     },
     en: {
       title: '💳 Premium Subscription',
@@ -40,6 +45,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
       processing: 'Processing...',
       errorMessage: 'Payment failed. Please try again.',
       successMessage: 'Subscription successful! Thank you.',
+      comingSoonTitle: '🚀 Coming Soon',
+      comingSoonDesc: 'Premium features are coming soon!',
+      comingSoonMsg: 'We are integrating the Paddle payment system. We are preparing to provide a better payment experience.',
+      comingSoonBtn: 'Close',
     },
     ja: {
       title: '💳 プレミアム購読',
@@ -52,6 +61,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
       processing: '処理中...',
       errorMessage: '支払いに失敗しました。もう一度お試しください。',
       successMessage: '購読が完了しました！ありがとうございます。',
+      comingSoonTitle: '🚀 Coming Soon',
+      comingSoonDesc: 'プレミアム機能が近日公開予定です！',
+      comingSoonMsg: 'Paddle決済システムの統合を進めています。より良い決済体験を提供するための準備を進めています。',
+      comingSoonBtn: '閉じる',
     },
   };
 
@@ -139,7 +152,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
       <div style={{
         backgroundColor: '#1e293b',
         borderRadius: '12px',
-        padding: '32px',
+        padding: '40px',
         maxWidth: '500px',
         width: '90%',
         maxHeight: '90vh',
@@ -147,196 +160,236 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
       }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ color: '#fff', margin: 0, fontSize: '24px' }}>{currentLabels.title}</h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              fontSize: '24px',
-              padding: '0',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Price */}
-        <div style={{
-          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '24px',
-        }}>
-          <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>
-            {currentLabels.priceLabel}
-          </div>
-          <div style={{ color: '#6366f1', fontSize: '28px', fontWeight: 'bold' }}>
-            $14.99<span style={{ fontSize: '16px', color: '#94a3b8' }}> / {locale === 'ko' ? '월' : locale === 'ja' ? '月' : 'month'}</span>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div style={{ marginBottom: '24px' }}>
-          {currentLabels.features.map((feature, idx) => (
-            <div key={idx} style={{ color: '#cbd5e1', marginBottom: '8px', fontSize: '14px' }}>
-              {feature}
+        {/* Coming Soon Mode */}
+        {isComingSoon ? (
+          <>
+            {/* Close Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '24px',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
             </div>
-          ))}
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handlePayment}>
-          {/* Full Name */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
-              {currentLabels.fullNameLabel}
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder={currentLabels.fullNameLabel}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Email */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
-              {currentLabels.emailLabel}
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={currentLabels.emailLabel}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Card Element */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
-              {currentLabels.cardLabel}
-            </label>
-            <div style={{
-              padding: '10px 12px',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '6px',
-              color: '#cbd5e1',
-              fontSize: '14px',
-            }}>
-              <p style={{ margin: 0, marginBottom: '8px', fontWeight: 'bold' }}>
-                {locale === 'ko' ? '테스트 카드' : locale === 'ja' ? 'テストカード' : 'Test Card'}
+            {/* Coming Soon Content */}
+            <div style={{ textAlign: 'center' }}>
+              <h2 style={{ color: '#fff', margin: '0 0 12px 0', fontSize: '32px' }}>
+                {currentLabels.comingSoonTitle}
+              </h2>
+              <p style={{ color: '#fb923c', fontSize: '18px', margin: '0 0 24px 0', fontWeight: '600' }}>
+                {currentLabels.comingSoonDesc}
               </p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: '1.6' }}>
-                {locale === 'ko' ? '번호: 4242 4242 4242 4242\nCVC: 123\n유효기간: 12/25' : locale === 'ja' ? '番号: 4242 4242 4242 4242\nCVC: 123\n有効期限: 12/25' : 'Number: 4242 4242 4242 4242\nCVC: 123\nExpiry: 12/25'}
+
+              {/* Features Preview */}
+              <div style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '24px',
+              }}>
+                <h3 style={{ color: '#93c5fd', margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
+                  {locale === 'ko' ? '곧 이용 가능한 기능' : locale === 'ja' ? 'すぐに利用可能な機能' : 'Features Coming Soon'}
+                </h3>
+                <div style={{ textAlign: 'left' }}>
+                  {currentLabels.features.map((feature, idx) => (
+                    <div key={idx} style={{ color: '#cbd5e1', marginBottom: '10px', fontSize: '14px' }}>
+                      {feature}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Message */}
+              <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 24px 0', lineHeight: '1.6' }}>
+                {currentLabels.comingSoonMsg}
               </p>
+
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#6366f1',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLButtonElement).style.backgroundColor = '#4f46e5';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLButtonElement).style.backgroundColor = '#6366f1';
+                }}
+              >
+                {currentLabels.comingSoonBtn}
+              </button>
             </div>
-          </div>
+          </>
+        ) : (
+          <>
+            {/* Original Payment Form (Hidden for now) */}
+            <div style={{ display: 'none' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ color: '#fff', margin: 0, fontSize: '24px' }}>{currentLabels.title}</h2>
+                <button
+                  onClick={onClose}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '24px',
+                    padding: '0',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  ×
+                </button>
+              </div>
 
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '6px',
-              padding: '12px',
-              color: '#fca5a5',
-              fontSize: '14px',
-              marginBottom: '16px',
-            }}>
-              {error}
+              {/* Features */}
+              <div style={{ marginBottom: '24px' }}>
+                {currentLabels.features.map((feature, idx) => (
+                  <div key={idx} style={{ color: '#cbd5e1', marginBottom: '8px', fontSize: '14px' }}>
+                    {feature}
+                  </div>
+                ))}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handlePayment}>
+                {/* Full Name */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
+                    {currentLabels.fullNameLabel}
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder={currentLabels.fullNameLabel}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      backgroundColor: '#0f172a',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Email */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
+                    {currentLabels.emailLabel}
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={currentLabels.emailLabel}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      backgroundColor: '#0f172a',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    color: '#fca5a5',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={loading}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '6px',
+                      color: '#cbd5e1',
+                      fontSize: '14px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.5 : 1,
+                      fontWeight: '500',
+                    }}
+                  >
+                    {currentLabels.cancelBtn}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      backgroundColor: '#6366f1',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.7 : 1,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {loading ? currentLabels.processing : currentLabels.subscribeBtn}
+                  </button>
+                </div>
+              </form>
             </div>
-          )}
-
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '6px',
-                color: '#cbd5e1',
-                fontSize: '14px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.5 : 1,
-                fontWeight: '500',
-              }}
-            >
-              {currentLabels.cancelBtn}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: '#6366f1',
-                border: 'none',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '14px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                fontWeight: '600',
-              }}
-            >
-              {loading ? currentLabels.processing : currentLabels.subscribeBtn}
-            </button>
-          </div>
-        </form>
-
-        {/* Test Mode Notice */}
-        <div style={{
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: 'rgba(147, 112, 219, 0.1)',
-          border: '1px solid rgba(147, 112, 219, 0.3)',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: '#d8b4fe',
-          textAlign: 'center',
-        }}>
-          {locale === 'ko' ? '🧪 테스트 모드: 결제 로직이 시뮬레이션됩니다.' : locale === 'ja' ? '🧪 テストモード: 支払いロジックはシミュレートされます。' : '🧪 Test Mode: Payment logic is simulated.'}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

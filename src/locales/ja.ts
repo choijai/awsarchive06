@@ -107,6 +107,7 @@ export const ja: Strings = {
   aiFeature: "🎯 AWSノードを選択するとAIが自動的にカスタマイズされたSAA-C03問題を生成",
   loginFreeAttempts: "📌 1日2回の無料試行",
   loginUpgradeOffer: "💎 または $14.99/月にアップグレードして1日20問を利用",
+  loginMockExamFeature: "📋 毎日模擬試験1回 (50問、130分)",
   cancelBtn: "キャンセル",
   btnSignUp: "サインアップ",
   btnLogIn: "ログイン",

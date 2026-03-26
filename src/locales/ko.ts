@@ -105,6 +105,7 @@ export const ko = {
   aiFeature: "🎯 AWS 노드를 선택하면 AI가 맞춤형 SAA-C03 문제를 자동 생성",
   loginFreeAttempts: "📌 매일 2회 무료 시도",
   loginUpgradeOffer: "💎 또는 $14.99/월에 업그레이드하여 하루 20개 문제 이용",
+  loginMockExamFeature: "📋 매일 모의시험 1회 (50문제, 130분)",
   cancelBtn: "취소",
   btnSignUp: "회원가입",
   btnLogIn: "로그인",

@@ -4556,6 +4556,7 @@ function App() {
                 <p style={{ marginBottom: "12px", color: "#a8d5ff", fontWeight: 500 }}>{t("aiFeature")}</p>
                 <p>{t("loginFreeAttempts")}</p>
                 <p style={{ marginTop: "12px", color: "#8b5cf6", fontWeight: "bold" }}>{t("loginUpgradeOffer")}</p>
+                <p style={{ marginTop: "8px", color: "#a8d5ff", fontWeight: 500 }}>{t("loginMockExamFeature")}</p>
               </div>
 
               <button onClick={() => { setShowLoginModal(false); setLoginError(null); }} style={{

@@ -107,6 +107,7 @@ export const en: Strings = {
   aiFeature: "🎯 Select AWS nodes and AI automatically generates personalized SAA-C03 problems",
   loginFreeAttempts: "📌 2 free attempts per day",
   loginUpgradeOffer: "💎 Or upgrade to 20 problems/day for $14.99/month",
+  loginMockExamFeature: "📋 Daily mock exam 1 session (50 questions, 130 minutes)",
   cancelBtn: "Cancel",
   btnSignUp: "Sign Up",
   btnLogIn: "Log In",

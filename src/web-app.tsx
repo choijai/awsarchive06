@@ -274,75 +274,16 @@ function initPos() {
   return pos;
 }
 
-function useForce(delayMs: number = 100) {
+function useForce() {
+  // Initialize positions once and keep them fixed (no animation/physics)
+  // This ensures page loads instantly and footer is immediately responsive
   const [pos, setPos] = useState(initPos);
   const posRef = useRef(pos);
   const dragRef = useRef<string | null>(null);
   posRef.current = pos;
 
-  useEffect(() => {
-    // Delay simulation start to let page become interactive
-    const delayTimer = setTimeout(() => {
-      let running = true, frame = 0;
-      const tick = () => {
-        if (!running) return;
-        frame++;
-        if (frame > 400) { running = false; return; } // Reduced from 450 to 400 frames
-        const p = { ...posRef.current };
-        const ids = NODES.map(n => n.id);
-        ids.forEach(id => {
-          if (dragRef.current === id) return;
-          const node = { ...p[id] };
-          let fx = 0, fy = 0;
-          // Repulsion
-          ids.forEach(o => {
-            if (o === id) return;
-            const d2 = Math.max((node.x - p[o].x) ** 2 + (node.y - p[o].y) ** 2, 1);
-            const d = Math.sqrt(d2);
-            const f = 5500 / d2;
-            fx += (node.x - p[o].x) / d * f;
-            fy += (node.y - p[o].y) / d * f;
-          });
-          // Link attraction
-          LINKS.forEach(l => {
-            const o = l.s === id ? l.t : l.t === id ? l.s : null;
-            if (!o) return;
-            const dx = p[o].x - node.x, dy = p[o].y - node.y;
-            const d = Math.sqrt(dx * dx + dy * dy) || 1;
-            const f = (d - 150) * 0.03;
-            fx += dx / d * f;
-            fy += dy / d * f;
-          });
-          // Category clustering
-          const myN = NODES.find(n => n.id === id)!;
-          ids.forEach(o => {
-            const oN = NODES.find(n => n.id === o);
-            if (!oN || oN.cat !== myN.cat || o === id) return;
-            const dx = p[o].x - node.x, dy = p[o].y - node.y;
-            const d = Math.sqrt(dx * dx + dy * dy) || 1;
-            const f = (d - 100) * 0.012;
-            fx += dx / d * f;
-            fy += dy / d * f;
-          });
-          // Center gravity
-          fx += (W / 2 - node.x) * 0.005;
-          fy += (H / 2 - node.y) * 0.005;
-          const damp = 0.78;
-          node.vx = (node.vx + fx * 0.016) * damp;
-          node.vy = (node.vy + fy * 0.016) * damp;
-          node.x = Math.max(38, Math.min(W - 38, node.x + node.vx));
-          node.y = Math.max(38, Math.min(H - 38, node.y + node.vy));
-          p[id] = node;
-        });
-        setPos({ ...p });
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-      return () => { running = false; };
-    }, delayMs);
-
-    return () => clearTimeout(delayTimer);
-  }, [delayMs]);
+  // No animation loop - nodes stay in their initial positions
+  // Drag functionality still works via SVG onMouseMove
 
   return { pos, setPos, posRef, dragRef };
 }
@@ -467,8 +408,8 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 
 function App() {
   const { locale, setLocale, t } = useLocale();
-  // Delay physics simulation to let page become interactive (footer clicks should work immediately)
-  const { pos, setPos, posRef, dragRef } = useForce(150);
+  // Fixed node positions for instant page load and immediate footer interactivity
+  const { pos, setPos, posRef, dragRef } = useForce();
 
   // ⚠️ 보안: 환경변수에서 관리자/테스트 이메일 읽기 (하드코딩 금지)
   const env = (import.meta as any).env;

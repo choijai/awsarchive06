@@ -128,6 +128,17 @@ const Footer: React.FC = () => {
       }}>
         {label.copyright}
       </p>
+
+      <p style={{
+        fontSize: '10px',
+        color: '#64748b',
+        margin: '12px 0 0 0',
+        paddingTop: '12px',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        lineHeight: '1.4'
+      }}>
+        AWS Archive is an independent educational platform not affiliated with, endorsed by, or associated with Amazon Web Services, Inc. or its affiliates. AWS and Amazon Web Services are registered trademarks of Amazon.com, Inc. or its affiliates.
+      </p>
     </footer>
   );
 };

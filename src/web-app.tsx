@@ -2,6 +2,7 @@ import html2pdf from "html2pdf.js/dist/html2pdf.js";
 import { useEffect, useRef, useState } from "react";
 import { getDailyVisitorsForMonth, getMonthlyVisitors, getTodayPurchaseCount, getTotalVisitorCount, getWeeklyVisitorsForMonth, trackVisitor } from "./analytics";
 import { Concept, generateSAAProblem, Problem } from "./api";
+import CookieConsent from "./components/CookieConsent";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
@@ -4853,6 +4854,9 @@ function App() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Cookie Consent */}
+      <CookieConsent />
     </div>
   );
 }

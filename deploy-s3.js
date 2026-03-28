@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { CloudFrontClient, CreateInvalidationCommand } = require('@aws-sdk/client-cloudfront');
 
 // .env 읽기
 const envPath = path.join(__dirname, '.env');
@@ -19,8 +20,17 @@ const s3Client = new S3Client({
   }
 });
 
+const cloudFrontClient = new CloudFrontClient({
+  region: 'us-east-1',
+  credentials: {
+    accessKeyId: envVars.AWS_ACCESS_KEY_ID,
+    secretAccessKey: envVars.AWS_SECRET_ACCESS_KEY
+  }
+});
+
 const BUCKET = envVars.AWS_S3_BUCKET;
 const DIST_DIR = path.join(__dirname, 'dist');
+const CLOUDFRONT_DISTRIBUTION_ID = envVars.CLOUDFRONT_DISTRIBUTION_ID || 'E3UX78LBQGHIL';
 
 async function uploadDir(dirPath, s3Path = '') {
   const files = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -63,6 +73,27 @@ function getContentType(filename) {
   return types[ext] || 'application/octet-stream';
 }
 
+async function invalidateCloudFront() {
+  try {
+    console.log('\n🔄 Invalidating CloudFront cache...');
+    const response = await cloudFrontClient.send(new CreateInvalidationCommand({
+      DistributionId: CLOUDFRONT_DISTRIBUTION_ID,
+      InvalidationBatch: {
+        Paths: {
+          Quantity: 1,
+          Items: ['/*']
+        },
+        CallerReference: Date.now().toString()
+      }
+    }));
+    console.log(`✅ CloudFront cache invalidated!`);
+    console.log(`   Invalidation ID: ${response.Invalidation.Id}`);
+  } catch (error) {
+    console.warn(`⚠️  CloudFront invalidation failed: ${error.message}`);
+    console.warn('   (This is OK if you have permission issues - manually invalidate via AWS console)');
+  }
+}
+
 async function deploy() {
   try {
     console.log(`🚀 Deploying to S3: ${BUCKET}`);
@@ -70,8 +101,13 @@ async function deploy() {
 
     await uploadDir(DIST_DIR);
 
-    console.log('\n✨ Deployment complete!');
+    console.log('\n✨ S3 upload complete!');
     console.log(`🌐 Check: https://${BUCKET}`);
+
+    // CloudFront 캐시 무효화
+    await invalidateCloudFront();
+
+    console.log('\n🎉 Deployment and cache invalidation complete!');
   } catch (error) {
     console.error('❌ Error:', error.message);
     process.exit(1);

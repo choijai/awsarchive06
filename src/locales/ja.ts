@@ -149,7 +149,7 @@ export const ja: Strings = {
   loggedInStatus: "✨ ログイン",
   paidStatus: "💎 プレミアム (有料)",
   quotaFullGuest: "🔐 1日の制限に達しました (2/2)。ログインして2回の無料試行を取得するか、アップグレードしてください。",
-  quotaFullLoggedIn: "✨ 無料の2回の試行は使用済みです。1日20問の問題を生成するにはアップグレードしてください!",
+  quotaFullLoggedIn: "✨ 無料の2回の試行は使用済みです。今日さらに問題を生成するにはアップグレードしてください!",
 
   // D-Day related
   examDateLabel: "📅 試験開始日を設定",

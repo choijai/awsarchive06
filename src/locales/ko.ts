@@ -147,7 +147,7 @@ export const ko = {
   loggedInStatus: "✨ 로그인",
   paidStatus: "💎 프리미엄 (결제)",
   quotaFullGuest: "🔐 일일 제한에 도달했습니다 (2/2). 로그인하여 2회 무료를 받거나 업그레이드하세요.",
-  quotaFullLoggedIn: "✨ 무료 2회가 모두 사용되었습니다. 하루 20개 문제를 생성하려면 업그레이드하세요!",
+  quotaFullLoggedIn: "✨ 무료 2회가 모두 사용되었습니다. 오늘 더 많은 문제를 생성하려면 업그레이드하세요!",
 
   // D-Day 관련
   examDateLabel: "📅 시험 시작일 설정",

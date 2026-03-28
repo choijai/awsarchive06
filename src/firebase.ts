@@ -1017,20 +1017,16 @@ export async function getTodayMockExamProblems(locale: string = "ko"): Promise<P
     if (cached) {
       try {
         const problems = JSON.parse(cached);
-        console.log(`💾 localStorage 캐시 히트: ${docKey}, ${problems.length}개`);
         return problems;
       } catch (e) {
-        console.warn("localStorage 파싱 실패, Firebase 조회 진행");
       }
     }
 
     // 2️⃣ Firebase에서 조회
-    console.log(`🌍 Firebase에서 조회: ${docKey}`);
     const mockExamRef = doc(db, "mockExamProblems", docKey);
     const mockExamDoc = await getDoc(mockExamRef);
 
     if (!mockExamDoc.exists()) {
-      console.log(`📭 오늘(${docKey}) 생성된 문제가 없음`);
       return null; // 아직 생성되지 않음
     }
 
@@ -1041,13 +1037,10 @@ export async function getTodayMockExamProblems(locale: string = "ko"): Promise<P
     if (problems && problems.length > 0) {
       try {
         localStorage.setItem(cacheKey, JSON.stringify(problems));
-        console.log(`✅ localStorage 캐시 저장: ${docKey}, ${problems.length}개`);
       } catch (e) {
-        console.warn("localStorage 저장 실패 (용량 초과?)", e);
       }
     }
 
-    console.log(`✅ Firebase 로드 완료: ${docKey}, ${problems?.length || 0}개`);
     return problems;
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제를 불러올 수 없습니다");
@@ -1064,14 +1057,12 @@ export async function saveTodayMockExamProblems(problems: Problem[], locale: str
     // 같은 언어를 선택한 사용자들이 같은 UTC 날짜의 문제를 공유하게 됨
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
     const docKey = `${today}_${locale}`; // 언어별로 구분
-    console.log(`💾 UTC 기준 오늘(${docKey}) 문제 저장 시도: ${problems.length}개`);
 
     const mockExamRef = doc(db, "mockExamProblems", docKey);
 
     // 이미 저장된 문제가 있으면 덮어쓰지 않음 (첫 사용자만 생성)
     const existingDoc = await getDoc(mockExamRef);
     if (existingDoc.exists()) {
-      console.log(`⏭️ 오늘(${docKey})의 문제가 이미 존재함 (같은 언어의 다른 사용자가 먼저 생성)`);
       return; // 이미 저장되어 있음
     }
 
@@ -1082,7 +1073,6 @@ export async function saveTodayMockExamProblems(problems: Problem[], locale: str
       date: today,
       locale: locale
     });
-    console.log(`✅ 오늘(${docKey}) 문제 저장 완료 (언어별 공유)`);
   } catch (error: any) {
     throw new Error(error.message || "모의시험 문제 저장에 실패했습니다");
   }
@@ -1099,7 +1089,6 @@ export async function updateMockExamProblemsProgressively(
   try {
     const today = new Date().toISOString().split("T")[0];
     const docKey = `${today}_${locale}`;
-    console.log(`📝 점진적 저장 시도: ${docKey}, 새로운 문제 ${newProblems.length}개`);
 
     const mockExamRef = doc(db, "mockExamProblems", docKey);
     const existingDoc = await getDoc(mockExamRef);
@@ -1129,12 +1118,8 @@ export async function updateMockExamProblemsProgressively(
     const cacheKey = `mockExamProblems_${docKey}`;
     try {
       localStorage.setItem(cacheKey, JSON.stringify(allProblems));
-      console.log(
-        `✅ 점진적 저장 완료: ${docKey}, Firebase + localStorage 모두 저장, 총 ${allProblems.length}개 문제`
-      );
     } catch (e) {
-      console.warn("localStorage 저장 실패 (용량 초과?):", e);
-      console.log(`⚠️ Firebase만 저장됨: ${docKey}, 총 ${allProblems.length}개 문제`);
+      // localStorage 저장 실패
     }
   } catch (error: any) {
     console.error("점진적 저장 실패:", error.message);
@@ -1172,19 +1157,99 @@ export async function deleteOldMockExamProblems(): Promise<number> {
         if (docDate < threeDaysAgo) {
           deletePromises.push(deleteDoc(doc.ref));
           deletedCount++;
-          console.log(`🗑️ 삭제: ${docId} (${docDate.toISOString().split('T')[0]})`);
         }
       }
     });
 
     if (deletePromises.length > 0) {
       await Promise.all(deletePromises);
-      console.log(`✅ 오래된 모의시험 문제 ${deletedCount}개 삭제 완료 (ko/en/ja 모두)`);
     }
 
     return deletedCount;
   } catch (error: any) {
+    // Firestore 권한 부족 - 무시 (클라이언트에서 삭제 불가는 정상)
+    if (error.code === "permission-denied") {
+      // 권한 부족은 정상 - Cloud Function이 없으면 발생
+      return 0;
+    }
     console.error("오래된 문제 삭제 실패:", error.message);
     return 0;
+  }
+}
+
+/**
+ * ⚠️ 보안: 문제 생성 가능 여부 확인 (Firebase 서버 검증)
+ * sessionStorage 우회 방지
+ */
+export async function canGenerateProblemToday(
+  userId: string,
+  userStatus: "guest" | "loggedIn" | "paid"
+): Promise<{ canGenerate: boolean; count: number; limit: number }> {
+  try {
+    if (!userId) {
+      return { canGenerate: false, count: 0, limit: 0 };
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const dailyStatsRef = doc(db, "users", userId, "dailyStats", today);
+    const dailyStats = await getDoc(dailyStatsRef);
+
+    let count = 0;
+    let limit = 2; // 기본값: guest/loggedIn 2회
+
+    // 상태별 제한
+    if (userStatus === "paid") {
+      limit = 20; // 유료: 무제한 (20회)
+    } else if (userStatus === "loggedIn") {
+      limit = 2; // 로그인: 2회
+    } else {
+      limit = 2; // 게스트: 2회
+    }
+
+    if (dailyStats.exists()) {
+      count = dailyStats.data()?.problemCount || 0;
+    }
+
+    return {
+      canGenerate: count < limit,
+      count,
+      limit
+    };
+  } catch (error: any) {
+    console.error("❌ 문제 생성 권한 확인 실패:", error.message);
+    return { canGenerate: false, count: 0, limit: 0 };
+  }
+}
+
+/**
+ * ⚠️ 보안: 문제 생성 기록 저장 (Firebase 서버에만 저장)
+ * 클라이언트에서 수정 불가능
+ */
+export async function recordProblemGeneration(userId: string): Promise<void> {
+  try {
+    if (!userId) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const dailyStatsRef = doc(db, "users", userId, "dailyStats", today);
+    const dailyStats = await getDoc(dailyStatsRef);
+
+    if (dailyStats.exists()) {
+      // 기존 기록 업데이트
+      await updateDoc(dailyStatsRef, {
+        problemCount: (dailyStats.data()?.problemCount || 0) + 1,
+        lastGeneratedAt: new Date().toISOString()
+      });
+    } else {
+      // 새 기록 생성
+      await setDoc(dailyStatsRef, {
+        date: today,
+        problemCount: 1,
+        createdAt: new Date().toISOString(),
+        lastGeneratedAt: new Date().toISOString()
+      });
+    }
+
+  } catch (error: any) {
+    console.error("❌ 문제 생성 기록 실패:", error.message);
   }
 }

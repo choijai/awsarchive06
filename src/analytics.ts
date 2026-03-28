@@ -46,8 +46,8 @@ export async function trackVisitor(): Promise<number> {
 
     // Check if this is a new session (visitor hasn't been tracked yet)
     const sessionKey = `aws-quiz-session-${today}`;
-    if (!sessionStorage.getItem(sessionKey)) {
-      sessionStorage.setItem(sessionKey, visitorId);
+    if (!localStorage.getItem(sessionKey)) {
+      localStorage.setItem(sessionKey, visitorId);
 
       const docRef = doc(db, VISITOR_COLLECTION, today);
       const docSnap = await getDoc(docRef);

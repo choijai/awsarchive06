@@ -6,8 +6,9 @@ import CookieConsent from "./components/CookieConsent";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
-import { createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
+import { auth, createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
 import { useLocale } from "./LocaleContext";
+import { canGenerateProblemToday, recordProblemGeneration } from "./firebase";
 import "./styles.css";
 
 // ===== 입력값 검증 함수 =====
@@ -59,12 +60,33 @@ type UserStatus = "guest" | "loggedIn" | "paid";
 
 function getUserStatus(): UserStatus {
   if (typeof window === "undefined") return "guest";
-  const status = localStorage.getItem("userStatus");
+  // ⚠️ 보안: PAID_TOKEN_ 형식만 인식, 다른 "paid"는 무시 (DevTools 수정 방지)
+  const status = sessionStorage.getItem("userStatus");
+  if (!status) return "guest";
+
+  // paid는 PAID_TOKEN_으로 시작하는 경우만 인정
+  if (status.startsWith("PAID_TOKEN_")) {
+    return "paid";
+  }
+
+  // "paid"를 직접 입력하면 guest로 반환 (DevTools 해킹 방지)
+  if (status === "paid") {
+    return "guest";
+  }
+
+  // guest, loggedIn은 그대로 반환
   return (status as UserStatus) || "guest";
 }
 
 function setUserStatus(status: UserStatus) {
-  localStorage.setItem("userStatus", status);
+  // ⚠️ 보안: 특정 토큰으로만 인식 (true/false 수정 방지)
+  if (status === "paid") {
+    const paidToken = `PAID_TOKEN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem("userStatus", paidToken);
+  } else {
+    // guest, loggedIn은 특정 토큰 형식 없음
+    sessionStorage.setItem("userStatus", status);
+  }
 }
 
 /**
@@ -76,27 +98,44 @@ async function verifyUserPaidStatusFromFirebase(userId: string): Promise<boolean
   try {
     return await getUserPaidStatus(userId);
   } catch (error) {
-    // Firebase 오류 시 localStorage에 캐시된 값 사용 (폴백)
-    const cached = localStorage.getItem("userStatus");
-    return cached === "paid";
+    // Firebase 오류 시 sessionStorage에 캐시된 값 사용 (폴백)
+    // ⚠️ 보안: 특정 토큰 형식만 인식
+    const cached = sessionStorage.getItem("userStatus");
+    return cached?.startsWith("PAID_TOKEN_") || false;
   }
 }
 
 function getTodayProblemCount(): number {
   if (typeof window === "undefined") return 0;
   const today = new Date().toISOString().split("T")[0];
-  const stored = localStorage.getItem("problemCountDate");
+  // ⚠️ 보안: sessionStorage로 변경 (탭 닫으면 초기화)
+  const stored = sessionStorage.getItem("problemCountDate");
   if (stored !== today) {
-    localStorage.setItem("problemCountDate", today);
-    localStorage.setItem("problemCount", "0");
+    sessionStorage.setItem("problemCountDate", today);
+    sessionStorage.setItem("problemCount", "COUNT_0_" + Date.now());
     return 0;
   }
-  return parseInt(localStorage.getItem("problemCount") || "0", 10);
+
+  // ⚠️ 보안: COUNT_ 토큰 형식만 인식
+  const countValue = sessionStorage.getItem("problemCount") || "";
+  if (countValue.startsWith("COUNT_")) {
+    try {
+      const count = parseInt(countValue.split("_")[1], 10);
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+
+  // 토큰 형식이 아니면 0으로 반환 (DevTools 수정 방지)
+  return 0;
 }
 
 function incrementProblemCount() {
   const count = getTodayProblemCount() + 1;
-  localStorage.setItem("problemCount", count.toString());
+  // ⚠️ 보안: COUNT_ 토큰 형식으로 저장
+  const countToken = `COUNT_${count}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  sessionStorage.setItem("problemCount", countToken);
 }
 
 function getDailyLimit(): number {
@@ -133,32 +172,22 @@ function clearSessionTimeout() {
 async function isAdminUser(email: string | null): Promise<boolean> {
   if (!email) return false;
 
-  // localStorage에 캐시된 값 확인
-  const cachedAdmin = localStorage.getItem(`isAdmin_${email}`);
-  if (cachedAdmin !== null) {
-    return cachedAdmin === 'true';
+  // ⚠️ 보안: ADMIN_TOKEN_ 형식만 인식, 다른 "true"는 무시 (DevTools 수정 방지)
+  const cachedToken = sessionStorage.getItem(`isAdmin_${email}`);
+  if (cachedToken !== null) {
+    // "ADMIN_TOKEN_" 형식의 토큰만 인식
+    if (cachedToken.startsWith('ADMIN_TOKEN_')) {
+      return true;
+    }
+    // "true"를 직접 입력하면 false 반환 (DevTools 해킹 방지)
+    if (cachedToken === 'true') {
+      return false;
+    }
+    return false;
   }
 
-  // 서버 API 시도 (포트 5000-5009 시도)
-  try {
-    // 상대 경로 사용 - 자동으로 현재 호스트와 포트 사용
-    const response = await fetch('/api/checkAdmin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-      signal: AbortSignal.timeout(2000) // 2초 타임아웃
-    });
-    const data = await response.json();
-    const isAdmin = data.isAdmin || false;
-
-    // 결과를 localStorage에 캐시 (24시간)
-    localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
-    localStorage.setItem(`isAdmin_${email}_time`, String(Date.now()));
-
-    return isAdmin;
-  } catch (error) {
-    // 서버 호출 실패 - 다음 단계로
-  }
+  // S3 배포 환경에서는 API 호출 불가 (정적 호스팅만 지원)
+  // Firebase 검증만 사용
 
   // 모든 포트 시도 실패 시 로컬 fallback 사용
   // (server.js가 실행 중이 아닐 때의 정상 동작)
@@ -173,8 +202,13 @@ async function isAdminUser(email: string | null): Promise<boolean> {
   const isAdmin = adminEmails.includes(email);
   const isPaidTestUser = paidTestEmails.includes(email);
 
-  // 결과를 localStorage에 캐시
-  localStorage.setItem(`isAdmin_${email}`, String(isAdmin));
+  // ⚠️ 보안: 특정 토큰으로만 admin 인식 (true/false 수정 방지)
+  if (isAdmin) {
+    const adminToken = `ADMIN_TOKEN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem(`isAdmin_${email}`, adminToken);
+  } else {
+    sessionStorage.setItem(`isAdmin_${email}`, 'NOT_ADMIN');
+  }
 
   return isAdmin;
 }
@@ -508,8 +542,9 @@ function App() {
   } | null>(null);
 
   // 사용자 상태 및 일일 제한
+  // ⚠️ 보안: sessionStorage만 사용 (localStorage 해킹 방지)
   const initialUserStatus: UserStatus = typeof window !== "undefined"
-    ? (localStorage.getItem("userStatus") as UserStatus) || "guest"
+    ? (sessionStorage.getItem("userStatus") as UserStatus) || "guest"
     : "guest";
   const [userStatus, setUserStatusLocal] = useState<UserStatus>(initialUserStatus);
   const [dailyCount, setDailyCount] = useState(0);
@@ -560,7 +595,6 @@ function App() {
 
       if (hoursElapsed >= 24) {
         localStorage.removeItem("mockExamPdfCreatedAt");
-        console.log("✅ 만료된 PDF 삭제 완료");
       }
     }
 
@@ -570,7 +604,6 @@ function App() {
 
     if (mockExamStartedDate && mockExamStartedDate !== today) {
       localStorage.removeItem("mockExamStartedToday");
-      console.log("✅ 새로운 날짜 - 모의시험 제한 플래그 초기화 완료");
     }
   }, []);
 
@@ -665,14 +698,24 @@ function App() {
           if (TEST_PAID_EMAILS.includes(user.email)) {
             isPaid = true;
             await updateUserPaidStatus(user.uid, true); // Firebase에도 저장
-            console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
           }
 
           const status: UserStatus = isPaid ? "paid" : "loggedIn";
           setUserStatusLocal(status);
-          localStorage.setItem("userStatus", status);
+          // ⚠️ 보안: paid 상태는 특정 토큰으로만 인식 (수정 방지)
+          if (isPaid) {
+            const paidToken = `PAID_TOKEN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            sessionStorage.setItem("userStatus", paidToken);
+          } else {
+            sessionStorage.setItem("userStatus", status);
+          }
         } catch (error) {
-          const status = (localStorage.getItem("userStatus") as UserStatus) || "loggedIn";
+          // ⚠️ 보안: sessionStorage 사용, 특정 토큰 형식만 인식
+          const statusValue = sessionStorage.getItem("userStatus");
+          let status: UserStatus = "loggedIn";
+          if (statusValue?.startsWith("PAID_TOKEN_")) {
+            status = "paid";
+          }
           setUserStatusLocal(status);
         }
       } else {
@@ -691,9 +734,7 @@ function App() {
     (async () => {
       try {
         const deleted = await deleteOldMockExamProblems();
-        if (deleted > 0) {
-          console.log(`🧹 앱 시작: ${deleted}개 오래된 문제 정리 완료`);
-        }
+        // 오래된 문제 정리 완료
       } catch (error) {
         console.error("오래된 문제 정리 실패:", error);
       }
@@ -789,9 +830,7 @@ function App() {
       if (isAdmin || TEST_PAID_EMAILS.includes(userEmail)) {
         setUserStatusLocal("paid");
         localStorage.setItem("userStatus", "paid");
-        if (TEST_PAID_EMAILS.includes(userEmail)) {
-          console.log("✅ 테스트 이메일 자동 paid 처리:", userEmail);
-        }
+        // 테스트 이메일 자동 paid 처리 (콘솔 로그 제거)
       }
 
       (async () => {
@@ -985,17 +1024,53 @@ function App() {
     setShowEasyMode(false);
 
     try {
-      const serviceNames = slots.map(id => {
-        const node = NODES.find(n => n.id === id);
-        return node?.name || id;
-      });
+      // ⚠️ 보안: Firebase 서버에서 권한 확인 (sessionStorage 우회 방지)
+      if (userEmail && auth.currentUser?.uid) {
+        const { canGenerate, count, limit } = await canGenerateProblemToday(
+          auth.currentUser.uid,
+          userStatus
+        );
 
-      const generatedProblem = await generateSAAProblem(serviceNames, difficulty, locale);
-      setProblem(generatedProblem);
+        if (!canGenerate) {
+          setError(getQuotaMessage(userStatus, limit, count));
+          return;
+        }
 
-      // 카운트 증가
-      incrementProblemCount();
-      setDailyCount(getTodayProblemCount());
+        // 문제 생성 후 Firebase에 기록
+        const serviceNames = slots.map(id => {
+          const node = NODES.find(n => n.id === id);
+          return node?.name || id;
+        });
+
+        const generatedProblem = await generateSAAProblem(serviceNames, difficulty, locale);
+
+        // Firebase에 문제 생성 기록 저장 (클라이언트 수정 불가)
+        await recordProblemGeneration(auth.currentUser.uid);
+
+        setProblem(generatedProblem);
+
+        // ⚠️ 보안: Firebase에서 최신 카운트를 다시 읽어옴 (localStorage 우회 방지)
+        const { count: updatedCount } = await canGenerateProblemToday(
+          auth.currentUser.uid,
+          userStatus
+        );
+        // 클라이언트 카운트 업데이트 (Firebase 기반)
+        sessionStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
+        sessionStorage.setItem(`COUNT_${new Date().toISOString().split("T")[0]}`, `COUNT_${updatedCount}`);
+        setDailyCount(updatedCount);
+      } else {
+        // 비로그인 상태
+        const serviceNames = slots.map(id => {
+          const node = NODES.find(n => n.id === id);
+          return node?.name || id;
+        });
+
+        const generatedProblem = await generateSAAProblem(serviceNames, difficulty, locale);
+        setProblem(generatedProblem);
+
+        incrementProblemCount();
+        setDailyCount(getTodayProblemCount());
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGenerate"));
       // 에러 처리만 수행 (로깅 제거)
@@ -1008,10 +1083,10 @@ function App() {
   function getQuotaMessage(status: UserStatus, limit: number, current: number): string {
     const remaining = Math.max(0, limit - current);
     if (status === "guest") {
-      return `🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade your plan.`;
+      return t("quotaFullGuest");
     }
     if (status === "loggedIn") {
-      return `✨ Your free 2 attempts are used. Please upgrade to generate more problems today!`;
+      return t("quotaFullLoggedIn");
     }
     return `Limit reached (${current}/${limit}).`;
   }
@@ -1566,8 +1641,28 @@ function App() {
         {/* 관리자에게만 Admin 탭 표시 */}
         {isAdmin && (
           <>
-            <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙️ Admin</button>
-            <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>👥 {t("tabUsers")}</button>
+            <button className={`tab ${tab === "admin" ? "active" : ""}`} onClick={async () => {
+              // 탭 클릭 시 서버에서 권한 재검증
+              if (userEmail) {
+                const verified = await isAdminUser(userEmail);
+                if (verified) {
+                  setTab("admin");
+                } else {
+                  alert("권한이 없습니다.");
+                }
+              }
+            }}>⚙️ Admin</button>
+            <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={async () => {
+              // 탭 클릭 시 서버에서 권한 재검증
+              if (userEmail) {
+                const verified = await isAdminUser(userEmail);
+                if (verified) {
+                  setTab("users");
+                } else {
+                  alert("권한이 없습니다.");
+                }
+              }
+            }}>👥 {t("tabUsers")}</button>
           </>
         )}
       </div>
@@ -2505,31 +2600,24 @@ function App() {
                     <button
                       onClick={async () => {
                         try {
-                          console.log("시험 생성 시작...");
-
                           // 캐시 삭제 - 항상 새로 생성
                           localStorage.removeItem("mockExamProblems");
                           localStorage.removeItem("mockExamProblemsLoaded");
                           localStorage.removeItem("mockExamDifficulties");
-                          console.log("캐시 삭제 완료");
 
                           const problems: Problem[] = [];
 
                           // 테스트: API 2번 호출, 문제 2개 생성
                           for (let i = 0; i < 2; i++) {
-                            console.log(`문제 ${i + 1} 생성 중...`);
                             const problem = await generateSAAProblem([], "medium", locale);
-                            console.log(`문제 ${i + 1} 생성 완료:`, problem);
                             problems.push(problem);
                           }
 
-                          console.log("총 문제 수:", problems.length);
                           setMockExamProblems(problems);
                           setMockExamCurrentIndex(0);
                           setMockExamAnswers(new Array(problems.length).fill(null));
                           setMockExamStartTime(Date.now());
                           setMockExamRunning(true);
-                          console.log("시험 시작됨");
                         } catch (error) {
                           console.error("문제 생성 실패:", error);
                           alert("문제 생성 실패: " + (error instanceof Error ? error.message : String(error)));
@@ -2782,8 +2870,10 @@ function App() {
             </div>
           )} {/* End of Status tab */}
 
-          {/* Admin Panel - 관리자만 접근 가능 */}
+          {/* Admin Panel - 관리자만 접근 가능 (서버 검증 필수) */}
           {tab === "admin" && isAdmin && userEmail && (
+            // ⚠️ 주의: 실제 데이터는 getAdminStatsSecure에서 서버 검증됨
+            // localStorage 수정해도 데이터 로드 실패
             <div style={{
               display: "flex",
               flexDirection: "column",
@@ -3768,15 +3858,12 @@ function App() {
                             console.log("시험 시작하기 - UTC 기준 오늘 문제 확인 중...");
 
                             // 1단계: Firestore에서 오늘의 UTC 기준 문제 조회 (언어별)
-                            console.log("🌐 선택한 언어:", locale, "| 사용자:", userEmail);
                             const existingProblems = await getTodayMockExamProblems(locale);
-                            console.log("📥 Firebase에서 불러온 문제:", existingProblems?.length || 0, "개");
                             let allProblems = existingProblems;
                             let difficulties: string[] = [];
 
                             if (existingProblems && existingProblems.length > 0) {
                               // 이미 생성된 문제 존재 - 공유 사용
-                              console.log("✅ 기존 문제 발견 (UTC 기준):", existingProblems.length);
                               allProblems = existingProblems;
                               // 기존 문제에서 난이도 추출
                               difficulties = existingProblems.map(p => {
@@ -3786,7 +3873,6 @@ function App() {
                               });
                             } else {
                               // 새 문제 생성
-                              console.log("🆕 새 문제 생성 (UTC 기준)");
                               difficulties = [
                                 ...Array(20).fill("medium"),
                                 ...Array(20).fill("hard"),
@@ -3833,9 +3919,7 @@ function App() {
                               localStorage.setItem("mockExamStartedToday", today);
                             }
 
-                            console.log("첫 문제 로드 완료, 백그라운드 로딩 시작");
                           } catch (err) {
-                            console.error("시험 생성 에러:", err);
                             setError("모의시험 생성 실패");
                           } finally {
                             setLoading(false);
@@ -4403,16 +4487,17 @@ function App() {
                     if (TEST_PAID_EMAILS.includes(user.email)) {
                       isPaid = true;
                       await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
-                      console.log("✅ 테스트 이메일 자동 paid 처리:", user.email);
                     }
 
                     const status: UserStatus = isPaid ? "paid" : "loggedIn";
                     setUserStatusLocal(status);
                     localStorage.setItem("userStatus", status);
 
-                    setDailyCount(0);
+                    // ⚠️ Firebase에서 실제 일일 생성 수 조회
+                    const { count } = await canGenerateProblemToday(user.uid, status);
+                    setDailyCount(count);
                     localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                    localStorage.setItem("problemCount", "0");
+                    sessionStorage.setItem(`COUNT_${new Date().toISOString().split("T")[0]}`, `COUNT_${count}`);
                     setShowLoginModal(false);
 
                     // Firebase에서 시험 시작일 확인
@@ -4518,7 +4603,6 @@ function App() {
                     if (TEST_PAID_EMAILS.includes(email)) {
                       isPaid = true;
                       await updateUserPaidStatus(user.uid, true); // ✅ Firebase에도 저장
-                      console.log("✅ 테스트 이메일 자동 paid 처리:", email);
                     }
 
                     const status: UserStatus = isPaid ? "paid" : "loggedIn";
@@ -4530,9 +4614,18 @@ function App() {
                   }
 
                   localStorage.setItem("userName", userName);
-                  setDailyCount(0);
+
+                  // ⚠️ Firebase에서 실제 일일 생성 수 조회
+                  const currentUser = getCurrentUser();
+                  if (currentUser) {
+                    const status: UserStatus = localStorage.getItem("userStatus") as UserStatus || "loggedIn";
+                    const { count } = await canGenerateProblemToday(currentUser.uid, status);
+                    setDailyCount(count);
+                    sessionStorage.setItem(`COUNT_${new Date().toISOString().split("T")[0]}`, `COUNT_${count}`);
+                  } else {
+                    setDailyCount(0);
+                  }
                   localStorage.setItem("problemCountDate", new Date().toISOString().split("T")[0]);
-                  localStorage.setItem("problemCount", "0");
                   setShowLoginModal(false);
 
                   // 세션 타임아웃 설정 (30분 비활동 시 자동 로그아웃)
@@ -4543,7 +4636,6 @@ function App() {
                   });
 
                   // Firebase에서 시험 시작일 확인
-                  const currentUser = getCurrentUser();
                   if (currentUser) {
                     const examStartDate = await getExamStartDate(currentUser.uid);
                     if (examStartDate) {

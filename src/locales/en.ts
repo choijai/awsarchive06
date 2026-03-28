@@ -149,7 +149,7 @@ export const en: Strings = {
   loggedInStatus: "✨ Logged in",
   paidStatus: "💎 Premium (Paid)",
   quotaFullGuest: "🔐 Daily limit reached (2/2). Please log in for 2 free attempts, or upgrade your plan.",
-  quotaFullLoggedIn: "✨ Your free 2 attempts are used. Please upgrade to generate 20 problems per day!",
+  quotaFullLoggedIn: "✨ Your free 2 attempts are used. Please upgrade to generate more problems today!",
 
   // D-Day related
   examDateLabel: "📅 Set Exam Start Date",

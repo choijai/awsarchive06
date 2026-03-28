@@ -45,3 +45,4 @@ app-example
 
 # Project documentation with sensitive info (admin emails, UIDs, etc.)
 CLAUDE.md
+firebase-key.json

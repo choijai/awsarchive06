@@ -238,6 +238,9 @@ export const en: Strings = {
   diffHardLabel: "Hard",
   diffChallengeLabel: "Challenge",
 
+  // Quiz Submit Button
+  btnSubmit: "✓ Submit",
+
   // PDF Export related
   pdfMockExamResults: "SAA-C03 Mock Exam Results",
   pdfStatus: "Status",

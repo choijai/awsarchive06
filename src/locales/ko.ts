@@ -236,6 +236,9 @@ export const ko = {
   diffHardLabel: "어려움",
   diffChallengeLabel: "챌린지",
 
+  // Quiz Submit Button
+  btnSubmit: "✓ 제출",
+
   // Exam Date Related
   examStartDateSetting: "📅 시험 시작일 설정",
   examSelectDate: "날짜를 선택하세요",

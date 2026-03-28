@@ -1944,7 +1944,7 @@ function App() {
                             e.currentTarget.style.borderColor = "rgba(59,130,246,0.5)";
                           }}
                         >
-                          ✓ 제출
+                          {t("btnSubmit")}
                         </button>
                       )}
 

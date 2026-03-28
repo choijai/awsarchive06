@@ -238,6 +238,9 @@ export const ja: Strings = {
   diffHardLabel: "難しい",
   diffChallengeLabel: "チャレンジ",
 
+  // Quiz Submit Button
+  btnSubmit: "✓ 送信",
+
   // Exam Date Related
   examStartDateSetting: "📅 試験開始日を設定",
   examSelectDate: "日付を選択",

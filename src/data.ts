@@ -441,4 +441,3 @@ export const CONCEPTS_JA: Record<string, Concept> = {
   },
 };
 
-export const CONCEPTS = CONCEPTS_KO;

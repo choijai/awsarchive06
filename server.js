@@ -17,6 +17,10 @@ app.use(cors({
     'https://awsarchive.com',
     'https://www.awsarchive.com',
     'http://localhost:5173',  // 개발 환경
+    'http://localhost:3000',  // Vite 대체 포트
+    'http://localhost:3001',  // Vite 대체 포트
+    'http://localhost:3002',  // Vite 대체 포트
+    'http://localhost:3003',  // Vite 대체 포트
     'http://localhost:5000'   // 로컬 테스트
   ],
   credentials: true,
@@ -445,6 +449,37 @@ app.post('/api/admin/user/sessions', (req, res) => {
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', port: PORT });
+});
+
+// ✅ Lemon Squeezy Checkout API
+app.post('/api/lemonsqueezy/checkout', async (req, res) => {
+  try {
+    const { email, returnUrl } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const apiKey = process.env.VITE_LEMON_SQUEEZY_API_KEY;
+    if (!apiKey) {
+      console.error('❌ VITE_LEMON_SQUEEZY_API_KEY not found');
+      return res.status(500).json({ error: 'Payment system not configured' });
+    }
+
+    console.log('📤 Creating Lemon Squeezy Checkout...');
+
+    // TODO: Implement actual Lemon Squeezy Checkout URL generation
+    // For now, return a test URL
+    const checkoutUrl = `https://lemonsqueezy.com/checkout?email=${encodeURIComponent(email)}&test=true`;
+
+    res.json({
+      checkoutUrl: checkoutUrl,
+      email: email
+    });
+  } catch (error) {
+    console.error('❌ Checkout error:', error);
+    res.status(500).json({ error: { message: error.message } });
+  }
 });
 
 // Start server on port 5000

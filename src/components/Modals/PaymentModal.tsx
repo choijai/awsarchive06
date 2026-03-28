@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useLocale } from '../../LocaleContext';
-import { updateUserPaidStatus } from '../../firebase';
-import { getCurrentUser } from '../../firebase';
 
 interface PaymentModalProps {
   onClose: () => void;
@@ -13,9 +11,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
   const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(userEmail || '');
-  const [isComingSoon] = useState(true); // Coming Soon 모드 활성화
+  const [isComingSoon] = useState(false); // Lemon Squeezy 모드 활성화
 
   const labels = {
     ko: {
@@ -70,10 +67,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
 
   const currentLabels = labels[locale as keyof typeof labels] || labels.en;
 
-  const handlePayment = async (e: React.FormEvent) => {
+  const handleLemonSqueezyCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !fullName) {
-      setError(locale === 'ko' ? '이름과 이메일을 입력해주세요.' : locale === 'ja' ? '名前とメールアドレスを入力してください。' : 'Please enter your name and email.');
+    if (!email) {
+      setError(locale === 'ko' ? '이메일을 입력해주세요.' : locale === 'ja' ? 'メールアドレスを入力してください。' : 'Please enter your email.');
       return;
     }
 
@@ -84,53 +81,33 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
       const env = (import.meta as any).env;
       const backendUrl = env?.VITE_BACKEND_URL || 'http://localhost:5000';
 
-      // ✅ 2Checkout API로 결제 처리
-      const response = await fetch(`${backendUrl}/api/process2CheckoutPayment`, {
+      // ✅ Lemon Squeezy Checkout URL 생성
+      const response = await fetch(`${backendUrl}/api/lemonsqueezy/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: email,
-          fullName: fullName,
-          amount: 14.99,
-          currency: 'usd',
+          returnUrl: window.location.origin,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Payment processing failed');
+        throw new Error('Checkout creation failed');
       }
 
       const data = await response.json();
 
-      if (data.success) {
-        // ✅ Firebase에 결제 상태 저장 (영구적)
-        const user = getCurrentUser();
-        if (user) {
-          await updateUserPaidStatus(user.uid, true);
-          console.log('✅ Premium status saved to Firebase');
-        }
-
-        // 로컬 캐시도 저장
-        localStorage.setItem('userStatus', 'paid');
-        localStorage.setItem('premiumEndDate', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
-
-        if (onSuccess) {
-          onSuccess();
-        }
-
-        // Show success message
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+      if (data.checkoutUrl) {
+        // Lemon Squeezy 결제 페이지로 리다이렉트
+        window.location.href = data.checkoutUrl;
       } else {
-        throw new Error(data.error || 'Payment failed');
+        throw new Error(data.error || 'Failed to create checkout');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(currentLabels.errorMessage);
-    } finally {
       setLoading(false);
     }
   };
@@ -247,147 +224,120 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess, userEma
           </>
         ) : (
           <>
-            {/* Original Payment Form (Hidden for now) */}
-            <div style={{ display: 'none' }}>
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ color: '#fff', margin: 0, fontSize: '24px' }}>{currentLabels.title}</h2>
-                <button
-                  onClick={onClose}
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ color: '#fff', margin: 0, fontSize: '24px' }}>{currentLabels.title}</h2>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '24px',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Features */}
+            <div style={{ marginBottom: '24px' }}>
+              {currentLabels.features.map((feature, idx) => (
+                <div key={idx} style={{ color: '#cbd5e1', marginBottom: '8px', fontSize: '14px' }}>
+                  {feature}
+                </div>
+              ))}
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleLemonSqueezyCheckout}>
+              {/* Email */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
+                  {currentLabels.emailLabel}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={currentLabels.emailLabel}
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    fontSize: '24px',
-                    padding: '0',
-                    width: '32px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: '#0f172a',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  color: '#fca5a5',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                }}>
+                  {error}
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#cbd5e1',
+                    fontSize: '14px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.5 : 1,
+                    fontWeight: '500',
                   }}
                 >
-                  ×
+                  {currentLabels.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: '#6366f1',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.7 : 1,
+                    fontWeight: '600',
+                  }}
+                >
+                  {loading ? currentLabels.processing : currentLabels.subscribeBtn}
                 </button>
               </div>
-
-              {/* Features */}
-              <div style={{ marginBottom: '24px' }}>
-                {currentLabels.features.map((feature, idx) => (
-                  <div key={idx} style={{ color: '#cbd5e1', marginBottom: '8px', fontSize: '14px' }}>
-                    {feature}
-                  </div>
-                ))}
-              </div>
-
-              {/* Form */}
-              <form onSubmit={handlePayment}>
-                {/* Full Name */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
-                    {currentLabels.fullNameLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder={currentLabels.fullNameLabel}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                    }}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Email */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '14px', marginBottom: '6px' }}>
-                    {currentLabels.emailLabel}
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={currentLabels.emailLabel}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                    }}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '6px',
-                    padding: '12px',
-                    color: '#fca5a5',
-                    fontSize: '14px',
-                    marginBottom: '16px',
-                  }}>
-                    {error}
-                  </div>
-                )}
-
-                {/* Buttons */}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={loading}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '6px',
-                      color: '#cbd5e1',
-                      fontSize: '14px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.5 : 1,
-                      fontWeight: '500',
-                    }}
-                  >
-                    {currentLabels.cancelBtn}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      backgroundColor: '#6366f1',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.7 : 1,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {loading ? currentLabels.processing : currentLabels.subscribeBtn}
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </>
         )}
       </div>

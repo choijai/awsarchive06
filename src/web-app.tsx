@@ -6,6 +6,8 @@ import CookieConsent from "./components/CookieConsent";
 import Footer from "./components/Footer";
 import PaymentModal from "./components/Modals/PaymentModal";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
+import { CONCEPTS_EN } from "./CONCEPTS_EN";
+import { CONCEPTS_JA } from "./data";
 import { auth, createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import { canGenerateProblemToday, recordProblemGeneration } from "./firebase";
@@ -1097,8 +1099,8 @@ function App() {
 
     const conceptsByLocale = {
       ko: CONCEPTS_KO,
-      en: CONCEPTS_KO, // Fallback to Korean (English version not available yet)
-      ja: CONCEPTS_KO, // Fallback to Korean (Japanese version coming soon)
+      en: CONCEPTS_EN,
+      ja: CONCEPTS_JA,
     };
 
     return conceptsByLocale[locale][selected] || null;

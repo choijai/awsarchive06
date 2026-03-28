@@ -214,4 +214,52 @@ export const en: Strings = {
   postsDelete: "Delete",
   postsView: "Views",
   postsPage: "Page",
+
+  // Quiz Result Messages
+  quizCorrect: "✅ Correct!",
+  quizIncorrect: "❌ Incorrect.",
+  quizKeyGoal: "🎯 Key Goal:",
+  quizAnswer: "Answer:",
+  quizExplanation: "Explanation",
+  quizTrap: "⚠️ Trap:",
+  quizKeywords: "📌 Key Keywords:",
+  quizEasyMode: "👶 Easy Mode",
+  quizEasyModeClose: "🧠 Close Easy Mode",
+  quizEasyModeExplanation: "🎈 Easy Mode Explanation:",
+  quizEachOptionExplanation: "Each Option Explanation:",
+  quizCorePattern: "📚 Core Pattern",
+
+  // Mock Exam Results
+  mockExamPass: "🎉 Pass!",
+  mockExamRetry: "Retry Needed",
+
+  // Mock Exam Difficulty (context specific)
+  diffMediumLabel: "Medium",
+  diffHardLabel: "Hard",
+  diffChallengeLabel: "Challenge",
+
+  // Exam Date Related
+  examStartDateSetting: "📅 Exam Start Date Setting",
+  examSelectDate: "Select a date",
+  examDaysRemaining: "{n} days left until exam",
+  examToday: "Today is the exam day",
+  examDatePassed: "Exam date has passed",
+
+  // Admin & Permissions
+  adminLabel: "Admin",
+  errorPermissionDenied: "You don't have permission.",
+  errorAdminOnly: "Admin only.",
+
+  // Validation & Error Messages
+  errorInvalidEmail: "Please enter valid email",
+  errorPasswordInvalid: "Password error",
+  errorTooManyRequests: "Too many requests. Try again later.",
+  errorProblemGeneration: "Problem generation failed",
+
+  // Mock Exam Grading Messages
+  mockExamNoAnswersGrading: "Nothing solved. Really grade?\nScore: 0 / Fail 🚫",
+  mockExamPartialAnswersGrading: "{n} problems not solved.\nReally grade?",
+
+  // Session Details
+  sessionDetailsView: "View details for {n} problems",
 };

@@ -214,4 +214,52 @@ export const ja: Strings = {
   postsDelete: "削除",
   postsView: "閲覧",
   postsPage: "ページ",
+
+  // Quiz Result Messages
+  quizCorrect: "✅ 正解!",
+  quizIncorrect: "❌ 不正解。",
+  quizKeyGoal: "🎯 重要な目標:",
+  quizAnswer: "答え:",
+  quizExplanation: "説明",
+  quizTrap: "⚠️ トラップ:",
+  quizKeywords: "📌 重要なキーワード:",
+  quizEasyMode: "👶 簡単モード",
+  quizEasyModeClose: "🧠 簡単モードを閉じる",
+  quizEasyModeExplanation: "🎈 簡単モード説明:",
+  quizEachOptionExplanation: "各オプションの説明:",
+  quizCorePattern: "📚 コアパターン",
+
+  // Mock Exam Results
+  mockExamPass: "🎉 合格!",
+  mockExamRetry: "再試験が必要",
+
+  // Mock Exam Difficulty (context specific)
+  diffMediumLabel: "普通",
+  diffHardLabel: "難しい",
+  diffChallengeLabel: "チャレンジ",
+
+  // Exam Date Related
+  examStartDateSetting: "📅 試験開始日を設定",
+  examSelectDate: "日付を選択",
+  examDaysRemaining: "試験まで{n}日残っています",
+  examToday: "本日は試験日です",
+  examDatePassed: "試験日は過ぎました",
+
+  // Admin & Permissions
+  adminLabel: "管理者",
+  errorPermissionDenied: "権限がありません。",
+  errorAdminOnly: "管理者のみ。",
+
+  // Validation & Error Messages
+  errorInvalidEmail: "有効なメールアドレスを入力してください",
+  errorPasswordInvalid: "パスワードエラー",
+  errorTooManyRequests: "リクエストが多すぎます。後でもう一度お試しください。",
+  errorProblemGeneration: "問題の生成に失敗しました",
+
+  // Mock Exam Grading Messages
+  mockExamNoAnswersGrading: "何も解きませんでした。本当に採点しますか？\nスコア: 0点 / 不合格 🚫",
+  mockExamPartialAnswersGrading: "{n}個の問題が解かれていません。\n本当に採点しますか？",
+
+  // Session Details
+  sessionDetailsView: "{n}個の問題の詳細を表示",
 };

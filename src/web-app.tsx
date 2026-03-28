@@ -1015,7 +1015,7 @@ function App() {
 
     // Rate Limiting 확인
     if (!checkRateLimit(userEmail)) {
-      setError("너무 많은 요청이 발생했습니다. 잠시 후 다시 시도하세요");
+      setError(t("errorTooManyRequests"));
       return;
     }
 
@@ -1650,7 +1650,7 @@ function App() {
                 if (verified) {
                   setTab("admin");
                 } else {
-                  alert("권한이 없습니다.");
+                  alert(t("errorPermissionDenied"));
                 }
               }
             }}>⚙️ Admin</button>
@@ -1661,7 +1661,7 @@ function App() {
                 if (verified) {
                   setTab("users");
                 } else {
-                  alert("권한이 없습니다.");
+                  alert(t("errorPermissionDenied"));
                 }
               }
             }}>👥 {t("tabUsers")}</button>
@@ -1825,7 +1825,7 @@ function App() {
                   {loading ? t("btnGenerating") : t("btnGenerate")}
                   <br />
                   <span style={{ fontSize: "11px", opacity: 0.7, display: "block", marginTop: "4px" }}>
-                    {isAdmin ? "관리자" : `${dailyCount}/${getDailyLimit()}`}
+                    {isAdmin ? t("adminLabel") : `${dailyCount}/${getDailyLimit()}`}
                   </span>
                 </button>
 
@@ -1952,26 +1952,26 @@ function App() {
                         <div className="explanation" style={{ background: "rgba(255,255,255,0.05)", padding: "12px", borderRadius: "6px", marginTop: "12px" }}>
                           {/* 정답 표시 */}
                           <div style={{ fontSize: "12px", color: selectedAnswer === problem.answer ? "#10b981" : "#ef4444", marginBottom: "8px", fontWeight: "bold" }}>
-                            {selectedAnswer === problem.answer ? "✅ 정답입니다!" : "❌ 틀렸습니다."}
+                            {selectedAnswer === problem.answer ? t("quizCorrect") : t("quizIncorrect")}
                           </div>
 
                           {/* 핵심 목표 */}
                           {(problem as any).goal && (
                             <div style={{ fontSize: "12px", color: "#a78bfa", marginBottom: "8px", padding: "8px", background: "rgba(167,139,250,0.1)", borderRadius: "4px" }}>
-                              <strong>🎯 핵심 목표:</strong> {(problem as any).goal}
+                              <strong>{t("quizKeyGoal")}</strong> {(problem as any).goal}
                             </div>
                           )}
 
                           {/* 정답과 설명 */}
                           <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "8px" }}>
-                            <strong>정답: {problem.answer}</strong>
+                            <strong>{t("quizAnswer")} {problem.answer}</strong>
                           </div>
                           <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "8px" }}>
-                            <strong>설명</strong>
+                            <strong>{t("quizExplanation")}</strong>
                             <p style={{ marginTop: "6px" }}>{problem.explanation.correct}</p>
                             {selectedAnswer !== problem.answer && problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation] && (
                               <p style={{ marginTop: "6px", color: "#ef4444" }}>
-                                <strong>⚠️ 함정:</strong> {problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation]}
+                                <strong>{t("quizTrap")}</strong> {problem.explanation[`trap_${selectedAnswer}` as keyof typeof problem.explanation]}
                               </p>
                             )}
                           </div>
@@ -1979,7 +1979,7 @@ function App() {
                           {/* 핵심 키워드 */}
                           {(problem as any).keywords && (problem as any).keywords.length > 0 && (
                             <div style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "8px", padding: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px" }}>
-                              <strong>📌 핵심 키워드:</strong>
+                              <strong>{t("quizKeywords")}</strong>
                               <div style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
                                 {(problem as any).keywords.map((kw: string, i: number) => (
                                   <span key={i} style={{ background: "rgba(59,130,246,0.3)", padding: "2px 8px", borderRadius: "12px", color: "#60a5fa" }}>
@@ -2015,17 +2015,17 @@ function App() {
                                 e.currentTarget.style.background = showEasyMode ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)";
                               }}
                             >
-                              {showEasyMode ? "🧠 이지모드 닫기" : "👶 이지모드"}
+                              {showEasyMode ? t("quizEasyModeClose") : t("quizEasyMode")}
                             </button>
                           )}
 
                           {/* easyMode 설명 */}
                           {showEasyMode && (problem as any).easyMode && (
                             <div style={{ fontSize: "12px", color: "#cbd5e1", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "6px", marginBottom: "12px" }}>
-                              <strong style={{ color: "#fbbf24" }}>🎈 이지모드 설명:</strong>
+                              <strong style={{ color: "#fbbf24" }}>{t("quizEasyModeExplanation")}</strong>
                               <p style={{ marginTop: "6px", lineHeight: "1.6" }}>{(problem as any).easyMode.explanation}</p>
                               <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(245,158,11,0.2)" }}>
-                                <strong style={{ color: "#fbbf24" }}>각 보기 설명:</strong>
+                                <strong style={{ color: "#fbbf24" }}>{t("quizEachOptionExplanation")}</strong>
                                 {(["A", "B", "C", "D"] as const).map(opt => (
                                   <div key={opt} style={{ marginTop: "6px", color: opt === problem.answer ? "#4ade80" : "#cbd5e1" }}>
                                     <strong>{opt}.</strong> {(problem as any).easyMode[opt]}
@@ -2037,7 +2037,7 @@ function App() {
 
                           {problem.patterns && (
                             <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                              <strong style={{ fontSize: "12px" }}>📚 핵심 패턴</strong>
+                              <strong style={{ fontSize: "12px" }}>{t("quizCorePattern")}</strong>
                               <ul style={{ fontSize: "12px", marginTop: "4px", paddingLeft: "16px" }}>
                                 {problem.patterns.map((p, i) => (
                                   <li key={i} style={{ color: "#94a3b8", marginTop: "4px" }}>{p}</li>
@@ -2191,7 +2191,7 @@ function App() {
                       margin: "0",
                       fontSize: "14px"
                     }}>
-                      {mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}
+                      {mockExamResults.passed ? t("mockExamPass") : t("mockExamRetry")}
                     </p>
                   </div>
 
@@ -2621,8 +2621,8 @@ function App() {
                           setMockExamStartTime(Date.now());
                           setMockExamRunning(true);
                         } catch (error) {
-                          console.error("문제 생성 실패:", error);
-                          alert("문제 생성 실패: " + (error instanceof Error ? error.message : String(error)));
+                          console.error(t("errorProblemGeneration"), error);
+                          alert(t("errorProblemGeneration") + ": " + (error instanceof Error ? error.message : String(error)));
                           setMockExamRunning(false);
                           // ✅ 에러 발생 시 시험 정보 정리
                           localStorage.removeItem("mockExamStartedLocale");
@@ -3558,8 +3558,8 @@ function App() {
                           // 답변하지 않은 문제가 있으면 확인
                           if (unanswered > 0) {
                             const message = unanswered === mockExamProblems.length
-                              ? `아무것도 풀지 않았습니다. 정말 채점하시겠습니까?\n점수: 0점 / 불합격 🚫`
-                              : `${unanswered}개의 문제를 풀지 않았습니다.\n정말 채점하시겠습니까?`;
+                              ? t("mockExamNoAnswersGrading")
+                              : t("mockExamPartialAnswersGrading").replace("{n}", unanswered.toString());
 
                             if (!window.confirm(message)) {
                               return; // 취소 클릭
@@ -3637,26 +3637,26 @@ function App() {
 
                               {/* 정답/오답 표시 */}
                               <div style={{ fontSize: "12px", color: isCorrect ? "#10b981" : "#ef4444", marginBottom: "12px", fontWeight: "bold" }}>
-                                {isCorrect ? "✅ 정답입니다!" : "❌ 틀렸습니다."}
+                                {isCorrect ? t("quizCorrect") : t("quizIncorrect")}
                               </div>
 
                               {/* 핵심 목표 */}
                               {(problem as any).goal && (
                                 <div style={{ fontSize: "12px", color: "#a78bfa", marginBottom: "12px", padding: "8px", background: "rgba(167,139,250,0.1)", borderRadius: "4px" }}>
-                                  <strong>🎯 핵심 목표:</strong> {(problem as any).goal}
+                                  <strong>{t("quizKeyGoal")}</strong> {(problem as any).goal}
                                 </div>
                               )}
 
                               {/* 정답과 설명 */}
                               <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "12px" }}>
-                                <strong>정답: {problem.answer}</strong>
+                                <strong>{t("quizAnswer")} {problem.answer}</strong>
                               </div>
                               <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "12px" }}>
-                                <strong>설명</strong>
+                                <strong>{t("quizExplanation")}</strong>
                                 <p style={{ marginTop: "6px" }}>{problem.explanation.correct}</p>
                                 {userAnswer !== problem.answer && problem.explanation[`trap_${userAnswer}` as keyof typeof problem.explanation] && (
                                   <p style={{ marginTop: "6px", color: "#ef4444" }}>
-                                    <strong>⚠️ 함정:</strong> {problem.explanation[`trap_${userAnswer}` as keyof typeof problem.explanation]}
+                                    <strong>{t("quizTrap")}</strong> {problem.explanation[`trap_${userAnswer}` as keyof typeof problem.explanation]}
                                   </p>
                                 )}
                               </div>
@@ -3664,7 +3664,7 @@ function App() {
                               {/* 핵심 키워드 */}
                               {(problem as any).keywords && (problem as any).keywords.length > 0 && (
                                 <div style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "12px", padding: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px" }}>
-                                  <strong>📌 핵심 키워드:</strong>
+                                  <strong>{t("quizKeywords")}</strong>
                                   <div style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
                                     {(problem as any).keywords.map((kw: string, i: number) => (
                                       <span key={i} style={{ background: "rgba(59,130,246,0.3)", padding: "2px 8px", borderRadius: "12px", color: "#60a5fa" }}>
@@ -3678,10 +3678,10 @@ function App() {
                               {/* 이지모드 */}
                               {(problem as any).easyMode && (
                                 <div style={{ fontSize: "12px", color: "#cbd5e1", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "6px" }}>
-                                  <strong style={{ color: "#fbbf24" }}>👨‍🏫 쉽게설명:</strong>
+                                  <strong style={{ color: "#fbbf24" }}>{t("quizEasyModeExplanation")}</strong>
                                   <p style={{ marginTop: "6px", lineHeight: "1.6" }}>{(problem as any).easyMode.explanation}</p>
                                   <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(245,158,11,0.2)" }}>
-                                    <strong style={{ color: "#fbbf24" }}>각 보기 설명:</strong>
+                                    <strong style={{ color: "#fbbf24" }}>{t("quizEachOptionExplanation")}</strong>
                                     {(["A", "B", "C", "D"] as const).map(opt => (
                                       <div key={opt} style={{ marginTop: "6px", color: opt === problem.answer ? "#4ade80" : "#cbd5e1" }}>
                                         <strong>{opt}.</strong> {(problem as any).easyMode[opt]}
@@ -3777,7 +3777,7 @@ function App() {
                             const adminData = await adminCheck.json();
 
                             if (!adminData.isAdmin) {
-                              setError("관리자만 접근 가능합니다");
+                              setError(t("errorAdminOnly"));
                               return;
                             }
 
@@ -3805,7 +3805,7 @@ function App() {
                             }
                             setMockExamProblems(problems);
                           } catch (err) {
-                            setError(locale === "ko" ? "문제 생성 실패" : locale === "ja" ? "問題生成失敗" : "Failed to generate problems");
+                            setError(t("errorProblemGeneration"));
                           } finally {
                             setLoading(false);
                           }
@@ -4346,14 +4346,14 @@ function App() {
                             borderRadius: "4px",
                             fontWeight: 600
                           }}>
-                            {session.difficulty === "medium" ? "보통" : session.difficulty === "hard" ? "어려움" : "챌린지"}
+                            {session.difficulty === "medium" ? t("diffMediumLabel") : session.difficulty === "hard" ? t("diffHardLabel") : t("diffChallengeLabel")}
                           </div>
                         </div>
                         <div style={{
                           fontSize: "10px",
                           color: "#64748b"
                         }}>
-                          {session.problemCount} 문제의 세부 정보 보기
+                          {t("sessionDetailsView").replace("{n}", session.problemCount.toString())}
                         </div>
                       </div>
                     ))}
@@ -4384,7 +4384,7 @@ function App() {
               background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
               padding: "32px", maxWidth: "450px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
             }} onClick={e => e.stopPropagation()}>
-              <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>📅 시험 시작일 설정</h2>
+              <h2 style={{ color: "#fff", marginBottom: "24px", fontSize: "20px", textAlign: "center" }}>{t("examStartDateSetting")}</h2>
 
               <div style={{ marginBottom: "24px" }}>
                 <input type="date"
@@ -4402,7 +4402,7 @@ function App() {
 
                     const resultDiv = document.getElementById("examDaysResult");
                     if (resultDiv) {
-                      resultDiv.textContent = daysLeft > 0 ? `시험까지 ${daysLeft}일 남았습니다` : daysLeft === 0 ? "오늘이 시험일입니다" : "시험일이 지났습니다";
+                      resultDiv.textContent = daysLeft > 0 ? t("examDaysRemaining").replace("{n}", daysLeft.toString()) : daysLeft === 0 ? t("examToday") : t("examDatePassed");
                     }
                   }}
                   style={{
@@ -4415,7 +4415,7 @@ function App() {
                   marginTop: "16px", padding: "12px", background: "rgba(59,130,246,0.1)",
                   border: "1px solid rgba(59,130,246,0.3)", borderRadius: "6px", fontSize: "14px", color: "#60a5fa", textAlign: "center", fontWeight: 600
                 }}>
-                  날짜를 선택하세요
+                  {t("examSelectDate")}
                 </div>
               </div>
 
@@ -4564,21 +4564,21 @@ function App() {
 
                 // 입력값 검증
                 if (!validateEmail(email)) {
-                  setLoginError("유효한 이메일 주소를 입력하세요");
+                  setLoginError(t("errorInvalidEmail"));
                   setLoginLoading(false);
                   return;
                 }
 
                 const passwordValidation = validatePassword(password);
                 if (!passwordValidation.valid) {
-                  setLoginError(passwordValidation.error || "비밀번호 오류");
+                  setLoginError(passwordValidation.error || t("errorPasswordInvalid"));
                   setLoginLoading(false);
                   return;
                 }
 
                 // Rate Limiting 확인
                 if (!checkRateLimit(email)) {
-                  setLoginError("너무 많은 요청이 발생했습니다. 잠시 후 다시 시도하세요");
+                  setLoginError(t("errorTooManyRequests"));
                   setLoginLoading(false);
                   return;
                 }

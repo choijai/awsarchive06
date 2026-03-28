@@ -212,6 +212,54 @@ export const ko = {
   postsDelete: "삭제",
   postsView: "조회",
   postsPage: "페이지",
+
+  // Quiz Result Messages
+  quizCorrect: "✅ 정답입니다!",
+  quizIncorrect: "❌ 틀렸습니다.",
+  quizKeyGoal: "🎯 핵심 목표:",
+  quizAnswer: "정답:",
+  quizExplanation: "설명",
+  quizTrap: "⚠️ 함정:",
+  quizKeywords: "📌 핵심 키워드:",
+  quizEasyMode: "👶 이지모드",
+  quizEasyModeClose: "🧠 이지모드 닫기",
+  quizEasyModeExplanation: "🎈 이지모드 설명:",
+  quizEachOptionExplanation: "각 보기 설명:",
+  quizCorePattern: "📚 핵심 패턴",
+
+  // Mock Exam Results
+  mockExamPass: "🎉 합격!",
+  mockExamRetry: "재응시 필요",
+
+  // Mock Exam Difficulty (context specific)
+  diffMediumLabel: "보통",
+  diffHardLabel: "어려움",
+  diffChallengeLabel: "챌린지",
+
+  // Exam Date Related
+  examStartDateSetting: "📅 시험 시작일 설정",
+  examSelectDate: "날짜를 선택하세요",
+  examDaysRemaining: "시험까지 {n}일 남았습니다",
+  examToday: "오늘이 시험일입니다",
+  examDatePassed: "시험일이 지났습니다",
+
+  // Admin & Permissions
+  adminLabel: "관리자",
+  errorPermissionDenied: "권한이 없습니다.",
+  errorAdminOnly: "관리자만 접근 가능합니다",
+
+  // Validation & Error Messages
+  errorInvalidEmail: "유효한 이메일 주소를 입력하세요",
+  errorPasswordInvalid: "비밀번호 오류",
+  errorTooManyRequests: "너무 많은 요청이 발생했습니다. 잠시 후 다시 시도하세요",
+  errorProblemGeneration: "문제 생성 실패",
+
+  // Mock Exam Grading Messages
+  mockExamNoAnswersGrading: "아무것도 풀지 않았습니다. 정말 채점하시겠습니까?\n점수: 0점 / 불합격 🚫",
+  mockExamPartialAnswersGrading: "{n}개의 문제를 풀지 않았습니다.\n정말 채점하시겠습니까?",
+
+  // Session Details
+  sessionDetailsView: "{n}개의 문제의 세부 정보 보기",
 };
 
 export type Strings = Record<keyof typeof ko, string>;

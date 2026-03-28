@@ -2260,6 +2260,21 @@ function App() {
 
                             const element = document.createElement("div");
 
+                            // PDF 번역 문자열 준비
+                            const pdfLabels = {
+                              options: t("pdfOptions"),
+                              goal: t("pdfGoal"),
+                              answer: t("pdfAnswer"),
+                              explanation: t("pdfExplanation"),
+                              trap: t("pdfTrap"),
+                              keywords: t("pdfKeywords"),
+                              easyMode: t("pdfEasyMode"),
+                              optionExplanations: t("pdfOptionExplanations"),
+                              userAnswer: t("pdfUserAnswer"),
+                              correct: t("quizCorrect"),
+                              incorrect: t("quizIncorrect"),
+                            };
+
                             // 문제별 분석 HTML 생성
                             const problemsHTML = mockExamProblems.map((problem, idx) => {
                               const userAnswer = mockExamAnswers[idx];
@@ -2270,7 +2285,7 @@ function App() {
 
                                   <!-- 보기 -->
                                   <div style="margin: 10px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.6;">
-                                    <strong>보기:</strong><br/>
+                                    <strong>${pdfLabels.options}:</strong><br/>
                                     <div style="margin-left: 10px;">
                                       <div style="margin: 3px 0;">A) ${problem.options.A}</div>
                                       <div style="margin: 3px 0;">B) ${problem.options.B}</div>
@@ -2282,37 +2297,37 @@ function App() {
                                   <!-- 정답/오답 표시 -->
                                   <div style="margin: 10px 0; padding: 8px; background: ${isCorrect ? '#e8f5e9' : '#ffebee'}; border-radius: 4px;">
                                     <strong style="color: ${isCorrect ? '#2e7d32' : '#c62828'};">
-                                      ${isCorrect ? '✅ 정답입니다!' : '❌ 틀렸습니다.'}
+                                      ${isCorrect ? pdfLabels.correct : pdfLabels.incorrect}
                                     </strong>
-                                    ${userAnswer ? `<br/>사용자 답: <strong>${userAnswer}</strong>` : ''}
+                                    ${userAnswer ? `<br/>${pdfLabels.userAnswer}: <strong>${userAnswer}</strong>` : ''}
                                   </div>
 
                                   <!-- 핵심 목표 -->
                                   ${problem.goal ? `
                                     <div style="margin: 8px 0; padding: 6px; background: #f3e5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
-                                      <strong>🎯 핵심 목표:</strong><br/>
+                                      <strong>${pdfLabels.goal}</strong><br/>
                                       ${problem.goal}
                                     </div>
                                   ` : ''}
 
                                   <!-- 정답과 설명 -->
                                   <div style="margin: 8px 0; page-break-inside: avoid;">
-                                    <strong>정답: ${problem.answer}</strong><br/>
-                                    <strong style="font-size: 13px;">설명:</strong>
+                                    <strong>${pdfLabels.answer} ${problem.answer}</strong><br/>
+                                    <strong style="font-size: 13px;">${pdfLabels.explanation}:</strong>
                                     <p style="margin: 4px 0; padding: 6px; background: #e3f2fd; border-radius: 4px; font-size: 13px; line-height: 1.5;">${problem.explanation.correct}</p>
                                   </div>
 
                                   <!-- 함정 설명 -->
                                   ${userAnswer && userAnswer !== problem.answer && problem.explanation[`trap_${userAnswer}`] ? `
                                     <div style="margin: 8px 0; padding: 6px; background: #fff3e0; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
-                                      <strong>⚠️ 함정:</strong> ${problem.explanation[`trap_${userAnswer}`]}
+                                      <strong>${pdfLabels.trap}</strong> ${problem.explanation[`trap_${userAnswer}`]}
                                     </div>
                                   ` : ''}
 
                                   <!-- 핵심 키워드 -->
                                   ${problem.keywords && problem.keywords.length > 0 ? `
                                     <div style="margin: 8px 0; page-break-inside: avoid; font-size: 13px;">
-                                      <strong>📌 핵심 키워드:</strong><br/>
+                                      <strong>${pdfLabels.keywords}</strong><br/>
                                       ${problem.keywords.map(kw => `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 3px 6px; background: #bbdefb; border-radius: 12px; font-size: 12px;"><strong>${kw}</strong></span>`).join('')}
                                     </div>
                                   ` : ''}
@@ -2320,9 +2335,9 @@ function App() {
                                   <!-- 쉽게설명 -->
                                   ${problem.easyMode ? `
                                     <div style="margin: 8px 0; padding: 8px; background: #fff9c4; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.5;">
-                                      <strong style="color: #f57f17;">👨‍🏫 쉽게설명:</strong><br/>
+                                      <strong style="color: #f57f17;">${pdfLabels.easyMode}</strong><br/>
                                       <p style="margin: 4px 0;">${problem.easyMode.explanation}</p>
-                                      <strong style="font-size: 12px;">각 보기 설명:</strong>
+                                      <strong style="font-size: 12px;">${pdfLabels.optionExplanations}:</strong>
                                       <div style="margin-left: 10px; font-size: 12px;">
                                         <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'A' ? '#4caf50' : '#666'};">A.</strong> ${problem.easyMode.A}</div>
                                         <div style="margin: 2px 0;"><strong style="color: ${problem.answer === 'B' ? '#4caf50' : '#666'};">B.</strong> ${problem.easyMode.B}</div>
@@ -2335,21 +2350,36 @@ function App() {
                               `;
                             }).join('');
 
+                            // PDF 헤더용 번역 문자열
+                            const pdfHeaderLabels = {
+                              title: t("pdfMockExamResults"),
+                              status: t("pdfStatus"),
+                              correct: t("pdfCorrect"),
+                              wrong: t("pdfWrong"),
+                              correctRate: t("pdfCorrectRate"),
+                              timeSpent: t("pdfTimeTaken"),
+                              minutes: t("pdfMinutes"),
+                              seconds: t("pdfSeconds"),
+                              pass: t("mockExamPass"),
+                              retry: t("mockExamRetry"),
+                              analysis: t("pdfDetailedAnalysis"),
+                            };
+
                             element.innerHTML = `
                               <div style="padding: 20px; color: #000; background: #fff; font-family: Arial, sans-serif;">
-                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
+                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 ${pdfHeaderLabels.title}</h1>
                                 <div style="margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
-                                  <h2 style="font-size: 32px; text-align: center; margin: 10px 0;">총점: ${mockExamResults.totalScore}</h2>
-                                  <p style="text-align: center; font-size: 16px; margin: 10px 0;">상태: ${mockExamResults.passed ? "🎉 합격!" : "재응시 필요"}</p>
+                                  <h2 style="font-size: 32px; text-align: center; margin: 10px 0;">${t("pdfTotalScore")}: ${mockExamResults.totalScore}</h2>
+                                  <p style="text-align: center; font-size: 16px; margin: 10px 0;">${pdfHeaderLabels.status}: ${mockExamResults.passed ? pdfHeaderLabels.pass : pdfHeaderLabels.retry}</p>
                                   <div style="text-align: center; font-size: 14px; line-height: 1.8;">
-                                    <p><strong>정답: ${mockExamResults.correct}/${mockExamProblems.length}</strong></p>
-                                    <p><strong>오답: ${mockExamResults.wrong}/${mockExamProblems.length}</strong></p>
-                                    <p><strong>정답률: ${mockExamResults.correctRate}%</strong></p>
-                                    <p><strong>소요 시간: ${Math.floor(mockExamResults.timeSpent / 60)}분 ${mockExamResults.timeSpent % 60}초</strong></p>
+                                    <p><strong>${pdfHeaderLabels.correct}: ${mockExamResults.correct}/${mockExamProblems.length}</strong></p>
+                                    <p><strong>${pdfHeaderLabels.wrong}: ${mockExamResults.wrong}/${mockExamProblems.length}</strong></p>
+                                    <p><strong>${pdfHeaderLabels.correctRate}: ${mockExamResults.correctRate}%</strong></p>
+                                    <p><strong>${pdfHeaderLabels.timeSpent}: ${Math.floor(mockExamResults.timeSpent / 60)}${pdfHeaderLabels.minutes} ${mockExamResults.timeSpent % 60}${pdfHeaderLabels.seconds}</strong></p>
                                   </div>
                                 </div>
 
-                                <h2 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">문제별 상세 분석</h2>
+                                <h2 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">${pdfHeaderLabels.analysis}</h2>
                                 ${problemsHTML}
                               </div>
                             `;
@@ -2416,6 +2446,21 @@ function App() {
 
                             const element = document.createElement("div");
 
+                            // PDF 번역 문자열 준비
+                            const pdfLabels = {
+                              options: t("pdfOptions"),
+                              goal: t("pdfGoal"),
+                              answer: t("pdfAnswer"),
+                              explanation: t("pdfExplanation"),
+                              trap: t("pdfTrap"),
+                              keywords: t("pdfKeywords"),
+                              easyMode: t("pdfEasyMode"),
+                              optionExplanations: t("pdfOptionExplanations"),
+                              userAnswer: t("pdfUserAnswer"),
+                              correct: t("quizCorrect"),
+                              incorrect: t("quizIncorrect"),
+                            };
+
                             // 문제별 분석 HTML 생성
                             const problemsHTML = mockExamProblems.map((problem, idx) => {
                               const userAnswer = mockExamAnswers[idx];
@@ -2426,7 +2471,7 @@ function App() {
 
                                   <!-- 보기 -->
                                   <div style="margin: 10px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; page-break-inside: avoid; font-size: 13px; line-height: 1.6;">
-                                    <strong>보기:</strong><br/>
+                                    <strong>${pdfLabels.options}:</strong><br/>
                                     <div style="margin-left: 10px;">
                                       <div style="margin: 3px 0;">A) ${problem.options.A}</div>
                                       <div style="margin: 3px 0;">B) ${problem.options.B}</div>
@@ -2438,30 +2483,39 @@ function App() {
                                   <!-- 정답/오답 표시 -->
                                   <div style="margin: 10px 0; padding: 8px; background: ${isCorrect ? '#e8f5e9' : '#ffebee'}; border-radius: 4px;">
                                     <strong style="color: ${isCorrect ? '#2e7d32' : '#c62828'};">
-                                      ${isCorrect ? '✅ 정답입니다!' : '❌ 틀렸습니다.'}
+                                      ${isCorrect ? pdfLabels.correct : pdfLabels.incorrect}
                                     </strong>
-                                    ${userAnswer ? `<br/>사용자 답: <strong>${userAnswer}</strong>` : ''}
+                                    ${userAnswer ? `<br/>${pdfLabels.userAnswer}: <strong>${userAnswer}</strong>` : ''}
                                   </div>
 
                                   <!-- 정답과 설명 -->
                                   <div style="margin: 8px 0; page-break-inside: avoid;">
-                                    <strong>정답: ${problem.answer}</strong><br/>
-                                    <strong style="font-size: 13px;">설명:</strong>
+                                    <strong>${pdfLabels.answer} ${problem.answer}</strong><br/>
+                                    <strong style="font-size: 13px;">${pdfLabels.explanation}:</strong>
                                     <p style="margin: 4px 0; padding: 6px; background: #e3f2fd; border-radius: 4px; font-size: 13px; line-height: 1.5;">${problem.explanation.correct}</p>
                                   </div>
                                 </div>
                               `;
                             }).join('');
 
+                            // PDF 헤더용 번역 문자열
+                            const pdfHeaderLabels = {
+                              title: t("pdfMockExamResults"),
+                              analysis: t("pdfDetailedAnalysis"),
+                              status: t("pdfStatus"),
+                              pass: t("mockExamPass"),
+                              retry: t("mockExamRetry"),
+                            };
+
                             element.innerHTML = `
                               <div style="padding: 20px; color: #000; background: #fff; font-family: Arial, sans-serif;">
-                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 모의시험 결과</h1>
+                                <h1 style="text-align: center; margin-bottom: 20px;">SAA-C03 ${pdfHeaderLabels.title}</h1>
                                 <div style="margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
-                                  <h2 style="font-size: 32px; text-align: center; margin: 10px 0;">총점: ${mockExamResults?.totalScore || 0}</h2>
-                                  <p style="text-align: center; font-size: 16px; margin: 10px 0;">상태: ${mockExamResults?.passed ? "🎉 합격!" : "재응시 필요"}</p>
+                                  <h2 style="font-size: 32px; text-align: center; margin: 10px 0;">${t("pdfTotalScore")}: ${mockExamResults?.totalScore || 0}</h2>
+                                  <p style="text-align: center; font-size: 16px; margin: 10px 0;">${pdfHeaderLabels.status}: ${mockExamResults?.passed ? pdfHeaderLabels.pass : pdfHeaderLabels.retry}</p>
                                 </div>
 
-                                <h2 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">문제별 상세 분석</h2>
+                                <h2 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">${pdfHeaderLabels.analysis}</h2>
                                 ${problemsHTML}
                               </div>
                             `;

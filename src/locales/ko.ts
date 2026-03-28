@@ -260,6 +260,28 @@ export const ko = {
 
   // Session Details
   sessionDetailsView: "{n}개의 문제의 세부 정보 보기",
+
+  // PDF Export related
+  pdfMockExamResults: "SAA-C03 모의시험 결과",
+  pdfStatus: "상태",
+  pdfUserAnswer: "당신의 답",
+  pdfTimeTaken: "소요 시간",
+  pdfMinutes: "분",
+  pdfSeconds: "초",
+  pdfDetailedAnalysis: "문제별 상세 분석",
+  pdfGoal: "🎯 핵심 목표:",
+  pdfAnswer: "정답:",
+  pdfExplanation: "설명:",
+  pdfTrap: "⚠️ 함정:",
+  pdfKeywords: "📌 핵심 키워드:",
+  pdfEasyMode: "👨‍🏫 쉽게설명:",
+  pdfOptionExplanations: "각 보기 설명:",
+  pdfOptions: "보기",
+  pdfTotalScore: "총점",
+  pdfTimeSpent: "소요 시간",
+  pdfCorrect: "정답",
+  pdfWrong: "오답",
+  pdfCorrectRate: "정답률",
 };
 
 export type Strings = Record<keyof typeof ko, string>;

@@ -262,4 +262,26 @@ export const ja: Strings = {
 
   // Session Details
   sessionDetailsView: "{n}個の問題の詳細を表示",
+
+  // PDF Export related
+  pdfMockExamResults: "SAA-C03 模試結果",
+  pdfStatus: "ステータス",
+  pdfUserAnswer: "あなたの回答",
+  pdfTimeTaken: "所要時間",
+  pdfMinutes: "分",
+  pdfSeconds: "秒",
+  pdfDetailedAnalysis: "問題別詳細分析",
+  pdfGoal: "🎯 重要なゴール:",
+  pdfAnswer: "答え:",
+  pdfExplanation: "説明:",
+  pdfTrap: "⚠️ トラップ:",
+  pdfKeywords: "📌 重要なキーワード:",
+  pdfEasyMode: "👨‍🏫 簡単説明:",
+  pdfOptionExplanations: "各選択肢の説明:",
+  pdfOptions: "選択肢",
+  pdfTotalScore: "総スコア",
+  pdfTimeSpent: "所要時間",
+  pdfCorrect: "正解",
+  pdfWrong: "不正解",
+  pdfCorrectRate: "正答率",
 };

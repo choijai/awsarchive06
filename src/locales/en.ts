@@ -238,6 +238,28 @@ export const en: Strings = {
   diffHardLabel: "Hard",
   diffChallengeLabel: "Challenge",
 
+  // PDF Export related
+  pdfMockExamResults: "SAA-C03 Mock Exam Results",
+  pdfStatus: "Status",
+  pdfUserAnswer: "Your Answer",
+  pdfTimeTaken: "Time Taken",
+  pdfMinutes: "minutes",
+  pdfSeconds: "seconds",
+  pdfDetailedAnalysis: "Detailed Problem Analysis",
+  pdfGoal: "🎯 Key Goal:",
+  pdfAnswer: "Answer:",
+  pdfExplanation: "Explanation:",
+  pdfTrap: "⚠️ Trap:",
+  pdfKeywords: "📌 Key Keywords:",
+  pdfEasyMode: "👨‍🏫 Easy Explanation:",
+  pdfOptionExplanations: "Each Option Explanation:",
+  pdfOptions: "Options",
+  pdfTotalScore: "Total Score",
+  pdfTimeSpent: "Time Spent",
+  pdfCorrect: "Correct",
+  pdfWrong: "Wrong",
+  pdfCorrectRate: "Correct Rate",
+
   // Exam Date Related
   examStartDateSetting: "📅 Exam Start Date Setting",
   examSelectDate: "Select a date",

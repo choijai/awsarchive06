@@ -2770,7 +2770,7 @@ function App() {
                 {/* Stats cards */}
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gridTemplateColumns: "1fr 1fr",
                   gap: "12px"
                 }}>
                   {/* Total Problems */}
@@ -2802,22 +2802,6 @@ function App() {
                     </div>
                     <div style={{ fontSize: "11px", color: "#64748b" }}>
                       {t("correctRate")} ({quizStats?.correctCount ?? 0}/{quizStats?.totalAttempts ?? 0})
-                    </div>
-                  </div>
-
-                  {/* Consecutive Days */}
-                  <div style={{
-                    background: "rgba(255,255,255,0.04)",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    textAlign: "center",
-                    border: "1px solid rgba(255,255,255,0.08)"
-                  }}>
-                    <div style={{ fontSize: "24px", fontWeight: 700, color: "#e2e8f0", marginBottom: "8px" }}>
-                      0
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>
-                      {t("consecutiveDays")}
                     </div>
                   </div>
                 </div>

@@ -32,7 +32,7 @@ const cloudFrontClient = new CloudFrontClient({
 
 const BUCKET = envVars.AWS_S3_BUCKET;
 const DIST_DIR = path.join(__dirname, 'dist');
-const CLOUDFRONT_DISTRIBUTION_ID = envVars.CLOUDFRONT_DISTRIBUTION_ID || 'E3UX78LBQGHIL';
+const CLOUDFRONT_DISTRIBUTION_ID = envVars.CLOUDFRONT_DISTRIBUTION_ID || 'E3UX780LBQGHIL';
 
 async function uploadDir(dirPath, s3Path = '') {
   const files = fs.readdirSync(dirPath, { withFileTypes: true });

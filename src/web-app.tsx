@@ -2844,28 +2844,6 @@ function App() {
                     </div>
                   </div>
                 )}
-
-                {/* Exam Date */}
-                <div style={{
-                  marginTop: "auto",
-                  paddingTop: "12px",
-                  borderTop: "1px solid rgba(255,255,255,0.1)"
-                }}>
-                  <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px" }}>
-                    <strong>{t("examDateLabel")}:</strong> {locale === "en" ? "Not set" : locale === "ja" ? "未設定" : "미설정"}
-                  </div>
-                  <button style={{
-                    padding: "6px 12px",
-                    fontSize: "11px",
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    color: "#94a3b8",
-                    cursor: "pointer"
-                  }}>
-                    {t("setExamDate")}
-                  </button>
-                </div>
                   </>
                 )}
               </div>

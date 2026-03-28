@@ -18,7 +18,7 @@ const cfClient = new CloudFrontClient({
 
 (async () => {
   try {
-    const distId = 'E3UX780LBQGHIL';
+    const distId = 'E3UX78LBQGHIL';
     console.log('🔄 CloudFront 캐시 무효화:', distId);
 
     const result = await cfClient.send(new CreateInvalidationCommand({

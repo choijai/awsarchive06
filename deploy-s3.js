@@ -3,7 +3,9 @@ const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { CloudFrontClient, CreateInvalidationCommand } = require('@aws-sdk/client-cloudfront');
 
-// .env 읽기
+// .env 읽기 (로컬 배포용 - AWS credentials는 환경변수에서 자동 감지)
+// ⚠️ 주의: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY는 .env에 저장하지 마세요!
+// 환경변수 설정 후 실행: AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... node deploy-s3.js
 const envPath = path.join(__dirname, '.env');
 const envContent = fs.readFileSync(envPath, 'utf-8');
 const envVars = {};

@@ -416,6 +416,32 @@ function App() {
   const env = (import.meta as any).env;
   const ADMIN_EMAILS = (env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
   const TEST_PAID_EMAILS = (env.VITE_TEST_PAID_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
+  // Hero banner state
+  const [showHero, setShowHero] = useState(() => {
+    const hideUntil = localStorage.getItem('heroHideUntil');
+    if (hideUntil) {
+      const now = Date.now();
+      if (now < parseInt(hideUntil)) {
+        return false; // 24시간 안 지났으면 숨김
+      } else {
+        localStorage.removeItem('heroHideUntil'); // 24시간 지났으면 삭제
+      }
+    }
+    return true;
+  });
+
+  const [dontShowTodayChecked, setDontShowTodayChecked] = useState(false);
+
+  const handleHeroClose = () => {
+    // "하루동안 안 열기" 체크되면 24시간 동안 안 보임
+    if (dontShowTodayChecked) {
+      const hideUntil = Date.now() + 24 * 60 * 60 * 1000; // 24시간 후
+      localStorage.setItem('heroHideUntil', hideUntil.toString());
+    }
+    // 체크 안 되면 현재 세션에서만 숨김 (새로고침하면 다시 보임)
+    setShowHero(false);
+  };
+
   const [tab, setTab] = useState<"quiz" | "concept" | "status" | "mockExam" | "posts" | "admin" | "users">("quiz");
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
@@ -1545,6 +1571,100 @@ function App() {
           </>
         )}
       </div>
+
+      {/* Hero Section */}
+      {showHero && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          padding: '32px 28px',
+          marginBottom: '20px',
+          position: 'relative'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <h2 style={{
+              color: '#e2e8f0',
+              fontSize: '24px',
+              marginBottom: '12px',
+              marginTop: '0',
+              fontWeight: '600',
+              letterSpacing: '0.5px'
+            }}>
+              {t("heroTitle")}
+            </h2>
+            <p style={{
+              color: '#cbd5e1',
+              fontSize: '14px',
+              marginBottom: '0',
+              maxWidth: '800px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              lineHeight: '1.6'
+            }}>
+              {t("heroDescription")}
+            </p>
+          </div>
+
+          {/* Action buttons and checkbox */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            flexWrap: 'wrap',
+            marginTop: '16px',
+            paddingTop: '16px',
+            borderTop: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {/* Checkbox */}
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              color: '#cbd5e1',
+              fontSize: '12px',
+              userSelect: 'none'
+            }}>
+              <input
+                type="checkbox"
+                checked={dontShowTodayChecked}
+                onChange={(e) => setDontShowTodayChecked(e.target.checked)}
+                style={{
+                  cursor: 'pointer',
+                  width: '16px',
+                  height: '16px'
+                }}
+              />
+              {t("heroDontShowToday")}
+            </label>
+
+            {/* Close button */}
+            <button
+              onClick={handleHeroClose}
+              style={{
+                padding: '6px 16px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                color: '#60a5fa',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+              }}
+            >
+              {t("heroClose")}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="main-area" style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
         {/* Left: Controls */}

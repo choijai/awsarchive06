@@ -160,6 +160,12 @@ export const en: Strings = {
   examDateCancelBtn: "Cancel",
   labelQuotaFull: "Upgrade",
 
+  // Hero Section
+  heroTitle: "✨ AWS SAA-C03 Exam Preparation Platform",
+  heroDescription: "AWS Archive is an AI-powered platform that helps you prepare for the AWS Solutions Architect Associate certification. Free plan: 2 problems/day. Premium ($14.99/month): 20 problems/day + daily mock exams + advanced analytics.",
+  heroClose: "Close",
+  heroDontShowToday: "Don't show for 24 hours",
+
   // Page metadata & SEO
   pageTitle: "AWS SAA-C03 Exam Prep - Claude AI Question Generator",
   pageDescription: "Master AWS SAA-C03 with Claude AI. Interactive service architecture map, AI-powered questions, learning analytics, and unlimited practice.",

@@ -160,6 +160,12 @@ export const ja: Strings = {
   examDateCancelBtn: "キャンセル",
   labelQuotaFull: "アップグレード",
 
+  // Hero Section
+  heroTitle: "✨ AWS SAA-C03試験対策プラットフォーム",
+  heroDescription: "AWS Archiveは、AWS Solutions Architect Associate認定試験の対策をサポートするAI搭載プラットフォームです。無料：1日2問。プレミアム($14.99/月)：1日20問 + 毎日模擬試験 + 詳細分析。",
+  heroClose: "閉じる",
+  heroDontShowToday: "24時間表示しない",
+
   // Page metadata & SEO
   pageTitle: "AWS SAA-C03試験対策 - Claude AI問題自動生成",
   pageDescription: "Claude AIでAWS SAA-C03試験に備えましょう。サービスアーキテクチャ図、AI自動問題生成、学習分析で合格を実現します。",

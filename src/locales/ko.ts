@@ -158,6 +158,12 @@ export const ko = {
   examDateCancelBtn: "취소",
   labelQuotaFull: "업그레이드",
 
+  // Hero Section
+  heroTitle: "✨ AWS SAA-C03 시험 준비 플랫폼",
+  heroDescription: "AWS Archive는 AWS Solutions Architect Associate 자격증 시험 준비를 위한 AI 기반 플랫폼입니다. 무료: 하루 2개 문제. 프리미엄($14.99/월): 하루 20개 문제 + 매일 모의시험 + 상세 분석.",
+  heroClose: "닫기",
+  heroDontShowToday: "하루동안 안 열기",
+
   // Page metadata & SEO
   pageTitle: "AWS SAA-C03 시험 준비 - Claude AI 문제 생성기",
   pageDescription: "AWS SAA-C03 시험을 Claude AI로 준비하세요. 서비스 관계도, 맞춤형 문제 생성, 학습 통계 분석을 제공합니다.",

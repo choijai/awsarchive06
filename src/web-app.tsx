@@ -758,8 +758,23 @@ function App() {
       }
     })();
 
-    // 일일 카운트 초기화
+    // 일일 카운트 초기화 (로그인 시 Firebase에서 덮어씀)
     setDailyCount(getTodayProblemCount());
+
+    // 로그인 사용자의 Firebase 데이터 로드
+    const user = getCurrentUser();
+    if (user) {
+      (async () => {
+        try {
+          const stats = await getUserQuizStats(user.uid);
+          if (stats && stats.totalAttempts !== undefined) {
+            setDailyCount(stats.totalAttempts);
+          }
+        } catch (error) {
+          // 에러 처리 생략
+        }
+      })();
+    }
 
     // D-day 초기화
     setDday(getExamDday());
@@ -1108,21 +1123,30 @@ function App() {
 
   const [concept, setConcept] = useState<Concept | null>(null);
 
-  // 현황 탭에서 퀴즈 통계 로드
+  // 현황 탭과 Quiz 탭에서 퀴즈 통계 로드
   useEffect(() => {
-    if (tab === "status") {
+    if (tab === "status" || tab === "quiz") {
       (async () => {
         const user = getCurrentUser();
         if (user) {
           try {
             // 만료된 결과 자동 삭제
-            await deleteExpiredResults(user.uid);
+            if (tab === "status") {
+              await deleteExpiredResults(user.uid);
+            }
 
             const stats = await getUserQuizStats(user.uid);
             setQuizStats(stats);
 
-            const sessions = await getUserProblemSessions(user.uid);
-            setProblemSessions(sessions);
+            // Quiz 탭에서는 일일 카운트만 업데이트
+            if (tab === "quiz" && stats && stats.totalAttempts !== undefined) {
+              setDailyCount(stats.totalAttempts);
+            }
+
+            if (tab === "status") {
+              const sessions = await getUserProblemSessions(user.uid);
+              setProblemSessions(sessions);
+            }
           } catch (error) {
             // 에러 처리만 수행 (로깅 제거)
           }

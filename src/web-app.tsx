@@ -1868,7 +1868,13 @@ function App() {
                     <div style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: "bold", marginBottom: "12px" }}>
                       {t("mockExamPremiumDaily")}
                     </div>
-                    <button onClick={() => setShowPaymentModal(true)} style={{
+                    <button onClick={() => {
+                      if (!userEmail) {
+                        setShowLoginModal(true);
+                      } else {
+                        setShowPaymentModal(true);
+                      }
+                    }} style={{
                       width: "100%", padding: "10px", background: "#8b5cf6", color: "#fff",
                       border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold"
                     }}>
@@ -2631,7 +2637,13 @@ function App() {
                     </div>
 
                     <button
-                      onClick={() => setShowPaymentModal(true)}
+                      onClick={() => {
+                        if (!userEmail) {
+                          setShowLoginModal(true);
+                        } else {
+                          setShowPaymentModal(true);
+                        }
+                      }}
                       style={{
                         width: "100%",
                         padding: "12px 16px",

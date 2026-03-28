@@ -76,6 +76,8 @@ function getContentType(filename) {
 async function invalidateCloudFront() {
   try {
     console.log('\n🔄 Invalidating CloudFront cache...');
+    console.log(`   Distribution: ${CLOUDFRONT_DISTRIBUTION_ID}`);
+
     const response = await cloudFrontClient.send(new CreateInvalidationCommand({
       DistributionId: CLOUDFRONT_DISTRIBUTION_ID,
       InvalidationBatch: {
@@ -86,11 +88,13 @@ async function invalidateCloudFront() {
         CallerReference: Date.now().toString()
       }
     }));
-    console.log(`✅ CloudFront cache invalidated!`);
-    console.log(`   Invalidation ID: ${response.Invalidation.Id}`);
+
+    console.log(`✅ CloudFront invalidation created!`);
+    console.log(`   ID: ${response.Invalidation.Id}`);
+    console.log(`   Status: ${response.Invalidation.Status}`);
   } catch (error) {
-    console.warn(`⚠️  CloudFront invalidation failed: ${error.message}`);
-    console.warn('   (This is OK if you have permission issues - manually invalidate via AWS console)');
+    console.warn(`⚠️  CloudFront invalidation error: ${error.message}`);
+    console.warn('   Tip: Check IAM permissions or AWS credentials');
   }
 }
 
@@ -107,7 +111,7 @@ async function deploy() {
     // CloudFront 캐시 무효화
     await invalidateCloudFront();
 
-    console.log('\n🎉 Deployment and cache invalidation complete!');
+    console.log('\n🎉 Deployment complete!');
   } catch (error) {
     console.error('❌ Error:', error.message);
     process.exit(1);

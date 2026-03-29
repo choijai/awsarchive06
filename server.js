@@ -471,14 +471,18 @@ app.post('/api/lemonsqueezy/checkout', async (req, res) => {
     const storeId = process.env.VITE_LEMON_SQUEEZY_STORE_ID;
     const productId = process.env.VITE_LEMON_SQUEEZY_PRODUCT_ID;
 
-    if (!storeId || !productId) {
-      console.error('❌ VITE_LEMON_SQUEEZY_STORE_ID or VITE_LEMON_SQUEEZY_PRODUCT_ID not found');
-      return res.status(500).json({ error: 'Payment configuration incomplete' });
-    }
-
-    // ✅ Lemon Squeezy Hosted Checkout URL
+    // ✅ Lemon Squeezy Hosted Checkout URL (계정 승인 후)
     // Format: https://checkout.lemonsqueezy.com/buy/{storeId}/{productId}
-    const checkoutUrl = `https://checkout.lemonsqueezy.com/buy/${storeId}/${productId}?checkout[email]=${encodeURIComponent(email)}`;
+    // 현재는 IN REVIEW 상태이므로 테스트 모드 사용
+    let checkoutUrl;
+
+    if (storeId && productId) {
+      // 운영 계정 (승인 후)
+      checkoutUrl = `https://checkout.lemonsqueezy.com/buy/${storeId}/${productId}?checkout[email]=${encodeURIComponent(email)}`;
+    } else {
+      // 테스트 모드 (계정 승인 대기 중)
+      checkoutUrl = `https://lemonsqueezy.com/checkout?email=${encodeURIComponent(email)}&test=true`;
+    }
 
     console.log('✅ Checkout URL generated:', checkoutUrl);
 

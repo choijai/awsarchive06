@@ -157,12 +157,17 @@ export async function signUp(email: string, password: string, displayName: strin
       throw new Error("이름은 100자 이하여야 합니다");
     }
 
+    const signInMethods = await getSignInMethodsSafely(email);
+    if ((signInMethods.includes("google.com") && !signInMethods.includes("password")) || signInMethods.length === 0) {
+      return await signInWithGoogleAndLinkPassword(email, password);
+    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error: any) {
     if (error?.code === "auth/email-already-in-use") {
       const methods = await getSignInMethodsSafely(email);
-      if (methods.includes("google.com") && !methods.includes("password")) {
+      if ((methods.includes("google.com") && !methods.includes("password")) || methods.length === 0) {
         throw new Error("이 이메일은 현재 Google 로그인으로만 연결되어 있습니다. Google로 로그인한 뒤 비밀번호를 연결해주세요.");
       }
     }
@@ -183,6 +188,11 @@ export async function signIn(email: string, password: string): Promise<User> {
       throw new Error("비밀번호는 6자 이상 128자 이하여야 합니다");
     }
 
+    const signInMethods = await getSignInMethodsSafely(email);
+    if ((signInMethods.includes("google.com") && !signInMethods.includes("password")) || signInMethods.length === 0) {
+      return await signInWithGoogleAndLinkPassword(email, password);
+    }
+
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error: any) {
@@ -192,7 +202,7 @@ export async function signIn(email: string, password: string): Promise<User> {
       error?.code === "auth/invalid-login-credentials"
     ) {
       const methods = await getSignInMethodsSafely(email);
-      if (methods.includes("google.com") && !methods.includes("password")) {
+      if ((methods.includes("google.com") && !methods.includes("password")) || methods.length === 0) {
         throw new Error("이 계정은 현재 Google 로그인으로만 연결되어 있습니다. 아래 'Google로 계속'을 사용한 뒤 계정 메뉴에서 비밀번호를 연결해주세요.");
       }
     }
@@ -236,6 +246,24 @@ export async function signInWithGoogle(): Promise<User> {
   } catch (error: any) {
     throw new Error(getErrorMessage(error.code));
   }
+}
+
+async function signInWithGoogleAndLinkPassword(email: string, password: string): Promise<User> {
+  const provider = new GoogleAuthProvider();
+  const userCredential = await signInWithPopup(auth, provider);
+  const user = userCredential.user;
+
+  if (!user.email || user.email.toLowerCase() !== email.toLowerCase()) {
+    await firebaseSignOut(auth);
+    throw new Error("같은 이메일의 Google 계정을 선택해주세요.");
+  }
+
+  if (!isPasswordLinked(user)) {
+    const credential = EmailAuthProvider.credential(email, password);
+    await linkWithCredential(user, credential);
+  }
+
+  return user;
 }
 
 function getLinkedProviders(user: User | null | undefined): string[] {
@@ -296,6 +324,8 @@ function getErrorMessage(errorCode: string): string {
     "auth/wrong-password": "비밀번호가 잘못되었습니다",
     "auth/invalid-login-credentials": "이메일 또는 비밀번호가 잘못되었습니다",
     "auth/too-many-requests": "너무 많은 시도가 있었습니다. 나중에 다시 시도해주세요",
+    "auth/popup-closed-by-user": "Google 로그인 창이 닫혔습니다. 다시 시도해주세요.",
+    "auth/popup-blocked": "브라우저가 Google 로그인 창을 차단했습니다. 팝업을 허용해주세요.",
   };
 
   return errors[errorCode] || "인증에 실패했습니다. 다시 시도해주세요";

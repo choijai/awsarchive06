@@ -291,4 +291,8 @@ export const en: Strings = {
   // Theme
   themeDark: "Dark Mode",
   themeLight: "Light Mode",
+
+  // Auth Errors
+  errorPopupClosedByUser: "Google login window closed. Please try again.",
+  errorPopupBlocked: "Browser blocked the Google login popup. Please allow popups.",
 };

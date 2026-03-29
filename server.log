@@ -1,0 +1,10 @@
+npm warn config production Use `--omit=dev` instead.
+npm warn using --force Recommended protections disabled.
+
+> seventytwo@1.0.0 dev:server
+> node server.js
+
+[dotenv@17.3.1] injecting env (19) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+✅ Proxy server running on http://localhost:5000
+   API: http://localhost:5000/api/checkAdmin
+   Contact API: http://localhost:5000/api/contact

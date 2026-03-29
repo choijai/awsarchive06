@@ -289,6 +289,10 @@ export const ko = {
   // Theme
   themeDark: "다크 모드",
   themeLight: "라이트 모드",
+
+  // Auth Errors
+  errorPopupClosedByUser: "Google 로그인 창이 닫혔습니다. 다시 시도해주세요.",
+  errorPopupBlocked: "브라우저가 Google 로그인 창을 차단했습니다. 팝업을 허용해주세요.",
 };
 
 export type Strings = Record<keyof typeof ko, string>;

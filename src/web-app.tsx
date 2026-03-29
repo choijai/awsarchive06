@@ -8,7 +8,7 @@ import PaymentModal from "./components/Modals/PaymentModal";
 import { CAT, CONCEPTS_KO, LINKS, NODES } from "./data";
 import { CONCEPTS_EN } from "./CONCEPTS_EN";
 import { CONCEPTS_JA } from "./data";
-import { auth, createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
+import { auth, createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, isPasswordLinked, linkEmailPasswordToCurrentUser, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
 import { useLocale } from "./LocaleContext";
 import { useTheme } from "./ThemeContext";
 import { canGenerateProblemToday, recordProblemGeneration } from "./firebase";
@@ -451,6 +451,17 @@ function App() {
   // Fixed node positions for instant page load and immediate footer interactivity
   const { pos, setPos, posRef, dragRef } = useForce();
 
+  // ⚠️ Google 로그인 에러 메시지를 다국어로 처리
+  const translateAuthError = (errorMessage: string): string => {
+    if (errorMessage.includes("Google 로그인 창이 닫혔") || errorMessage.includes("popup closed")) {
+      return t("errorPopupClosedByUser");
+    }
+    if (errorMessage.includes("브라우저가 Google 로그인 창을 차단") || errorMessage.includes("popup blocked")) {
+      return t("errorPopupBlocked");
+    }
+    return errorMessage;
+  };
+
   // ⚠️ 보안: 환경변수에서 관리자/테스트 이메일 읽기 (하드코딩 금지)
   const env = (import.meta as any).env;
   const ADMIN_EMAILS = (env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
@@ -565,6 +576,11 @@ function App() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isPasswordLoginLinked, setIsPasswordLoginLinked] = useState(false);
+  const [showLinkPasswordModal, setShowLinkPasswordModal] = useState(false);
+  const [linkPasswordValue, setLinkPasswordValue] = useState("");
+  const [linkPasswordLoading, setLinkPasswordLoading] = useState(false);
+  const [linkPasswordError, setLinkPasswordError] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [sessionId, setSessionId] = useState<string>(`${Date.now()}`); // 현재 세션 ID
   const [pdfGeneratingId, setPdfGeneratingId] = useState<string | null>(null); // PDF 생성 중인 세션
@@ -687,6 +703,7 @@ function App() {
     const unsubscribe = onAuthStateChange(async (user) => {
       if (user?.email) {
         setUserEmail(user.email);
+        setIsPasswordLoginLinked(isPasswordLinked(user));
 
         // 사용자 정보를 Firestore에 저장
         try {
@@ -726,6 +743,7 @@ function App() {
       } else {
         setUserEmail(null);
         setUserStatusLocal("guest");
+        setIsPasswordLoginLinked(false);
         localStorage.removeItem("userStatus");
       }
       setIsAuthChecked(true);
@@ -1593,6 +1611,36 @@ function App() {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                     zIndex: 100
                   }}>
+                    {!isPasswordLoginLinked && (
+                      <button
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          setLinkPasswordValue("");
+                          setLinkPasswordError(null);
+                          setShowLinkPasswordModal(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          background: "transparent",
+                          border: "none",
+                          color: "#cbd5e1",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          borderBottom: "1px solid rgba(255,255,255,0.1)"
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(59,130,246,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                        }}
+                      >
+                        🔑 비밀번호 연결
+                      </button>
+                    )}
+
                     <button
                       onClick={async () => {
                         clearSessionTimeout();
@@ -4530,6 +4578,123 @@ function App() {
         )}
 
         {/* Firebase 로그인/회원가입 모달 */}
+        {showLinkPasswordModal && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1002
+          }} onClick={() => setShowLinkPasswordModal(false)}>
+            <div style={{
+              background: "#0f172a",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "16px",
+              padding: "32px",
+              maxWidth: "420px",
+              width: "90%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+            }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ color: "#fff", margin: "0 0 12px", fontSize: "22px", textAlign: "center" }}>
+                비밀번호 연결
+              </h3>
+              <p style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", marginBottom: "20px", lineHeight: 1.6 }}>
+                Google로 로그인한 현재 계정에 비밀번호를 추가합니다.
+                연결 후에는 이메일/비밀번호 로그인도 함께 사용할 수 있습니다.
+              </p>
+
+              {linkPasswordError && (
+                <div style={{
+                  marginBottom: "12px",
+                  padding: "12px",
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  borderRadius: "8px",
+                  color: "#fca5a5",
+                  fontSize: "12px",
+                  textAlign: "center"
+                }}>
+                  {linkPasswordError}
+                </div>
+              )}
+
+              <input
+                type="password"
+                value={linkPasswordValue}
+                onChange={(e) => setLinkPasswordValue(e.target.value)}
+                placeholder="새 비밀번호 (6자 이상)"
+                autoComplete="new-password"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: "8px",
+                  color: "#cbd5e1",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                  marginBottom: "16px"
+                }}
+              />
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={async () => {
+                    setLinkPasswordError(null);
+                    const validation = validatePassword(linkPasswordValue);
+                    if (!validation.valid) {
+                      setLinkPasswordError(validation.error || "비밀번호를 다시 확인해주세요.");
+                      return;
+                    }
+
+                    setLinkPasswordLoading(true);
+                    try {
+                      await linkEmailPasswordToCurrentUser(linkPasswordValue);
+                      setIsPasswordLoginLinked(true);
+                      setShowLinkPasswordModal(false);
+                      setLinkPasswordValue("");
+                    } catch (error: any) {
+                      setLinkPasswordError(error.message || "비밀번호 연결에 실패했습니다.");
+                    } finally {
+                      setLinkPasswordLoading(false);
+                    }
+                  }}
+                  disabled={linkPasswordLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "#3b82f6",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: linkPasswordLoading ? "not-allowed" : "pointer",
+                    fontWeight: "bold",
+                    opacity: linkPasswordLoading ? 0.6 : 1
+                  }}
+                >
+                  {linkPasswordLoading ? "연결 중..." : "연결하기"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLinkPasswordModal(false);
+                    setLinkPasswordError(null);
+                    setLinkPasswordValue("");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "rgba(255,255,255,0.08)",
+                    color: "#cbd5e1",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "8px",
+                    cursor: "pointer"
+                  }}
+                >
+                  나중에
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showLoginModal && (
           <div style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -4555,6 +4720,7 @@ function App() {
                   try {
                     const user = await signInWithGoogle();
                     setUserEmail(user.email);
+                    setIsPasswordLoginLinked(isPasswordLinked(user));
 
                     // 사용자 정보 저장 및 결제 상태 로드
                     await saveUserInfoToFirebase(user.uid, user.email);
@@ -4588,7 +4754,7 @@ function App() {
                       setTimeout(() => setShowExamDateModal(true), 300);
                     }
                   } catch (err: any) {
-                    setLoginError(err.message);
+                    setLoginError(translateAuthError(err.message));
                   } finally {
                     setLoginLoading(false);
                   }
@@ -4665,6 +4831,7 @@ function App() {
                   } else {
                     await signIn(email, password);
                   }
+                  setIsPasswordLoginLinked(true);
 
                   // 성공 시 상태 업데이트
                   setUserEmail(email);
@@ -4731,7 +4898,7 @@ function App() {
                     }
                   }
                 } catch (err: any) {
-                  setLoginError(err.message);
+                  setLoginError(translateAuthError(err.message));
                 } finally {
                   setLoginLoading(false);
                 }

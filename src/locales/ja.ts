@@ -291,4 +291,8 @@ export const ja: Strings = {
   // Theme
   themeDark: "ダークモード",
   themeLight: "ライトモード",
+
+  // Auth Errors
+  errorPopupClosedByUser: "Googleログインウィンドウが閉じられました。もう一度試してください。",
+  errorPopupBlocked: "ブラウザがGoogleログインのポップアップをブロックしました。ポップアップを許可してください。",
 };

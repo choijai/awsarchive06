@@ -50,15 +50,15 @@ const Footer: React.FC = () => {
       style={{
         background: 'none',
         border: 'none',
-        color: '#64748b',
+        color: 'var(--text-tertiary)',
         cursor: 'pointer',
         fontSize: '12px',
         textDecoration: 'underline',
         padding: '0',
         transition: 'color 0.2s'
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = '#94a3b8')}
-      onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--link)')}
+      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
     >
       {children}
     </a>
@@ -66,18 +66,18 @@ const Footer: React.FC = () => {
 
   return (
     <footer style={{
-      borderTop: '1px solid rgba(255,255,255,0.1)',
-      padding: '20px',
+      borderTop: '1px solid var(--border-subtle)',
+      padding: '24px 20px',
       marginTop: '40px',
-      backgroundColor: 'rgba(15,23,42,0.5)',
+      backgroundColor: 'var(--bg-surface)',
       textAlign: 'center'
     }}>
       {/* AWSARCHIVE Logo */}
       <div style={{
         marginBottom: '16px',
         fontSize: '14px',
-        fontWeight: 'bold',
-        color: '#60a5fa',
+        fontWeight: '600',
+        color: 'var(--accent)',
         letterSpacing: '1px'
       }}>
         📦 AWSARCHIVE
@@ -95,25 +95,25 @@ const Footer: React.FC = () => {
           {label.terms}
         </LinkButton>
 
-        <span style={{ color: '#475569' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>|</span>
 
         <LinkButton href="/privacy.html">
           {label.privacy}
         </LinkButton>
 
-        <span style={{ color: '#475569' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>|</span>
 
         <LinkButton href="/pricing.html">
           {label.pricing}
         </LinkButton>
 
-        <span style={{ color: '#475569' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>|</span>
 
         <LinkButton href="/refund.html">
           {label.refund}
         </LinkButton>
 
-        <span style={{ color: '#475569' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>|</span>
 
         <LinkButton href={`/contact.html?lang=${displayLocale}`} external={false}>
           {label.contact}
@@ -122,7 +122,7 @@ const Footer: React.FC = () => {
 
       <p style={{
         fontSize: '11px',
-        color: '#475569',
+        color: 'var(--text-secondary)',
         margin: '0',
         marginTop: '8px'
       }}>
@@ -131,10 +131,10 @@ const Footer: React.FC = () => {
 
       <p style={{
         fontSize: '10px',
-        color: '#64748b',
+        color: 'var(--text-tertiary)',
         margin: '12px 0 0 0',
         paddingTop: '12px',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderTop: '1px solid var(--border-subtle)',
         lineHeight: '1.4'
       }}>
         AWS Archive is an independent educational platform not affiliated with, endorsed by, or associated with Amazon Web Services, Inc. or its affiliates. AWS and Amazon Web Services are registered trademarks of Amazon.com, Inc. or its affiliates.

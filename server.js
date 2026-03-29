@@ -468,9 +468,19 @@ app.post('/api/lemonsqueezy/checkout', async (req, res) => {
 
     console.log('📤 Creating Lemon Squeezy Checkout...');
 
-    // TODO: Implement actual Lemon Squeezy Checkout URL generation
-    // For now, return a test URL
-    const checkoutUrl = `https://lemonsqueezy.com/checkout?email=${encodeURIComponent(email)}&test=true`;
+    const storeId = process.env.VITE_LEMON_SQUEEZY_STORE_ID;
+    const productId = process.env.VITE_LEMON_SQUEEZY_PRODUCT_ID;
+
+    if (!storeId || !productId) {
+      console.error('❌ VITE_LEMON_SQUEEZY_STORE_ID or VITE_LEMON_SQUEEZY_PRODUCT_ID not found');
+      return res.status(500).json({ error: 'Payment configuration incomplete' });
+    }
+
+    // ✅ Lemon Squeezy Hosted Checkout URL
+    // Format: https://checkout.lemonsqueezy.com/buy/{storeId}/{productId}
+    const checkoutUrl = `https://checkout.lemonsqueezy.com/buy/${storeId}/${productId}?checkout[email]=${encodeURIComponent(email)}`;
+
+    console.log('✅ Checkout URL generated:', checkoutUrl);
 
     res.json({
       checkoutUrl: checkoutUrl,

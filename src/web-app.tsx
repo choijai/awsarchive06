@@ -3571,8 +3571,9 @@ function App() {
                       <div style={{ fontSize: "14px", color: "#e2e8f0" }}>
                         문제 {mockExamCurrentIndex + 1} / {mockExamProblems.length}
                         {mockExamIsLoading && (
-                          <span style={{ marginLeft: "8px", color: "#60a5fa", fontSize: "12px" }}>
-                            🔄 문제 로딩 중...
+                          <span style={{ marginLeft: "8px", color: "#60a5fa", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>🔄</span>
+                            문제 로딩 중...
                           </span>
                         )}
                       </div>

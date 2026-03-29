@@ -1620,6 +1620,7 @@ function App() {
                           setShowLinkPasswordModal(true);
                         }}
                         style={{
+                          display: "none",
                           width: "100%",
                           padding: "10px 12px",
                           background: "transparent",
@@ -4581,8 +4582,9 @@ function App() {
         {/* Firebase 로그인/회원가입 모달 */}
         {showLinkPasswordModal && (
           <div style={{
+            display: "none",
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center",
             zIndex: 1002
           }} onClick={() => setShowLinkPasswordModal(false)}>
             <div style={{

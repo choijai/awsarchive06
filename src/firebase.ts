@@ -9,7 +9,10 @@ import {
   onAuthStateChanged,
   User,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  EmailAuthProvider,
+  fetchSignInMethodsForEmail,
+  linkWithCredential
 } from "firebase/auth";
 import {
   getFirestore,
@@ -157,6 +160,12 @@ export async function signUp(email: string, password: string, displayName: strin
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error: any) {
+    if (error?.code === "auth/email-already-in-use") {
+      const methods = await getSignInMethodsSafely(email);
+      if (methods.includes("google.com") && !methods.includes("password")) {
+        throw new Error("이 이메일은 현재 Google 로그인으로만 연결되어 있습니다. Google로 로그인한 뒤 비밀번호를 연결해주세요.");
+      }
+    }
     throw new Error(getErrorMessage(error.code));
   }
 }
@@ -177,6 +186,16 @@ export async function signIn(email: string, password: string): Promise<User> {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error: any) {
+    if (
+      error?.code === "auth/user-not-found" ||
+      error?.code === "auth/wrong-password" ||
+      error?.code === "auth/invalid-login-credentials"
+    ) {
+      const methods = await getSignInMethodsSafely(email);
+      if (methods.includes("google.com") && !methods.includes("password")) {
+        throw new Error("이 계정은 현재 Google 로그인으로만 연결되어 있습니다. 아래 'Google로 계속'을 사용한 뒤 계정 메뉴에서 비밀번호를 연결해주세요.");
+      }
+    }
     throw new Error(getErrorMessage(error.code));
   }
 }

@@ -1563,10 +1563,13 @@ function App() {
               <option value="ja" style={{ background: "rgba(59,130,246,0.3)", color: "#cbd5e1" }}>日本語</option>
             </select>
           </div>
-          <div className="visitor-count">
-            <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "2px" }}>{t("currentVisitors")}</div>
-            <div style={{ fontSize: "14px", fontWeight: 700 }}>👥 {visitorCount}</div>
-          </div>
+          {/* 운영자만 볼 수 있는 접속자수 */}
+          {isAdmin && (
+            <div className="visitor-count">
+              <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "2px" }}>{t("currentVisitors")}</div>
+              <div style={{ fontSize: "14px", fontWeight: 700 }}>👥 {visitorCount}</div>
+            </div>
+          )}
 
           {/* 사용자 상태 및 일일 카운트 / 로그인 */}
           <div

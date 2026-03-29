@@ -287,4 +287,8 @@ export const ja: Strings = {
   pdfCorrect: "正解",
   pdfWrong: "不正解",
   pdfCorrectRate: "正答率",
+
+  // Theme
+  themeDark: "ダークモード",
+  themeLight: "ライトモード",
 };

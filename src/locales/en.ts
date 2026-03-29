@@ -287,4 +287,8 @@ export const en: Strings = {
 
   // Session Details
   sessionDetailsView: "View details for {n} problems",
+
+  // Theme
+  themeDark: "Dark Mode",
+  themeLight: "Light Mode",
 };

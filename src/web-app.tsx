@@ -10,6 +10,7 @@ import { CONCEPTS_EN } from "./CONCEPTS_EN";
 import { CONCEPTS_JA } from "./data";
 import { auth, createPost, deleteExpiredResults, deleteOldMockExamProblems, deletePost, getAdminStatsSecure, getAllUsersForAdminSecure, getCurrentUser, getExamStartDate, getPostById, getPosts, getTodayMockExamProblems, getUserPaidStatus, getUserProblemSessions, getUserProblemSessionsSecure, getUserQuizStats, onAuthStateChange, recordQuizResult, saveExamStartDate, saveTodayMockExamProblems, saveUserInfoToFirebase, signIn, signInWithGoogle, signOut, signUp, updateMockExamProblemsProgressively, updateStreakInFirebase, updateUserPaidStatus, uploadPDFToStorage } from "./firebase";
 import { useLocale } from "./LocaleContext";
+import { useTheme } from "./ThemeContext";
 import { canGenerateProblemToday, recordProblemGeneration } from "./firebase";
 import "./styles.css";
 
@@ -325,7 +326,7 @@ function useForce() {
   return { pos, setPos, posRef, dragRef };
 }
 
-function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, catFilter }: {
+function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, catFilter, theme }: {
   pos: Record<string, any>;
   setPos: any;
   posRef: any;
@@ -334,6 +335,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
   slots: string[];
   onNodeClick: (id: string | null) => void;
   catFilter: string | null;
+  theme: "dark" | "light";
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const connectedIds = selected
@@ -350,7 +352,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
-      style={{ display: "block", width: "100%", height: "100%", background: "#060e18", touchAction: "none", cursor: "grab" }}
+      style={{ display: "block", width: "100%", height: "100%", background: "var(--bg-graph)", touchAction: "none", cursor: "grab" }}
       onMouseMove={e => {
         if (dragRef.current) {
           const { x, y } = getSvgXY(e.clientX, e.clientY);
@@ -379,7 +381,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
       {/* Background dots */}
       {Array.from({ length: 70 }, (_, i) => (
         <circle key={i} cx={(i * 179 + 53) % W} cy={(i * 113 + 41) % H}
-          r={i % 6 === 0 ? 1.3 : 0.5} fill="white" opacity={0.06 + (i % 4) * 0.03} />
+          r={i % 6 === 0 ? 1.3 : 0.5} fill={theme === "dark" ? "white" : "#1e293b"} opacity={0.06 + (i % 4) * 0.03} />
       ))}
 
       {/* Links */}
@@ -390,7 +392,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
         const srcNode = NODES.find(n => n.id === link.s);
         return (
           <line key={i} x1={sp.x} y1={sp.y} x2={tp.x} y2={tp.y}
-            stroke={active ? (srcNode ? CAT[srcNode.cat].color : "#fff") : "rgba(255,255,255,0.05)"}
+            stroke={active ? (srcNode ? CAT[srcNode.cat].color : "#fff") : (theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.08)")}
             strokeWidth={active ? 2 : 1}
             opacity={active ? 0.5 : 0.15}
             pointerEvents="none"
@@ -433,7 +435,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
             </text>
             {/* Label */}
             <text x={p.x} y={p.y + r + 14} textAnchor="middle" fontSize={10}
-              fill={dimmed ? "rgba(255,255,255,0.2)" : "#cbd5e1"} pointerEvents="none" fontWeight={isSelected ? 700 : 400}>
+              fill={dimmed ? (theme === "dark" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)") : "var(--text-mid)"} pointerEvents="none" fontWeight={isSelected ? 700 : 400}>
               {n.name}
             </text>
           </g>
@@ -445,6 +447,7 @@ function GraphSVG({ pos, setPos, posRef, dragRef, selected, slots, onNodeClick, 
 
 function App() {
   const { locale, setLocale, t } = useLocale();
+  const { theme, toggleTheme } = useTheme();
   // Fixed node positions for instant page load and immediate footer interactivity
   const { pos, setPos, posRef, dragRef } = useForce();
 
@@ -1496,6 +1499,27 @@ function App() {
           <p>{t("headerSubtitle")}</p>
         </div>
         <div className="header-right">
+          {/* Theme Toggle Button - Admin only */}
+          {isAdmin && (
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? t("themeLight") : t("themeDark")}
+              title={theme === "dark" ? t("themeLight") : t("themeDark")}
+              style={{
+                padding: "6px 10px",
+                background: "transparent",
+                border: "1px solid var(--border-medium)",
+                borderRadius: "6px",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontSize: "16px",
+                lineHeight: 1,
+                transition: "all 0.2s"
+              }}
+            >
+              {theme === "dark" ? "☀️" : "🌙"}
+            </button>
+          )}
           <div className="lang-selector">
             <select
               value={locale}
@@ -4419,7 +4443,7 @@ function App() {
               <div className="graph-label">{t("graphLabel")}</div>
               <div className="graph-box">
                 <GraphSVG pos={pos} setPos={setPos} posRef={posRef} dragRef={dragRef}
-                  selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} />
+                  selected={selected} slots={slots} onNodeClick={onNodeClick} catFilter={catFilter} theme={theme} />
               </div>
             </>
           )}

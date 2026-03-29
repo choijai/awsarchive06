@@ -285,6 +285,10 @@ export const ko = {
   pdfCorrect: "정답",
   pdfWrong: "오답",
   pdfCorrectRate: "정답률",
+
+  // Theme
+  themeDark: "다크 모드",
+  themeLight: "라이트 모드",
 };
 
 export type Strings = Record<keyof typeof ko, string>;

@@ -238,6 +238,52 @@ export async function signInWithGoogle(): Promise<User> {
   }
 }
 
+function getLinkedProviders(user: User | null | undefined): string[] {
+  if (!user) return [];
+  return user.providerData
+    .map((provider) => provider?.providerId)
+    .filter((providerId): providerId is string => Boolean(providerId));
+}
+
+async function getSignInMethodsSafely(email: string): Promise<string[]> {
+  try {
+    return await fetchSignInMethodsForEmail(auth, email);
+  } catch {
+    return [];
+  }
+}
+
+export function isPasswordLinked(user: User | null | undefined = auth.currentUser): boolean {
+  return getLinkedProviders(user).includes("password");
+}
+
+export async function linkEmailPasswordToCurrentUser(password: string): Promise<void> {
+  const user = auth.currentUser;
+  const email = user?.email;
+
+  if (!user || !email) {
+    throw new Error("로그인된 사용자를 찾을 수 없습니다. 먼저 로그인해주세요.");
+  }
+
+  if (password.length < 6 || password.length > 128) {
+    throw new Error("비밀번호는 6자 이상 128자 이하여야 합니다.");
+  }
+
+  if (isPasswordLinked(user)) {
+    return;
+  }
+
+  try {
+    const credential = EmailAuthProvider.credential(email, password);
+    await linkWithCredential(user, credential);
+  } catch (error: any) {
+    if (error?.code === "auth/provider-already-linked") {
+      return;
+    }
+    throw new Error(getErrorMessage(error.code));
+  }
+}
+
 /**
  * Firebase 에러 메시지 한글화
  */

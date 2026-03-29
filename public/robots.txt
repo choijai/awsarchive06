@@ -12,17 +12,26 @@ Disallow: /src/
 # Specific crawl delay for respect
 Crawl-delay: 1
 
-# AI Crawlers - Allow Gemini, ChatGPT, and other AI services
+# AI Crawlers - Allow Gemini, ChatGPT, Claude, and other AI services
 User-agent: Google-Extended
 Allow: /
 
 User-agent: Gemini
 Allow: /
 
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
 User-agent: CCBot
 Allow: /
 
 User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
 Allow: /
 
 # Sitemap location

@@ -1277,13 +1277,15 @@ function App() {
     (async () => {
       try {
         const storedDifficulties = localStorage.getItem("mockExamDifficulties");
+        const storedDomains = localStorage.getItem("mockExamDomains");
         const storedAllProblems = localStorage.getItem("mockExamAllProblems");
         // ✅ 시험 시작 시 고정된 언어 사용 (시험 중 언어 변경 방지)
         const mockExamLocale = localStorage.getItem("mockExamStartedLocale") || "ko";
 
-        if (!storedDifficulties || !storedAllProblems) return;
+        if (!storedDifficulties || !storedDomains || !storedAllProblems) return;
 
         const difficulties = JSON.parse(storedDifficulties);
+        const domains = JSON.parse(storedDomains);
         const allProblems = JSON.parse(storedAllProblems);
         let newProblems = [...mockExamProblems];
 
@@ -1311,7 +1313,8 @@ function App() {
               } else {
                 // 추가 생성 (필요시)
                 const difficulty = difficulties[startIdx + i] as "medium" | "hard" | "challenge";
-                const problem = await generateSAAProblem([], difficulty, mockExamLocale);
+                const domain = domains[startIdx + i] as "security" | "resilience" | "performance" | "cost-optimization";
+                const problem = await generateSAAProblem([], difficulty, mockExamLocale, domain);
                 newProblems.push(problem);
               }
             }
@@ -1329,6 +1332,7 @@ function App() {
         // 모든 문제 로드 완료 후 정리
         if (newProblems.length === 50 && allProblems.length < 50) {
           localStorage.removeItem("mockExamDifficulties");
+          localStorage.removeItem("mockExamDomains");
           localStorage.removeItem("mockExamProblemsCount");
           localStorage.removeItem("mockExamAllProblems");
         }
@@ -3989,6 +3993,7 @@ function App() {
                             const existingProblems = await getTodayMockExamProblems(locale);
                             let allProblems = existingProblems;
                             let difficulties: string[] = [];
+                            let domains: string[] = [];
 
                             if (existingProblems && existingProblems.length > 0) {
                               // 이미 생성된 문제 존재 - 공유 사용
@@ -3999,17 +4004,42 @@ function App() {
                                 if (p.question.includes("Hard")) return "hard";
                                 return "medium";
                               });
+                              // 기존 문제의 도메인은 알 수 없으므로 균등 분배
+                              domains = [
+                                ...Array(15).fill("security"),
+                                ...Array(13).fill("resilience"),
+                                ...Array(12).fill("performance"),
+                                ...Array(10).fill("cost-optimization")
+                              ];
+                              for (let i = domains.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [domains[i], domains[j]] = [domains[j], domains[i]];
+                              }
                             } else {
                               // 새 문제 생성
+                              // 📊 SAA-C03 도메인별 출제 비율
+                              // - 보안 (Secure Architectures): 30% → 15문제
+                              // - 복현력 (Resilient Architectures): 26% → 13문제
+                              // - 고성능 (High-Performing Architectures): 24% → 12문제
+                              // - 비용 최적화 (Cost-Optimized Architectures): 20% → 10문제
+                              domains = [
+                                ...Array(15).fill("security"),
+                                ...Array(13).fill("resilience"),
+                                ...Array(12).fill("performance"),
+                                ...Array(10).fill("cost-optimization")
+                              ];
+
                               difficulties = [
                                 ...Array(20).fill("medium"),
                                 ...Array(20).fill("hard"),
                                 ...Array(10).fill("challenge")
                               ];
-                              // 순서 섞기 (shuffle)
+
+                              // 순서 섞기 (shuffle) - 도메인과 난이도 동시에
                               for (let i = difficulties.length - 1; i > 0; i--) {
                                 const j = Math.floor(Math.random() * (i + 1));
                                 [difficulties[i], difficulties[j]] = [difficulties[j], difficulties[i]];
+                                [domains[i], domains[j]] = [domains[j], domains[i]];
                               }
                             }
 
@@ -4019,7 +4049,8 @@ function App() {
                               problems.push(allProblems[0]);
                             } else {
                               const difficulty = difficulties[0] as "medium" | "hard" | "challenge";
-                              const problem = await generateSAAProblem([], difficulty, locale);
+                              const domain = domains[0] as "security" | "resilience" | "performance" | "cost-optimization";
+                              const problem = await generateSAAProblem([], difficulty, locale, domain);
                               problems.push(problem);
                               allProblems = [problem];
                             }
@@ -4033,6 +4064,7 @@ function App() {
 
                             // localStorage에 저장 (백그라운드 로딩용)
                             localStorage.setItem("mockExamDifficulties", JSON.stringify(difficulties));
+                            localStorage.setItem("mockExamDomains", JSON.stringify(domains));
                             localStorage.setItem("mockExamProblemsCount", "1");
                             localStorage.setItem("mockExamAllProblems", JSON.stringify(allProblems));
                             // ✅ 시험 시작 시 언어 고정 (시험 중 언어 변경 방지)

@@ -931,7 +931,8 @@ export const DIFFICULTY_LABELS = {
 export function generatePrompt(
   serviceNames: string[],
   difficulty: string,
-  locale: "ko" | "ja" | "en" = "ko"
+  locale: "ko" | "ja" | "en" = "ko",
+  domain?: "security" | "resilience" | "performance" | "cost-optimization"
 ): string {
   // 난이도별로 다른 프롬프트 선택
   let prompt: string;
@@ -964,6 +965,30 @@ export function generatePrompt(
 
   const diffLabel = DIFFICULTY_LABELS[locale][difficulty as "medium" | "hard" | "challenge"] || difficulty;
 
+  // 📊 도메인별 가이드 추가
+  const domainGuide = domain
+    ? (locale === "ko"
+      ? `\n\n## 📚 출제 도메인 (SAA-C03 시험 비율):\n${
+          domain === "security" ? "**보안 아키텍처 설계 (Secure Architectures) - 30%**: IAM, KMS, 암호화, VPC 보안그룹, Shield, WAF, 접근 제어 등을 포함한 문제를 생성하세요." :
+          domain === "resilience" ? "**복원력 있는 아키텍처 설계 (Resilient Architectures) - 26%**: Multi-AZ, Auto Scaling, ELB, 재해복구(DR), RTO/RPO, 고가용성 등을 포함한 문제를 생성하세요." :
+          domain === "performance" ? "**고성능 아키텍처 설계 (High-Performing Architectures) - 24%**: 네트워크 설계, CloudFront, ElastiCache, 스토리지 최적화, 성능 모니터링 등을 포함한 문제를 생성하세요." :
+          "**비용 최적화 아키텍처 설계 (Cost-Optimized Architectures) - 20%**: Reserved/Spot 인스턴스, S3 스토리지 클래스, 비용 모니터링, 리소스 적정화 등을 포함한 문제를 생성하세요."
+        }`
+      : locale === "ja"
+      ? `\n\n## 📚 出題ドメイン (SAA-C03 試験の割合):\n${
+          domain === "security" ? "**セキュアアーキテクチャー設計 (Secure Architectures) - 30%**: IAM、KMS、暗号化、VPCセキュリティグループ、Shield、WAFなどを含む問題を生成してください。" :
+          domain === "resilience" ? "**回復力のあるアーキテクチャー設計 (Resilient Architectures) - 26%**: マルチAZ、オートスケーリング、ELB、ディザスタリカバリー、RTO/RPOなどを含む問題を生成してください。" :
+          domain === "performance" ? "**高性能アーキテクチャー設計 (High-Performing Architectures) - 24%**: ネットワーク設計、CloudFront、ElastiCache、ストレージ最適化などを含む問題を生成してください。" :
+          "**コスト最適化アーキテクチャー設計 (Cost-Optimized Architectures) - 20%**: 予約インスタンス、スポットインスタンス、S3ストレージクラス、コスト監視などを含む問題を生成してください。"
+        }`
+      : `\n\n## 📚 Exam Domain (SAA-C03 Exam Proportion):\n${
+          domain === "security" ? "**Secure Architectures Design - 30%**: Create questions including IAM, KMS, encryption, VPC security groups, Shield, WAF, and access control." :
+          domain === "resilience" ? "**Resilient Architectures Design - 26%**: Create questions including Multi-AZ, Auto Scaling, ELB, disaster recovery, RTO/RPO, and high availability." :
+          domain === "performance" ? "**High-Performing Architectures Design - 24%**: Create questions including network design, CloudFront, ElastiCache, storage optimization, and performance monitoring." :
+          "**Cost-Optimized Architectures Design - 20%**: Create questions including Reserved/Spot instances, S3 storage classes, cost monitoring, and resource optimization."
+        }`)
+    : "";
+
   const tokenConstraint = locale === "ko"
     ? `\n\n⚠️ **필수 제약사항 (반드시 지켜야 함)**:\n- 응답은 정확히 3500 토큰 이내로 제한됩니다.\n- JSON 외에 다른 설명이나 마크다운은 절대 금지입니다.\n- 선택지(options): 각 선택지는 3-4줄의 구체적인 아키텍처 설명.\n- 정답 설명(explanation): 각 필드는 전문적이고 상세하게 (2-4줄).\n- goal: 문제의 핵심 목표를 한 문장으로 명확히.\n- correct: 정답이 모든 제약을 만족하는 이유를 기술적으로 상세히 (2-3줄).\n- trap_A, B, C: 각각 미충족 제약과 기술적 근거 (2줄).\n- JSON 구조는 빠짐없이 완전해야 합니다.`
     : locale === "ja"
@@ -972,5 +997,5 @@ export function generatePrompt(
 
   return (prompt
     .replace("${SERVICE_NAMES}", serviceNames.join(", "))
-    .replace("${DIFFICULTY}", diffLabel) + tokenConstraint);
+    .replace("${DIFFICULTY}", diffLabel) + domainGuide + tokenConstraint);
 }

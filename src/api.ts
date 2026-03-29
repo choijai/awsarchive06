@@ -143,7 +143,8 @@ export interface Problem {
 export async function generateSAAProblem(
   serviceNames: string[],
   difficulty: string,
-  locale: "ko" | "ja" | "en" = "ko"
+  locale: "ko" | "ja" | "en" = "ko",
+  domain?: "security" | "resilience" | "performance" | "cost-optimization"
 ): Promise<Problem> {
   const env = (import.meta as any).env;
   const apiKey = (globalThis as any).__VITE_API_KEY__ || env.VITE_ANTHROPIC_API_KEY;
@@ -161,7 +162,7 @@ export async function generateSAAProblem(
     selectedServices = selectServicesFromAnalysis(difficulty);
   }
 
-  const prompt = generatePrompt(selectedServices, difficulty, locale);
+  const prompt = generatePrompt(selectedServices, difficulty, locale, domain);
 
   let content: string;
 
